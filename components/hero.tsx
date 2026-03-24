@@ -104,9 +104,12 @@ export function Hero() {
           <Button
             variant="outline"
             size="lg"
-            className="rounded-full px-8 h-12 text-base font-medium border-[#492B8C] text-[#492B8C] hover:bg-[#F4F1FB] hover:text-[#2D1A69] bg-transparent"
+            asChild
+            className="rounded-full px-8 h-12 text-base font-medium border-[#2D1A69] text-[#2D1A69] hover:bg-[#2D1A69] hover:text-white bg-white"
           >
-            View Curriculum
+            <a href="#curriculum">
+              View Curriculum
+            </a>
           </Button>
         </motion.div>
 
