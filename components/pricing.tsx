@@ -38,9 +38,9 @@ const plans = [
 
 const earnings = [
   { step: "1", title: "Complete the cohort", desc: "Build your end-to-end AI product during the 4 weeks" },
-  { step: "2", title: "Upload to AI Store", desc: "Publish your finished product on our marketplace" },
+  { step: "2", title: "Upload to AI Store", desc: "Publish your finished AI app on our marketplace" },
   { step: "3", title: "Set your price", desc: "Free, one-time, or monthly subscription - your choice" },
-  { step: "4", title: "Keep 100% earnings", desc: "Every rupee goes to you. No platform cut, ever." },
+  { step: "4", title: "Keep 100% of earnings", desc: "Every rupee from your AI app goes to you. No platform cut." },
 ]
 
 function BorderBeam() {
@@ -123,13 +123,16 @@ export function Pricing() {
               </ul>
 
               <Button
+                asChild
                 className={`w-full rounded-full ${
                   plan.highlighted
                     ? "shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90"
                     : "bg-[#2D1A69] text-white hover:bg-[#492B8C]"
                 }`}
               >
-                {plan.cta}
+                <a href="https://docs.google.com/forms/d/e/1FAIpQLSelAKQrkxz97RxCo7B8K-xNOAe3-wXhtmnxyW6qx-WNA_82ZA/viewform?usp=header" target="_blank" rel="noopener noreferrer">
+                  {plan.cta}
+                </a>
               </Button>
             </motion.div>
           ))}
@@ -144,7 +147,7 @@ export function Pricing() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#E8E3F3] mb-6">
             <Store className="w-4 h-4 text-[#FF6B34]" />
-            <span className="text-sm text-[#492B8C] font-medium">Contributors: 100% Earnings on AI Store</span>
+            <span className="text-sm text-[#492B8C] font-medium">Contributors: 100% of AI App Earnings</span>
           </div>
           <h3
             className="text-2xl sm:text-3xl font-bold text-[#1A0A3D] mb-4"
@@ -153,7 +156,7 @@ export function Pricing() {
             How Contributors Earn
           </h3>
           <p className="text-[#6B5B9E] max-w-2xl mx-auto mb-12">
-            As a Contributor, you get access to our AI Store. Upload your completed AI products, set your own prices, and keep every rupee you earn. No platform fees. No commissions.
+            As a Contributor, you get access to our AI Store. Upload your completed AI apps, set your own prices, and keep 100% of earnings from your AI app sales. No platform fees. No commissions.
           </p>
 
           {/* How You Earn Steps */}

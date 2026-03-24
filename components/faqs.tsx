@@ -37,6 +37,10 @@ const faqs = [
     question: "Can I upgrade from Standard to Contributor later?",
     answer: "Yes! If you start as Standard and later decide you want to publish on the AI Store and earn, you can upgrade to Contributor at any time."
   },
+  {
+    question: "What if it's not working out for me?",
+    answer: "If you feel the cohort isn't right for you, reach out to us within the first week. We'll work with you to find a solution or process a refund. No hard feelings - we want you to be in the right place."
+  },
 ]
 
 function FAQItem({ faq, isOpen, onClick }: { faq: typeof faqs[0], isOpen: boolean, onClick: () => void }) {

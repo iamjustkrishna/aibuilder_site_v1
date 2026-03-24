@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 const stats = [
   { icon: Calendar, value: "4", label: "Weeks" },
   { icon: Video, value: "2-3x", label: "Live Classes/wk" },
-  { icon: Percent, value: "100%", label: "Your Earnings" },
+  { icon: Percent, value: "100%", label: "Of AI App Earnings" },
 ]
 
 const textRevealVariants = {
@@ -81,7 +81,7 @@ export function Hero() {
           transition={{ duration: 0.6, delay: 0.5 }}
           className="text-lg sm:text-xl text-[#6B5B9E] max-w-2xl mx-auto mb-10 leading-relaxed"
         >
-          A 4-week cohort where you go from zero to shipping real AI apps and agents. Contributors can publish on our marketplace and keep 100% of their earnings. No commissions. No cuts.
+          A 4-week cohort where you go from zero to shipping real AI apps and agents. Contributors can publish on our AI Store and keep 100% of earnings from their AI apps. No commissions. No cuts.
         </motion.p>
 
         {/* CTAs */}
@@ -93,10 +93,13 @@ export function Hero() {
         >
           <Button
             size="lg"
+            asChild
             className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full px-8 h-12 text-base font-medium shadow-lg shadow-[#FF6B34]/20"
           >
-            Apply Now
-            <ArrowRight className="ml-2 w-4 h-4" />
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSelAKQrkxz97RxCo7B8K-xNOAe3-wXhtmnxyW6qx-WNA_82ZA/viewform?usp=header" target="_blank" rel="noopener noreferrer">
+              Express Interest
+              <ArrowRight className="ml-2 w-4 h-4" />
+            </a>
           </Button>
           <Button
             variant="outline"

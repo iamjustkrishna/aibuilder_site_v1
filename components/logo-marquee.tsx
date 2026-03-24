@@ -14,6 +14,16 @@ const tools = [
   { name: "Pinecone", icon: "P" },
   { name: "n8n", icon: "n" },
   { name: "OpenAI", icon: "O" },
+  { name: "v0", icon: "v0" },
+  { name: "Bolt", icon: "B" },
+  { name: "Lovable", icon: "Lv" },
+  { name: "Make", icon: "M" },
+  { name: "Zapier", icon: "Z" },
+  { name: "Notion AI", icon: "N" },
+  { name: "Gemini", icon: "G" },
+  { name: "Perplexity", icon: "Px" },
+  { name: "Midjourney", icon: "Mj" },
+  { name: "ElevenLabs", icon: "11" },
 ]
 
 export function LogoMarquee() {

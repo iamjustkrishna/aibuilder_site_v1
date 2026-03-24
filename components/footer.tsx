@@ -2,13 +2,11 @@
 
 import { motion, useInView } from "framer-motion"
 import { useRef } from "react"
-import { Sparkles } from "lucide-react"
+import { Sparkles, Mail } from "lucide-react"
 
 const footerLinks = {
-  Program: ["Curriculum", "Pricing", "FAQs", "Apply Now"],
-  Resources: ["Session Recordings", "Templates", "Community", "Office Hours"],
-  Platform: ["AI Store", "Publishing", "Analytics", "Pricing Tools"],
-  Connect: ["Email", "Twitter/X", "LinkedIn", "WhatsApp"],
+  Program: ["Curriculum", "FAQs"],
+  Resources: ["Session Recordings", "Templates", "Community"],
 }
 
 export function Footer() {
@@ -22,7 +20,7 @@ export function Footer() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6 }}
-          className="grid grid-cols-2 md:grid-cols-5 gap-8"
+          className="grid grid-cols-2 md:grid-cols-4 gap-8"
         >
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
@@ -32,7 +30,7 @@ export function Footer() {
               </div>
               <span className="font-semibold text-white">AI Builder</span>
             </a>
-            <p className="text-sm text-[#C3AFFF] mb-4">Build AI apps. Launch them. Contributors keep 100% of their earnings.</p>
+            <p className="text-sm text-[#C3AFFF] mb-4">Build AI apps. Launch them. Contributors keep 100% of their AI app earnings.</p>
             {/* Season Badge */}
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#492B8C]/50 border border-[#492B8C]">
               <span className="w-2 h-2 rounded-full bg-[#FF6B34] pulse-glow" />
@@ -55,6 +53,19 @@ export function Footer() {
               </ul>
             </div>
           ))}
+
+          {/* Support */}
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-4">Support</h4>
+            <ul className="space-y-3">
+              <li>
+                <a href="mailto:support@aibuilder.space" className="flex items-center gap-2 text-sm text-[#C3AFFF] hover:text-[#FF6B34] transition-colors">
+                  <Mail className="w-4 h-4" />
+                  support@aibuilder.space
+                </a>
+              </li>
+            </ul>
+          </div>
         </motion.div>
 
         {/* Bottom */}
@@ -65,17 +76,9 @@ export function Footer() {
           className="mt-16 pt-8 border-t border-[#492B8C]/30 flex flex-col sm:flex-row items-center justify-between gap-4"
         >
           <p className="text-sm text-[#C3AFFF]">&copy; {new Date().getFullYear()} AI Builder Cohort. All rights reserved.</p>
-          <div className="flex items-center gap-6">
-            <a href="#" className="text-sm text-[#C3AFFF] hover:text-[#FF6B34] transition-colors">
-              Twitter/X
-            </a>
-            <a href="#" className="text-sm text-[#C3AFFF] hover:text-[#FF6B34] transition-colors">
-              LinkedIn
-            </a>
-            <a href="mailto:chitranshuharbola@gmail.com" className="text-sm text-[#C3AFFF] hover:text-[#FF6B34] transition-colors">
-              Email
-            </a>
-          </div>
+          <a href="mailto:support@aibuilder.space" className="text-sm text-[#C3AFFF] hover:text-[#FF6B34] transition-colors">
+            support@aibuilder.space
+          </a>
         </motion.div>
       </div>
     </footer>

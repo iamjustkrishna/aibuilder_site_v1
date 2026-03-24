@@ -36,17 +36,20 @@ export function FinalCTA() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
           <Button
             size="lg"
+            asChild
             className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full px-8 h-14 text-base font-medium shadow-lg shadow-[#FF6B34]/20"
           >
-            Apply / Express Interest
-            <ArrowRight className="ml-2 w-5 h-5" />
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSelAKQrkxz97RxCo7B8K-xNOAe3-wXhtmnxyW6qx-WNA_82ZA/viewform?usp=header" target="_blank" rel="noopener noreferrer">
+              Express Interest
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </a>
           </Button>
         </div>
 
         <div className="flex items-center justify-center gap-2 text-[#C3AFFF]">
           <Mail className="w-4 h-4" />
-          <a href="mailto:chitranshuharbola@gmail.com" className="text-sm hover:text-white transition-colors">
-            chitranshuharbola@gmail.com
+          <a href="mailto:support@aibuilder.space" className="text-sm hover:text-white transition-colors">
+            support@aibuilder.space
           </a>
         </div>
 
@@ -55,7 +58,7 @@ export function FinalCTA() {
           <span className="w-1 h-1 rounded-full bg-[#492B8C]" />
           <span>2 to 3 Live Classes Per Week</span>
           <span className="w-1 h-1 rounded-full bg-[#492B8C]" />
-          <span>Contributors Keep 100%</span>
+          <span>Contributors Keep 100% of AI App Earnings</span>
           <span className="w-1 h-1 rounded-full bg-[#492B8C]" />
           <span>Hybrid / Online</span>
         </div>

@@ -60,8 +60,10 @@ export function Navbar() {
 
         {/* CTA Button */}
         <div className="hidden md:flex items-center gap-3">
-          <Button size="sm" className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full px-5 font-medium">
-            Apply Now
+          <Button size="sm" asChild className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full px-5 font-medium">
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSelAKQrkxz97RxCo7B8K-xNOAe3-wXhtmnxyW6qx-WNA_82ZA/viewform?usp=header" target="_blank" rel="noopener noreferrer">
+              Express Interest
+            </a>
           </Button>
         </div>
 
@@ -95,8 +97,10 @@ export function Navbar() {
               </a>
             ))}
             <hr className="border-[#492B8C] my-2" />
-            <Button className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full font-medium">
-              Apply Now
+            <Button asChild className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full font-medium">
+              <a href="https://docs.google.com/forms/d/e/1FAIpQLSelAKQrkxz97RxCo7B8K-xNOAe3-wXhtmnxyW6qx-WNA_82ZA/viewform?usp=header" target="_blank" rel="noopener noreferrer">
+                Express Interest
+              </a>
             </Button>
           </div>
         </motion.div>
