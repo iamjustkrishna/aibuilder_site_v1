@@ -24,12 +24,9 @@ const textRevealVariants = {
 
 export function Hero() {
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-24 pb-16 overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 pointer-events-none" />
-
+    <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-24 pb-16 overflow-hidden bg-white">
       {/* Subtle radial glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[#F4F1FB] rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10 max-w-5xl mx-auto text-center">
         {/* Badge */}
@@ -37,15 +34,15 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 border border-slate-700/50 mb-8"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#F4F1FB] border border-[#E8E3F3] mb-8"
         >
-          <span className="w-2 h-2 rounded-full bg-emerald-500 pulse-glow" />
-          <span className="text-sm text-slate-400">Season 01 | Limited Seats</span>
+          <span className="w-2 h-2 rounded-full bg-[#FF6B34] pulse-glow" />
+          <span className="text-sm text-[#492B8C]">Season 01 | Limited Seats</span>
         </motion.div>
 
         {/* Headline with text mask animation */}
         <h1
-          className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-white mb-6"
+          className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-[#1A0A3D] mb-6"
           style={{ fontFamily: "var(--font-cal-sans), sans-serif" }}
         >
           <span className="block overflow-hidden">
@@ -55,7 +52,7 @@ export function Hero() {
           </span>
           <span className="block overflow-hidden">
             <motion.span
-              className="block text-emerald-400"
+              className="block text-[#FF6B34]"
               variants={textRevealVariants}
               initial="hidden"
               animate="visible"
@@ -66,7 +63,7 @@ export function Hero() {
           </span>
           <span className="block overflow-hidden">
             <motion.span
-              className="block text-slate-500"
+              className="block text-[#6B5B9E]"
               variants={textRevealVariants}
               initial="hidden"
               animate="visible"
@@ -82,9 +79,9 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.5 }}
-          className="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed"
+          className="text-lg sm:text-xl text-[#6B5B9E] max-w-2xl mx-auto mb-10 leading-relaxed"
         >
-          A 4-week cohort where you go from zero to shipping real AI apps and agents, then publish them on our marketplace and keep every rupee you earn. No commissions. No cuts.
+          A 4-week cohort where you go from zero to shipping real AI apps and agents. Contributors can publish on our marketplace and keep 100% of their earnings. No commissions. No cuts.
         </motion.p>
 
         {/* CTAs */}
@@ -96,7 +93,7 @@ export function Hero() {
         >
           <Button
             size="lg"
-            className="shimmer-btn bg-emerald-500 text-slate-950 hover:bg-emerald-400 rounded-full px-8 h-12 text-base font-medium shadow-lg shadow-emerald-500/20"
+            className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full px-8 h-12 text-base font-medium shadow-lg shadow-[#FF6B34]/20"
           >
             Apply Now
             <ArrowRight className="ml-2 w-4 h-4" />
@@ -104,7 +101,7 @@ export function Hero() {
           <Button
             variant="outline"
             size="lg"
-            className="rounded-full px-8 h-12 text-base font-medium border-slate-700 text-slate-300 hover:bg-slate-900 hover:text-white hover:border-slate-600 bg-transparent"
+            className="rounded-full px-8 h-12 text-base font-medium border-[#492B8C] text-[#492B8C] hover:bg-[#F4F1FB] hover:text-[#2D1A69] bg-transparent"
           >
             View Curriculum
           </Button>
@@ -126,10 +123,10 @@ export function Hero() {
               className="flex flex-col items-center gap-2"
             >
               <div className="flex items-center gap-2">
-                <stat.icon className="w-5 h-5 text-emerald-500" />
-                <span className="text-2xl sm:text-3xl font-bold text-white">{stat.value}</span>
+                <stat.icon className="w-5 h-5 text-[#FF6B34]" />
+                <span className="text-2xl sm:text-3xl font-bold text-[#1A0A3D]">{stat.value}</span>
               </div>
-              <span className="text-sm text-slate-500">{stat.label}</span>
+              <span className="text-sm text-[#6B5B9E]">{stat.label}</span>
             </motion.div>
           ))}
         </motion.div>

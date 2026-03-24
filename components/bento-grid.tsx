@@ -31,6 +31,7 @@ const weeks = [
     title: "Understand & Explore",
     description: "How LLMs work, prompt engineering, RAG, APIs, idea scoping. Know what to build and why before writing a line.",
     icon: Brain,
+    color: "#492B8C",
     topics: ["LLM Fundamentals", "Prompt Engineering", "RAG Concepts", "API Integration"],
   },
   {
@@ -38,6 +39,7 @@ const weeks = [
     title: "Build Your First App",
     description: "Full stack AI app, RAG with vector databases, MVP in Replit, deploying live. Ship something real by end of week.",
     icon: Code,
+    color: "#FF6B34",
     topics: ["Next.js/Flask MVP", "Vector Databases", "LangChain", "Deployment"],
   },
   {
@@ -45,6 +47,7 @@ const weeks = [
     title: "Build AI Agents",
     description: "ReAct loop, tool calling, multi-step workflows, agent memory. Create agents that browse, plan and execute tasks.",
     icon: Bot,
+    color: "#00C8A7",
     topics: ["ReAct Loop", "Tool Calling", "Multi-Agent Systems", "Agent Memory"],
   },
   {
@@ -52,6 +55,7 @@ const weeks = [
     title: "Launch & Get Traction",
     description: "Publish to platform, pricing strategy, demo content, distribution channels, analytics. End with real users.",
     icon: Rocket,
+    color: "#FFD13F",
     topics: ["Platform Publishing", "Pricing Strategy", "Distribution", "Analytics"],
   },
 ]
@@ -61,7 +65,7 @@ export function BentoGrid() {
   const isInView = useInView(ref, { once: true, margin: "-100px" })
 
   return (
-    <section id="curriculum" className="py-24 px-4">
+    <section id="curriculum" className="py-24 px-4 bg-white">
       <div className="max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -70,12 +74,12 @@ export function BentoGrid() {
           className="text-center mb-16"
         >
           <h2
-            className="text-3xl sm:text-4xl font-bold text-white mb-4"
+            className="text-3xl sm:text-4xl font-bold text-[#1A0A3D] mb-4"
             style={{ fontFamily: "var(--font-instrument-sans)" }}
           >
             4-Week Curriculum
           </h2>
-          <p className="text-slate-400 max-w-2xl mx-auto">
+          <p className="text-[#6B5B9E] max-w-2xl mx-auto">
             Live classes 2 to 3 times per week. All sessions recorded for replay. Each class builds directly on the last.
           </p>
         </motion.div>
@@ -91,29 +95,44 @@ export function BentoGrid() {
             <motion.div
               key={week.week}
               variants={itemVariants}
-              className="group relative p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-emerald-500/30 hover:scale-[1.02] transition-all duration-300 overflow-hidden"
+              className="group relative p-6 rounded-2xl bg-[#F4F1FB] border border-[#E8E3F3] hover:border-[#492B8C]/30 hover:scale-[1.02] transition-all duration-300 overflow-hidden"
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-emerald-500/10 transition-colors" />
+              {/* Left accent bar */}
+              <div 
+                className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
+                style={{ backgroundColor: week.color }}
+              />
               
-              <div className="flex items-start gap-4 mb-4">
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                  <week.icon className="w-6 h-6 text-emerald-400" strokeWidth={1.5} />
+              <div className="flex items-start gap-4 mb-4 pl-3">
+                <div 
+                  className="p-3 rounded-xl border"
+                  style={{ 
+                    backgroundColor: `${week.color}15`,
+                    borderColor: `${week.color}30`
+                  }}
+                >
+                  <week.icon className="w-6 h-6" style={{ color: week.color }} strokeWidth={1.5} />
                 </div>
                 <div>
-                  <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">Week {week.week}</span>
-                  <h3 className="text-xl font-semibold text-white">{week.title}</h3>
+                  <span 
+                    className="text-xs font-medium uppercase tracking-wider"
+                    style={{ color: week.color }}
+                  >
+                    Week {week.week}
+                  </span>
+                  <h3 className="text-xl font-semibold text-[#1A0A3D]">{week.title}</h3>
                 </div>
               </div>
               
-              <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+              <p className="text-[#6B5B9E] text-sm mb-6 leading-relaxed pl-3">
                 {week.description}
               </p>
               
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 pl-3">
                 {week.topics.map((topic) => (
                   <span
                     key={topic}
-                    className="px-3 py-1 text-xs bg-slate-800/80 border border-slate-700/50 rounded-full text-slate-300"
+                    className="px-3 py-1 text-xs bg-white border border-[#E8E3F3] rounded-full text-[#492B8C]"
                   >
                     {topic}
                   </span>
@@ -130,22 +149,22 @@ export function BentoGrid() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-4"
         >
-          <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-900/30 border border-slate-800/50">
-            <div className="p-2 rounded-lg bg-slate-800">
-              <BookOpen className="w-5 h-5 text-emerald-400" />
+          <div className="flex items-center gap-4 p-4 rounded-xl bg-[#F4F1FB] border border-[#E8E3F3]">
+            <div className="p-2 rounded-lg bg-white border border-[#E8E3F3]">
+              <BookOpen className="w-5 h-5 text-[#FF6B34]" />
             </div>
             <div>
-              <h4 className="font-medium text-white">50+ Resources Provided</h4>
-              <p className="text-sm text-slate-500">Templates, guides, cheatsheets per week</p>
+              <h4 className="font-medium text-[#1A0A3D]">50+ Resources Provided</h4>
+              <p className="text-sm text-[#6B5B9E]">Templates, guides, cheatsheets per week</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-900/30 border border-slate-800/50">
-            <div className="p-2 rounded-lg bg-slate-800">
-              <Users className="w-5 h-5 text-emerald-400" />
+          <div className="flex items-center gap-4 p-4 rounded-xl bg-[#F4F1FB] border border-[#E8E3F3]">
+            <div className="p-2 rounded-lg bg-white border border-[#E8E3F3]">
+              <Users className="w-5 h-5 text-[#00C8A7]" />
             </div>
             <div>
-              <h4 className="font-medium text-white">Community + Office Hours</h4>
-              <p className="text-sm text-slate-500">Peer support and weekly unblock sessions</p>
+              <h4 className="font-medium text-[#1A0A3D]">Community + Office Hours</h4>
+              <p className="text-sm text-[#6B5B9E]">Peer support and weekly unblock sessions</p>
             </div>
           </div>
         </motion.div>
