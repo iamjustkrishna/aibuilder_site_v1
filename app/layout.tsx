@@ -23,9 +23,9 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Apex - Enterprise SaaS Platform",
-  description: "The modern platform for teams who ship fast. Built for scale, designed for speed.",
-    generator: 'v0.app'
+  title: "AI Builder Cohort | Season 01 - Build AI, Launch It, Keep It All",
+  description: "A 4-week cohort where you go from zero to shipping real AI apps and agents, then publish them on our marketplace and keep 100% of your earnings.",
+  generator: 'v0.app'
 }
 
 export default function RootLayout({

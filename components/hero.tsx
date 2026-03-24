@@ -1,15 +1,13 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Calendar, Video, Percent } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-const avatars = [
-  "/professional-headshot-1.png",
-  "/professional-headshot-2.png",
-  "/professional-headshot-3.png",
-  "/professional-headshot-4.png",
-  "/professional-headshot-5.png",
+const stats = [
+  { icon: Calendar, value: "4", label: "Weeks" },
+  { icon: Video, value: "2-3x", label: "Live Classes/wk" },
+  { icon: Percent, value: "100%", label: "Your Earnings" },
 ]
 
 const textRevealVariants = {
@@ -28,10 +26,10 @@ export function Hero() {
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-24 pb-16 overflow-hidden">
       {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 pointer-events-none" />
 
       {/* Subtle radial glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-zinc-800/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10 max-w-5xl mx-auto text-center">
         {/* Badge */}
@@ -39,10 +37,10 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900 border border-zinc-800 mb-8"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 border border-slate-700/50 mb-8"
         >
           <span className="w-2 h-2 rounded-full bg-emerald-500 pulse-glow" />
-          <span className="text-sm text-zinc-400">Now in Public Beta</span>
+          <span className="text-sm text-slate-400">Season 01 | Limited Seats</span>
         </motion.div>
 
         {/* Headline with text mask animation */}
@@ -52,18 +50,29 @@ export function Hero() {
         >
           <span className="block overflow-hidden">
             <motion.span className="block" variants={textRevealVariants} initial="hidden" animate="visible" custom={0}>
-              Ship faster.
+              Build AI.
             </motion.span>
           </span>
           <span className="block overflow-hidden">
             <motion.span
-              className="block text-zinc-500"
+              className="block text-emerald-400"
               variants={textRevealVariants}
               initial="hidden"
               animate="visible"
               custom={1}
             >
-              Scale smarter.
+              Launch It.
+            </motion.span>
+          </span>
+          <span className="block overflow-hidden">
+            <motion.span
+              className="block text-slate-500"
+              variants={textRevealVariants}
+              initial="hidden"
+              animate="visible"
+              custom={2}
+            >
+              Keep It All.
             </motion.span>
           </span>
         </h1>
@@ -73,10 +82,9 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.5 }}
-          className="text-lg sm:text-xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed"
+          className="text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed"
         >
-          The modern platform for teams who ship fast. Built for scale, designed for speed. Everything you need to
-          build, deploy, and grow.
+          A 4-week cohort where you go from zero to shipping real AI apps and agents, then publish them on our marketplace and keep every rupee you earn. No commissions. No cuts.
         </motion.p>
 
         {/* CTAs */}
@@ -88,47 +96,42 @@ export function Hero() {
         >
           <Button
             size="lg"
-            className="shimmer-btn bg-white text-zinc-950 hover:bg-zinc-200 rounded-full px-8 h-12 text-base font-medium shadow-lg shadow-white/10"
+            className="shimmer-btn bg-emerald-500 text-slate-950 hover:bg-emerald-400 rounded-full px-8 h-12 text-base font-medium shadow-lg shadow-emerald-500/20"
           >
-            Start Building
+            Apply Now
             <ArrowRight className="ml-2 w-4 h-4" />
           </Button>
           <Button
             variant="outline"
             size="lg"
-            className="rounded-full px-8 h-12 text-base font-medium border-zinc-800 text-zinc-300 hover:bg-zinc-900 hover:text-white hover:border-zinc-700 bg-transparent"
+            className="rounded-full px-8 h-12 text-base font-medium border-slate-700 text-slate-300 hover:bg-slate-900 hover:text-white hover:border-slate-600 bg-transparent"
           >
-            View Demo
+            View Curriculum
           </Button>
         </motion.div>
 
-        {/* Social Proof */}
+        {/* Stats */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.7 }}
-          className="flex flex-col items-center gap-4"
+          className="flex flex-wrap items-center justify-center gap-8 sm:gap-12"
         >
-          <div className="flex items-center -space-x-3">
-            {avatars.map((avatar, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, scale: 0.5, x: -20 }}
-                animate={{ opacity: 1, scale: 1, x: 0 }}
-                transition={{ duration: 0.4, delay: 0.8 + index * 0.1 }}
-                className="relative"
-              >
-                <img
-                  src={avatar || "/placeholder.svg"}
-                  alt=""
-                  className="w-10 h-10 rounded-full border-2 border-zinc-950 object-cover"
-                />
-              </motion.div>
-            ))}
-          </div>
-          <p className="text-sm text-zinc-500">
-            Trusted by <span className="text-zinc-300 font-medium">2,000+</span> teams worldwide
-          </p>
+          {stats.map((stat, index) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.8 + index * 0.1 }}
+              className="flex flex-col items-center gap-2"
+            >
+              <div className="flex items-center gap-2">
+                <stat.icon className="w-5 h-5 text-emerald-500" />
+                <span className="text-2xl sm:text-3xl font-bold text-white">{stat.value}</span>
+              </div>
+              <span className="text-sm text-slate-500">{stat.label}</span>
+            </motion.div>
+          ))}
         </motion.div>
       </div>
     </section>
