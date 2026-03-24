@@ -2,7 +2,7 @@
 
 import { motion, useInView } from "framer-motion"
 import { useRef } from "react"
-import { Brain, Code, Bot, Rocket, BookOpen, Users } from "lucide-react"
+import { Brain, Code, Bot, Rocket, BookOpen, Users, PlayCircle } from "lucide-react"
 
 const containerVariants = {
   hidden: {},
@@ -80,7 +80,7 @@ export function BentoGrid() {
             4-Week Curriculum
           </h2>
           <p className="text-[#6B5B9E] max-w-2xl mx-auto">
-            Live classes 2 to 3 times per week. All sessions recorded for replay. Each class builds directly on the last.
+            Live classes 2 to 3 times per week, plus 2-4 recorded project videos each week where we build products together. All sessions available for replay.
           </p>
         </motion.div>
 
@@ -147,7 +147,7 @@ export function BentoGrid() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-4"
+          className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4"
         >
           <div className="flex items-center gap-4 p-4 rounded-xl bg-[#F4F1FB] border border-[#E8E3F3]">
             <div className="p-2 rounded-lg bg-white border border-[#E8E3F3]">
@@ -165,6 +165,15 @@ export function BentoGrid() {
             <div>
               <h4 className="font-medium text-[#1A0A3D]">Community + Office Hours</h4>
               <p className="text-sm text-[#6B5B9E]">Peer support and weekly unblock sessions</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 p-4 rounded-xl bg-[#F4F1FB] border border-[#E8E3F3]">
+            <div className="p-2 rounded-lg bg-white border border-[#E8E3F3]">
+              <PlayCircle className="w-5 h-5 text-[#492B8C]" />
+            </div>
+            <div>
+              <h4 className="font-medium text-[#1A0A3D]">2-4 Recorded Videos/Week</h4>
+              <p className="text-sm text-[#6B5B9E]">Watch us build products step-by-step</p>
             </div>
           </div>
         </motion.div>

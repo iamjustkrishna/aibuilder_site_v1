@@ -1,12 +1,13 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { ArrowRight, Calendar, Video, Percent } from "lucide-react"
+import { ArrowRight, Calendar, Video, Percent, PlayCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const stats = [
   { icon: Calendar, value: "4", label: "Weeks" },
   { icon: Video, value: "2-3x", label: "Live Classes/wk" },
+  { icon: PlayCircle, value: "2-4", label: "Recorded Videos/wk" },
   { icon: Percent, value: "100%", label: "Of AI App Earnings" },
 ]
 
