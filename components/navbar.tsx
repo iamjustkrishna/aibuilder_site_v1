@@ -9,6 +9,7 @@ const navItems = [
   { label: "Curriculum", href: "#curriculum" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQs", href: "#faqs" },
+  { label: "Community", href: "https://whatsapp.com/channel/0029VbCJ26365yDAn7xmbq2R", external: true },
 ]
 
 export function Navbar() {
@@ -41,6 +42,8 @@ export function Navbar() {
             <a
               key={item.label}
               href={item.href}
+              target={item.external ? "_blank" : undefined}
+              rel={item.external ? "noopener noreferrer" : undefined}
               className="relative px-4 py-2 text-sm text-[#C3AFFF] hover:text-white transition-colors"
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
@@ -90,6 +93,8 @@ export function Navbar() {
               <a
                 key={item.label}
                 href={item.href}
+                target={item.external ? "_blank" : undefined}
+                rel={item.external ? "noopener noreferrer" : undefined}
                 className="px-4 py-3 text-sm text-[#C3AFFF] hover:text-white hover:bg-[#492B8C] rounded-lg transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >

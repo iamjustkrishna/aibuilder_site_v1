@@ -5,8 +5,15 @@ import { useRef } from "react"
 import { Sparkles, Mail } from "lucide-react"
 
 const footerLinks = {
-  Program: ["Curriculum", "FAQs"],
-  Resources: ["Session Recordings", "Templates", "Community"],
+  Program: [
+    { label: "Curriculum", href: "#curriculum" },
+    { label: "FAQs", href: "#faqs" },
+  ],
+  Resources: [
+    { label: "Session Recordings", href: "#curriculum" },
+    { label: "Templates", href: "#curriculum" },
+    { label: "Community", href: "https://whatsapp.com/channel/0029VbCJ26365yDAn7xmbq2R", external: true },
+  ],
 }
 
 export function Footer() {
@@ -44,9 +51,14 @@ export function Footer() {
               <h4 className="text-sm font-semibold text-white mb-4">{title}</h4>
               <ul className="space-y-3">
                 {links.map((link) => (
-                  <li key={link}>
-                    <a href="#" className="text-sm text-[#C3AFFF] hover:text-[#FF6B34] transition-colors">
-                      {link}
+                  <li key={link.label}>
+                    <a 
+                      href={link.href} 
+                      target={link.external ? "_blank" : undefined}
+                      rel={link.external ? "noopener noreferrer" : undefined}
+                      className="text-sm text-[#C3AFFF] hover:text-[#FF6B34] transition-colors"
+                    >
+                      {link.label}
                     </a>
                   </li>
                 ))}
