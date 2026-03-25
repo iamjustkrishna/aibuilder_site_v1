@@ -17,8 +17,8 @@ export default function Home() {
         <Hero />
         <LogoMarquee />
         <BentoGrid />
-        <AITools />
         <Pricing />
+        <AITools />
         <FAQs />
         <FinalCTA />
         <Footer />
