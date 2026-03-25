@@ -15,7 +15,10 @@ import {
   Mail,
   MessageCircle,
   BookOpen,
-  X
+  X,
+  Wrench,
+  Zap,
+  Gift
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -36,6 +39,48 @@ interface DashboardContentProps {
   user: User
   profile: Profile | null
 }
+
+// Best AI Tools to use
+const aiTools = [
+  {
+    name: "v0.app",
+    description: "Build full-stack apps with AI. Get free credits to start!",
+    url: "https://v0.app/ref/RAIJ6R",
+    rank: 1,
+    highlight: true,
+    badge: "Free Credits",
+  },
+  {
+    name: "Cursor",
+    description: "AI-powered code editor. The best IDE for AI development.",
+    url: "https://cursor.sh",
+    rank: 2,
+  },
+  {
+    name: "Claude",
+    description: "Advanced AI assistant for coding and reasoning.",
+    url: "https://claude.ai",
+    rank: 3,
+  },
+  {
+    name: "ChatGPT",
+    description: "OpenAI's powerful assistant for any task.",
+    url: "https://chat.openai.com",
+    rank: 4,
+  },
+  {
+    name: "Replit",
+    description: "Build and deploy apps instantly with AI help.",
+    url: "https://replit.com",
+    rank: 5,
+  },
+  {
+    name: "Bolt.new",
+    description: "Ship full-stack apps from your browser.",
+    url: "https://bolt.new",
+    rank: 6,
+  },
+]
 
 // YouTube videos for learning
 const youtubeVideos = [
@@ -366,6 +411,57 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                 </a>
               </Button>
             )}
+          </div>
+        </div>
+
+        {/* Best AI Tools Section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-[#1A0A3D] mb-4" style={{ fontFamily: "var(--font-cal-sans)" }}>
+            <Wrench className="w-5 h-5 inline-block mr-2 text-[#FF6B34]" />
+            Best AI Tools to Use
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {aiTools.map((tool, index) => (
+              <a
+                key={index}
+                href={tool.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`group relative p-5 rounded-xl border transition-all hover:shadow-lg ${
+                  tool.highlight 
+                    ? "bg-gradient-to-br from-[#FF6B34]/10 to-[#FFD13F]/10 border-[#FF6B34] hover:border-[#FF6B34]" 
+                    : "bg-white border-[#E8E3F3] hover:border-[#492B8C]"
+                }`}
+              >
+                {/* Rank Badge */}
+                <div className={`absolute -top-2 -left-2 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-md ${
+                  tool.rank === 1 ? "bg-[#FF6B34] text-white" : "bg-[#F4F1FB] text-[#492B8C]"
+                }`}>
+                  #{tool.rank}
+                </div>
+                
+                {/* Free Credits Badge */}
+                {tool.badge && (
+                  <div className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-[#00C8A7] text-white text-xs font-medium flex items-center gap-1 shadow-md">
+                    <Gift className="w-3 h-3" />
+                    {tool.badge}
+                  </div>
+                )}
+                
+                <div className="flex items-start gap-3 mt-2">
+                  <div className={`p-2 rounded-lg ${tool.highlight ? "bg-[#FF6B34]" : "bg-[#F4F1FB] group-hover:bg-[#492B8C]"} transition-colors`}>
+                    <Zap className={`w-5 h-5 ${tool.highlight ? "text-white" : "text-[#492B8C] group-hover:text-white"} transition-colors`} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className={`font-bold mb-1 ${tool.highlight ? "text-[#FF6B34]" : "text-[#1A0A3D] group-hover:text-[#492B8C]"} transition-colors`}>
+                      {tool.name}
+                    </h3>
+                    <p className="text-sm text-[#6B5B9E]">{tool.description}</p>
+                  </div>
+                  <ExternalLink className={`w-4 h-4 ${tool.highlight ? "text-[#FF6B34]" : "text-[#6B5B9E]"} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                </div>
+              </a>
+            ))}
           </div>
         </div>
 
