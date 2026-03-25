@@ -9,6 +9,8 @@
     "start": "next start"
   },
   "dependencies": {
+    "ai": "^6.0.0",
+    "@ai-sdk/react": "^3.0.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.10",
     "@emotion/is-prop-valid": "latest",
