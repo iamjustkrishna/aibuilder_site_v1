@@ -61,8 +61,13 @@ export function Navbar() {
           ))}
         </div>
 
-        {/* CTA Button */}
+        {/* CTA Buttons */}
         <div className="hidden md:flex items-center gap-3">
+          <Button size="sm" asChild variant="ghost" className="text-[#C3AFFF] hover:text-white hover:bg-[#492B8C] rounded-full px-4 font-medium">
+            <a href="/login">
+              Login
+            </a>
+          </Button>
           <Button size="sm" asChild className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full px-5 font-medium">
             <a href="https://docs.google.com/forms/d/e/1FAIpQLSelAKQrkxz97RxCo7B8K-xNOAe3-wXhtmnxyW6qx-WNA_82ZA/viewform?usp=header" target="_blank" rel="noopener noreferrer">
               Express Interest
@@ -102,6 +107,11 @@ export function Navbar() {
               </a>
             ))}
             <hr className="border-[#492B8C] my-2" />
+            <Button asChild variant="ghost" className="text-[#C3AFFF] hover:text-white hover:bg-[#492B8C] rounded-full font-medium justify-center">
+              <a href="/login">
+                Login
+              </a>
+            </Button>
             <Button asChild className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full font-medium">
               <a href="https://docs.google.com/forms/d/e/1FAIpQLSelAKQrkxz97RxCo7B8K-xNOAe3-wXhtmnxyW6qx-WNA_82ZA/viewform?usp=header" target="_blank" rel="noopener noreferrer">
                 Express Interest
