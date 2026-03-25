@@ -1,35 +1,123 @@
 "use client"
 
-import { useState } from "react"
-import { useChat } from "@ai-sdk/react"
-import { DefaultChatTransport } from "ai"
+import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { MessageCircle, X, Send, Bot, User, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
+interface Message {
+  id: string
+  role: "user" | "assistant"
+  content: string
+}
+
 export function Chatbot() {
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState("")
+  const [messages, setMessages] = useState<Message[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({ api: "/api/chat" }),
-  })
-
-  const isLoading = status === "streaming" || status === "submitted"
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
-    sendMessage({ text: input })
-    setInput("")
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
-  // Helper to extract text from message parts
-  const getMessageText = (message: typeof messages[0]) => {
-    return message.parts
-      ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
-      .map((p) => p.text)
-      .join("") || ""
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim() || isLoading) return
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: input.trim(),
+    }
+
+    setMessages((prev) => [...prev, userMessage])
+    setInput("")
+    setIsLoading(true)
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+        }),
+      })
+
+      if (!response.ok) throw new Error("Failed to get response")
+
+      const data = await response.json()
+      
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: data.message || "Sorry, I couldn't process that request.",
+      }
+
+      setMessages((prev) => [...prev, assistantMessage])
+    } catch (error) {
+      console.error("Chat error:", error)
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "Sorry, something went wrong. Please try again or contact support@aibuilder.space",
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleQuickQuestion = (question: string) => {
+    setInput(question)
+    // Trigger submit programmatically
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: question,
+    }
+    setMessages((prev) => [...prev, userMessage])
+    setIsLoading(true)
+
+    fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [...messages, userMessage].map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: data.message || "Sorry, I couldn't process that request.",
+        }
+        setMessages((prev) => [...prev, assistantMessage])
+      })
+      .catch(() => {
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: "Sorry, something went wrong. Please try again.",
+        }
+        setMessages((prev) => [...prev, errorMessage])
+      })
+      .finally(() => {
+        setIsLoading(false)
+        setInput("")
+      })
   }
 
   return (
@@ -66,7 +154,7 @@ export function Chatbot() {
                 </div>
                 <div>
                   <h3 className="font-bold text-sm">AI Builder Assistant</h3>
-                  <p className="text-xs text-white/70">Ask me anything about the cohort</p>
+                  <p className="text-xs text-white/70">Powered by Gemini</p>
                 </div>
               </div>
             </div>
@@ -86,11 +174,9 @@ export function Chatbot() {
                     {["What will I learn?", "Do I need coding experience?", "How do I earn 100%?"].map((q) => (
                       <button
                         key={q}
-                        onClick={() => {
-                          setInput(q)
-                          sendMessage({ text: q })
-                        }}
-                        className="px-3 py-1.5 text-xs rounded-full bg-white border border-[#E8E3F3] text-[#492B8C] hover:bg-[#492B8C] hover:text-white transition-colors"
+                        onClick={() => handleQuickQuestion(q)}
+                        disabled={isLoading}
+                        className="px-3 py-1.5 text-xs rounded-full bg-white border border-[#E8E3F3] text-[#492B8C] hover:bg-[#492B8C] hover:text-white transition-colors disabled:opacity-50"
                       >
                         {q}
                       </button>
@@ -116,7 +202,7 @@ export function Chatbot() {
                         : "bg-white border border-[#E8E3F3] text-[#1A0A3D] rounded-tl-sm"
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{getMessageText(message)}</p>
+                    <p className="whitespace-pre-wrap">{message.content}</p>
                   </div>
                   {message.role === "user" && (
                     <div className="w-8 h-8 rounded-full bg-[#F4F1FB] flex items-center justify-center shrink-0">
@@ -126,7 +212,7 @@ export function Chatbot() {
                 </div>
               ))}
 
-              {isLoading && messages[messages.length - 1]?.role === "user" && (
+              {isLoading && (
                 <div className="flex gap-2 justify-start">
                   <div className="w-8 h-8 rounded-full bg-[#492B8C] flex items-center justify-center shrink-0">
                     <Bot className="w-4 h-4 text-white" />
@@ -140,6 +226,8 @@ export function Chatbot() {
                   </div>
                 </div>
               )}
+              
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}

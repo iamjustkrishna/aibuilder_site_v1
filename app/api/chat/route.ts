@@ -1,10 +1,3 @@
-import {
-  consumeStream,
-  convertToModelMessages,
-  streamText,
-  UIMessage,
-} from 'ai'
-
 export const maxDuration = 30
 
 // AI Builder Cohort FAQ context for the chatbot
@@ -42,20 +35,60 @@ WhatsApp Community: Available for all participants
 
 Be concise, helpful, and encouraging. If you don't know something specific (like exact pricing), direct them to express interest via the Google Form or contact support@aibuilder.space.
 
-Always maintain a positive, excited tone about helping people learn AI and build real products.`
+Always maintain a positive, excited tone about helping people learn AI and build real products. Keep responses short and to the point.`
+
+interface Message {
+  role: "user" | "assistant"
+  content: string
+}
 
 export async function POST(req: Request) {
-  const { messages }: { messages: UIMessage[] } = await req.json()
+  const { messages }: { messages: Message[] } = await req.json()
+  
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) {
+    return Response.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 })
+  }
 
-  const result = streamText({
-    model: 'openai/gpt-4o-mini',
-    system: systemPrompt,
-    messages: await convertToModelMessages(messages),
-    abortSignal: req.signal,
-  })
+  // Format messages for Gemini API
+  const contents = messages.map((msg) => ({
+    role: msg.role === "assistant" ? "model" : "user",
+    parts: [{ text: msg.content }],
+  }))
 
-  return result.toUIMessageStreamResponse({
-    originalMessages: messages,
-    consumeSseStream: consumeStream,
-  })
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents,
+          systemInstruction: {
+            parts: [{ text: systemPrompt }],
+          },
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1024,
+          },
+        }),
+      }
+    )
+
+    if (!response.ok) {
+      const error = await response.json()
+      console.error("Gemini API error:", error)
+      return Response.json({ error: "Failed to get response from AI" }, { status: 500 })
+    }
+
+    const data = await response.json()
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response."
+
+    return Response.json({ message: text })
+  } catch (error) {
+    console.error("Chat API error:", error)
+    return Response.json({ error: "Failed to process request" }, { status: 500 })
+  }
 }
