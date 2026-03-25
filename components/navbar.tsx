@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Menu, X, Sparkles } from "lucide-react"
+import { Menu, X, Sparkles, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { createClient } from "@/lib/supabase/client"
+import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 const navItems = [
   { label: "Curriculum", href: "#curriculum" },
@@ -15,7 +17,26 @@ const navItems = [
 export function Navbar() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
+  const [loading, setLoading] = useState(true)
   const navRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setLoading(false)
+    })
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   return (
     <motion.header
@@ -29,7 +50,7 @@ export function Navbar() {
         className="relative flex items-center justify-between px-4 py-3 rounded-full bg-[#2D1A69] backdrop-blur-md border border-[#492B8C]/50 shadow-lg"
       >
         {/* Logo */}
-        <a href="#" className="flex items-center gap-2">
+        <a href="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[#FF6B34] flex items-center justify-center">
             <Sparkles className="w-4 h-4 text-white" />
           </div>
@@ -63,11 +84,22 @@ export function Navbar() {
 
         {/* CTA Button */}
         <div className="hidden md:flex items-center gap-3">
-          <Button size="sm" asChild className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full px-5 font-medium">
-            <a href="/login">
-              Login
-            </a>
-          </Button>
+          {!loading && (
+            user ? (
+              <Button size="sm" asChild className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full px-5 font-medium">
+                <a href="/dashboard" className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Dashboard
+                </a>
+              </Button>
+            ) : (
+              <Button size="sm" asChild className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full px-5 font-medium">
+                <a href="/login">
+                  Login
+                </a>
+              </Button>
+            )
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -102,11 +134,22 @@ export function Navbar() {
               </a>
             ))}
             <hr className="border-[#492B8C] my-2" />
-            <Button asChild className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full font-medium">
-              <a href="/login">
-                Login
-              </a>
-            </Button>
+            {!loading && (
+              user ? (
+                <Button asChild className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full font-medium">
+                  <a href="/dashboard" className="flex items-center justify-center gap-2">
+                    <User className="w-4 h-4" />
+                    Dashboard
+                  </a>
+                </Button>
+              ) : (
+                <Button asChild className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full font-medium">
+                  <a href="/login">
+                    Login
+                  </a>
+                </Button>
+              )
+            )}
           </div>
         </motion.div>
       )}
