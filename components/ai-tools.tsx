@@ -39,25 +39,29 @@ export function AITools() {
           transition={{ duration: 0.5 }}
           className="text-center"
         >
-          <h2
-            className="text-2xl sm:text-3xl font-bold text-[#1A0A3D] mb-3"
-            style={{ fontFamily: "var(--font-cal-sans)" }}
-          >
-            Best AI Tools to Build With
-          </h2>
-          <p className="text-[#6B5B9E] max-w-xl mx-auto mb-6">
+          {/* Title with inline collapse toggle */}
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <h2
+              className="text-2xl sm:text-3xl font-bold text-[#1A0A3D]"
+              style={{ fontFamily: "var(--font-cal-sans)" }}
+            >
+              Best AI Tools to Build With
+            </h2>
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${
+                isExpanded 
+                  ? "bg-[#492B8C] text-white" 
+                  : "bg-[#FF6B34] text-white animate-pulse shadow-lg shadow-[#FF6B34]/40"
+              }`}
+              aria-label={isExpanded ? "Collapse tools" : "Expand tools"}
+            >
+              <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`} />
+            </button>
+          </div>
+          <p className="text-[#6B5B9E] max-w-xl mx-auto">
             We will teach you how to max out the potential of these kind of AI tools to be productive
           </p>
-          
-          {/* Collapse/Expand Button */}
-          <Button
-            variant="outline"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="rounded-full border-[#492B8C] text-[#492B8C] hover:bg-[#492B8C] hover:text-white px-6 gap-2"
-          >
-            {isExpanded ? "Hide Tools" : "View Tools"}
-            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`} />
-          </Button>
         </motion.div>
 
         {/* Tools - Collapsible */}
