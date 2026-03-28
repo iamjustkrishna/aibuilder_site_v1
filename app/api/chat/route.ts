@@ -55,9 +55,9 @@ interface Message {
 // Generate summary using Gemini
 async function generateSummary(messages: Message[], apiKey: string): Promise<string> {
   const conversationText = messages.map(m => `${m.role}: ${m.content}`).join("\n")
-  
+
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -73,9 +73,9 @@ async function generateSummary(messages: Message[], apiKey: string): Promise<str
       }),
     }
   )
-  
+
   if (!response.ok) return ""
-  
+
   const data = await response.json()
   return data.candidates?.[0]?.content?.parts?.[0]?.text || ""
 }
@@ -93,7 +93,7 @@ export async function POST(req: Request) {
   // Get existing session context
   let existingSummary = ""
   let messageCount = 0
-  
+
   const { data: sessionData } = await supabase
     .from("chat_sessions")
     .select("summary, message_count, messages")
@@ -175,7 +175,7 @@ export async function POST(req: Request) {
         onConflict: "session_id"
       })
 
-    return Response.json({ 
+    return Response.json({
       message: text,
       messageCount: newMessageCount
     })
