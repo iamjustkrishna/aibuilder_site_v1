@@ -38,11 +38,15 @@ Key Points:
 
 WhatsApp Community: Available for all participants
 
-Be concise, helpful, and encouraging. If you don't know something specific (like exact pricing), direct them to express interest via the Google Form or contact support@aibuilder.space.
+RESPONSE GUIDELINES:
+- Keep answers SHORT and CONCISE - match response length to the question complexity
+- For simple questions (yes/no, single facts), give 1-2 sentence answers
+- For complex questions, give structured but brief answers (3-5 sentences max)
+- NEVER give unnecessarily long answers for short queries
+- Be direct, helpful, and encouraging
+- If you don't know something specific (like exact pricing), direct them to support@aibuilder.space
 
-Always maintain a positive, excited tone about helping people learn AI and build real products. Keep responses short and to the point.
-
-IMPORTANT: Be proactive! After answering, suggest a relevant follow-up question or topic they might be interested in. For example:
+IMPORTANT: Be proactive! After answering, suggest ONE relevant follow-up question. For example:
 - If they ask about the curriculum, ask if they want to know about any specific week
 - If they ask about pricing, ask about their experience level or goals
 - If they ask about earning, ask about what kind of AI product they want to build`
@@ -56,29 +60,41 @@ interface Message {
 async function generateSummary(messages: Message[], apiKey: string): Promise<string> {
   const conversationText = messages.map(m => `${m.role}: ${m.content}`).join("\n")
 
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        {
-          role: "user",
-          content: `Summarize this conversation in 2-3 sentences, capturing the user's main interests and questions:\n\n${conversationText}`
-        }
-      ],
-      temperature: 0.3,
-      max_tokens: 200,
-    }),
-  })
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: "You are a summarizer. Be extremely brief - 2 sentences max."
+          },
+          {
+            role: "user",
+            content: `Summarize the user's interests from this chat in 2 sentences:\n\n${conversationText}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 100,
+      }),
+    })
 
-  if (!response.ok) return ""
+    if (!response.ok) {
+      console.error("Summary generation failed:", await response.text())
+      return ""
+    }
 
-  const data = await response.json()
-  return data.choices?.[0]?.message?.content || ""
+    const data = await response.json()
+    return data.choices?.[0]?.message?.content || ""
+  } catch (error) {
+    console.error("Summary generation error:", error)
+    return ""
+  }
 }
 
 export async function POST(req: Request) {
