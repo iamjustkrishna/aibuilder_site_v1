@@ -52,40 +52,41 @@ interface Message {
   content: string
 }
 
-// Generate summary using Gemini
+// Generate summary using Groq
 async function generateSummary(messages: Message[], apiKey: string): Promise<string> {
   const conversationText = messages.map(m => `${m.role}: ${m.content}`).join("\n")
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
           role: "user",
-          parts: [{ text: `Summarize this conversation in 2-3 sentences, capturing the user's main interests and questions:\n\n${conversationText}` }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 200,
-        },
-      }),
-    }
-  )
+          content: `Summarize this conversation in 2-3 sentences, capturing the user's main interests and questions:\n\n${conversationText}`
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 200,
+    }),
+  })
 
   if (!response.ok) return ""
 
   const data = await response.json()
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || ""
+  return data.choices?.[0]?.message?.content || ""
 }
 
 export async function POST(req: Request) {
   const { messages, sessionId }: { messages: Message[], sessionId: string } = await req.json()
 
-  const apiKey = process.env.GEMINI_API_KEY
+  const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) {
-    return Response.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 })
+    return Response.json({ error: "GROQ_API_KEY not configured" }, { status: 500 })
   }
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
@@ -111,46 +112,40 @@ export async function POST(req: Request) {
     contextPrefix = `Previous conversation context: ${existingSummary}\n\nContinuing conversation:\n`
   }
 
-  // Format messages for Gemini API
-  const contents = messages.map((msg) => ({
-    role: msg.role === "assistant" ? "model" : "user",
-    parts: [{ text: msg.content }],
-  }))
-
-  // Add context as system-like prefix if exists
-  if (contextPrefix && contents.length > 0 && contents[0].role === "user") {
-    contents[0].parts[0].text = contextPrefix + contents[0].parts[0].text
-  }
+  // Format messages for Groq API (OpenAI-compatible format)
+  const groqMessages = [
+    { role: "system", content: systemPrompt },
+    ...messages.map((msg) => ({
+      role: msg.role,
+      content: msg.role === "user" && messages.indexOf(msg) === 0 && contextPrefix
+        ? contextPrefix + msg.content
+        : msg.content,
+    })),
+  ]
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents,
-          systemInstruction: {
-            parts: [{ text: systemPrompt }],
-          },
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1024,
-          },
-        }),
-      }
-    )
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: groqMessages,
+        temperature: 0.7,
+        max_tokens: 1024,
+      }),
+    })
 
     if (!response.ok) {
       const error = await response.json()
-      console.error("Gemini API error:", error)
+      console.error("Groq API error:", error)
       return Response.json({ error: "Failed to get response from AI" }, { status: 500 })
     }
 
     const data = await response.json()
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response."
+    const text = data.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response."
 
     // Update message count
     const newMessageCount = messageCount + 1
