@@ -46,54 +46,43 @@ RESPONSE GUIDELINES:
 - Be direct, helpful, and encouraging
 - If you don't know something specific (like exact pricing), direct them to support@aibuilder.space
 
-IMPORTANT: Be proactive! After answering, suggest ONE relevant follow-up question. For example:
-- If they ask about the curriculum, ask if they want to know about any specific week
-- If they ask about pricing, ask about their experience level or goals
-- If they ask about earning, ask about what kind of AI product they want to build`
+IMPORTANT: Be proactive! After answering, suggest ONE relevant follow-up question.
+
+CRITICAL: You MUST end every response with a JSON block containing insights about the user. Format:
+###USER_INSIGHTS###
+{"interest_level": "high/medium/low", "experience": "beginner/intermediate/advanced/unknown", "interested_in": ["curriculum", "pricing", "earning", "tools", "other"], "potential_tier": "standard/contributor/undecided", "key_questions": ["brief question 1"], "notes": "one line about what they seem to want"}
+###END_INSIGHTS###
+
+This JSON block will be parsed and removed from the visible response. Always include it.`
 
 interface Message {
   role: "user" | "assistant"
   content: string
 }
 
-// Generate summary using Groq
-async function generateSummary(messages: Message[], apiKey: string): Promise<string> {
-  const conversationText = messages.map(m => `${m.role}: ${m.content}`).join("\n")
+interface UserInsights {
+  interest_level?: string
+  experience?: string
+  interested_in?: string[]
+  potential_tier?: string
+  key_questions?: string[]
+  notes?: string
+}
 
+function parseInsights(text: string): { cleanText: string; insights: UserInsights | null } {
+  const insightsMatch = text.match(/###USER_INSIGHTS###\s*([\s\S]*?)\s*###END_INSIGHTS###/)
+  
+  if (!insightsMatch) {
+    return { cleanText: text, insights: null }
+  }
+
+  const cleanText = text.replace(/###USER_INSIGHTS###[\s\S]*?###END_INSIGHTS###/, "").trim()
+  
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          {
-            role: "system",
-            content: "You are a summarizer. Be extremely brief - 2 sentences max."
-          },
-          {
-            role: "user",
-            content: `Summarize the user's interests from this chat in 2 sentences:\n\n${conversationText}`
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 100,
-      }),
-    })
-
-    if (!response.ok) {
-      console.error("Summary generation failed:", await response.text())
-      return ""
-    }
-
-    const data = await response.json()
-    return data.choices?.[0]?.message?.content || ""
-  } catch (error) {
-    console.error("Summary generation error:", error)
-    return ""
+    const insights = JSON.parse(insightsMatch[1].trim())
+    return { cleanText, insights }
+  } catch {
+    return { cleanText, insights: null }
   }
 }
 
@@ -107,35 +96,34 @@ export async function POST(req: Request) {
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-  // Get existing session context
-  let existingSummary = ""
-  let messageCount = 0
-
+  // Get existing session data
+  let existingInsights: UserInsights = {}
   const { data: sessionData } = await supabase
     .from("chat_sessions")
-    .select("summary, message_count, messages")
+    .select("summary, message_count")
     .eq("session_id", sessionId)
     .single()
 
-  if (sessionData) {
-    existingSummary = sessionData.summary || ""
-    messageCount = sessionData.message_count || 0
+  if (sessionData?.summary) {
+    try {
+      existingInsights = JSON.parse(sessionData.summary)
+    } catch {
+      existingInsights = {}
+    }
   }
 
-  // Build context with previous summary if exists
-  let contextPrefix = ""
-  if (existingSummary) {
-    contextPrefix = `Previous conversation context: ${existingSummary}\n\nContinuing conversation:\n`
+  // Add context about previous insights if available
+  let contextNote = ""
+  if (Object.keys(existingInsights).length > 0) {
+    contextNote = `\n\nPrevious user context: ${JSON.stringify(existingInsights)}`
   }
 
-  // Format messages for Groq API (OpenAI-compatible format)
+  // Format messages for Groq API
   const groqMessages = [
-    { role: "system", content: systemPrompt },
+    { role: "system", content: systemPrompt + contextNote },
     ...messages.map((msg) => ({
       role: msg.role,
-      content: msg.role === "user" && messages.indexOf(msg) === 0 && contextPrefix
-        ? contextPrefix + msg.content
-        : msg.content,
+      content: msg.content,
     })),
   ]
 
@@ -161,34 +149,37 @@ export async function POST(req: Request) {
     }
 
     const data = await response.json()
-    const text = data.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response."
+    const rawText = data.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response."
 
-    // Update message count
-    const newMessageCount = messageCount + 1
-    const allMessages = [...messages, { role: "assistant" as const, content: text }]
+    // Parse insights from response
+    const { cleanText, insights } = parseInsights(rawText)
 
-    // Generate summary every 3 messages
-    let newSummary = existingSummary
-    if (newMessageCount % 3 === 0) {
-      newSummary = await generateSummary(allMessages, apiKey)
+    // Merge new insights with existing ones
+    if (insights) {
+      const mergedInsights: UserInsights = {
+        ...existingInsights,
+        ...insights,
+        interested_in: [...new Set([...(existingInsights.interested_in || []), ...(insights.interested_in || [])])],
+        key_questions: [...(existingInsights.key_questions || []), ...(insights.key_questions || [])].slice(-5),
+      }
+
+      // Save to database
+      const messageCount = (sessionData?.message_count || 0) + 1
+      
+      await supabase
+        .from("chat_sessions")
+        .upsert({
+          session_id: sessionId,
+          summary: JSON.stringify(mergedInsights),
+          message_count: messageCount,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: "session_id"
+        })
     }
 
-    // Upsert session data
-    await supabase
-      .from("chat_sessions")
-      .upsert({
-        session_id: sessionId,
-        messages: allMessages,
-        summary: newSummary,
-        message_count: newMessageCount,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: "session_id"
-      })
-
     return Response.json({
-      message: text,
-      messageCount: newMessageCount
+      message: cleanText,
     })
   } catch (error) {
     console.error("Chat API error:", error)
