@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { MessageCircle, X, Send, Bot, User, Loader2 } from "lucide-react"
+import { MessageCircle, X, Send, Bot, User, Loader2, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface Message {
@@ -11,12 +11,31 @@ interface Message {
   content: string
 }
 
+// Generate a unique session ID
+function generateSessionId(): string {
+  return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+}
+
 export function Chatbot() {
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [sessionId, setSessionId] = useState<string>("")
+  const [messageCount, setMessageCount] = useState(0)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Initialize or restore session ID
+  useEffect(() => {
+    const storedSessionId = localStorage.getItem("chatbot_session_id")
+    if (storedSessionId) {
+      setSessionId(storedSessionId)
+    } else {
+      const newSessionId = generateSessionId()
+      localStorage.setItem("chatbot_session_id", newSessionId)
+      setSessionId(newSessionId)
+    }
+  }, [])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -26,9 +45,34 @@ export function Chatbot() {
     scrollToBottom()
   }, [messages])
 
+  // Proactive questions based on conversation progress
+  const getProactiveQuestions = () => {
+    if (messages.length === 0) {
+      return ["What will I learn?", "Do I need coding experience?", "How do I earn 100%?"]
+    }
+    
+    const lastMessage = messages[messages.length - 1]?.content.toLowerCase() || ""
+    
+    if (lastMessage.includes("curriculum") || lastMessage.includes("week")) {
+      return ["Tell me about Week 2", "What tools will I use?", "Are sessions recorded?"]
+    }
+    if (lastMessage.includes("pricing") || lastMessage.includes("tier") || lastMessage.includes("contributor")) {
+      return ["What's in Standard tier?", "How does earning work?", "Can I upgrade later?"]
+    }
+    if (lastMessage.includes("earn") || lastMessage.includes("store") || lastMessage.includes("100%")) {
+      return ["What can I build?", "When can I start earning?", "How do I set prices?"]
+    }
+    if (lastMessage.includes("coding") || lastMessage.includes("beginner") || lastMessage.includes("experience")) {
+      return ["What tools are taught?", "Is there support?", "How long are sessions?"]
+    }
+    
+    // Default follow-up questions
+    return ["Tell me about pricing", "What's the schedule?", "How do I join?"]
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+    if (!input.trim() || isLoading || !sessionId) return
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -49,12 +93,15 @@ export function Chatbot() {
             role: m.role,
             content: m.content,
           })),
+          sessionId,
         }),
       })
 
       if (!response.ok) throw new Error("Failed to get response")
 
       const data = await response.json()
+      
+      setMessageCount(data.messageCount || messageCount + 1)
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -76,48 +123,60 @@ export function Chatbot() {
     }
   }
 
-  const handleQuickQuestion = (question: string) => {
-    setInput(question)
-    // Trigger submit programmatically
+  const handleQuickQuestion = async (question: string) => {
+    if (isLoading || !sessionId) return
+    
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
       content: question,
     }
+    
     setMessages((prev) => [...prev, userMessage])
     setIsLoading(true)
 
-    fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: [...messages, userMessage].map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-      }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: data.message || "Sorry, I couldn't process that request.",
-        }
-        setMessages((prev) => [...prev, assistantMessage])
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          sessionId,
+        }),
       })
-      .catch(() => {
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: "Sorry, something went wrong. Please try again.",
-        }
-        setMessages((prev) => [...prev, errorMessage])
-      })
-      .finally(() => {
-        setIsLoading(false)
-        setInput("")
-      })
+
+      const data = await response.json()
+      
+      setMessageCount(data.messageCount || messageCount + 1)
+      
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: data.message || "Sorry, I couldn't process that request.",
+      }
+      setMessages((prev) => [...prev, assistantMessage])
+    } catch {
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: "Sorry, something went wrong. Please try again.",
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
+      setInput("")
+    }
+  }
+
+  const clearChat = () => {
+    const newSessionId = generateSessionId()
+    localStorage.setItem("chatbot_session_id", newSessionId)
+    setSessionId(newSessionId)
+    setMessages([])
+    setMessageCount(0)
   }
 
   return (
@@ -148,15 +207,33 @@ export function Chatbot() {
           >
             {/* Header */}
             <div className="p-4 bg-gradient-to-r from-[#2D1A69] to-[#492B8C] text-white">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                  <Bot className="w-5 h-5" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm">AI Builder Assistant</h3>
+                    <p className="text-xs text-white/70">Powered by Gemini</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-sm">AI Builder Assistant</h3>
-                  <p className="text-xs text-white/70">Powered by Gemini</p>
-                </div>
+                {messages.length > 0 && (
+                  <button 
+                    onClick={clearChat}
+                    className="text-xs text-white/70 hover:text-white transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
+              
+              {/* Context indicator */}
+              {messageCount > 0 && messageCount % 3 === 0 && (
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-white/80 bg-white/10 rounded-full px-2 py-1 w-fit">
+                  <Sparkles className="w-3 h-3" />
+                  <span>Context saved</span>
+                </div>
+              )}
             </div>
 
             {/* Messages */}
@@ -170,18 +247,6 @@ export function Chatbot() {
                   <p className="text-[#6B5B9E] text-sm">
                     Ask me about the curriculum, pricing, or anything else about the program.
                   </p>
-                  <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                    {["What will I learn?", "Do I need coding experience?", "How do I earn 100%?"].map((q) => (
-                      <button
-                        key={q}
-                        onClick={() => handleQuickQuestion(q)}
-                        disabled={isLoading}
-                        className="px-3 py-1.5 text-xs rounded-full bg-white border border-[#E8E3F3] text-[#492B8C] hover:bg-[#492B8C] hover:text-white transition-colors disabled:opacity-50"
-                      >
-                        {q}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               )}
 
@@ -224,6 +289,41 @@ export function Chatbot() {
                       <span className="w-2 h-2 bg-[#492B8C] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                     </div>
                   </div>
+                </div>
+              )}
+              
+              {/* Proactive follow-up questions */}
+              {messages.length > 0 && !isLoading && (
+                <div className="pt-2">
+                  <p className="text-xs text-[#6B5B9E] mb-2">Suggested questions:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {getProactiveQuestions().map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => handleQuickQuestion(q)}
+                        disabled={isLoading}
+                        className="px-3 py-1.5 text-xs rounded-full bg-white border border-[#E8E3F3] text-[#492B8C] hover:bg-[#492B8C] hover:text-white transition-colors disabled:opacity-50"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Initial questions */}
+              {messages.length === 0 && (
+                <div className="flex flex-wrap gap-2 justify-center mt-4">
+                  {getProactiveQuestions().map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => handleQuickQuestion(q)}
+                      disabled={isLoading}
+                      className="px-3 py-1.5 text-xs rounded-full bg-white border border-[#E8E3F3] text-[#492B8C] hover:bg-[#492B8C] hover:text-white transition-colors disabled:opacity-50"
+                    >
+                      {q}
+                    </button>
+                  ))}
                 </div>
               )}
               
