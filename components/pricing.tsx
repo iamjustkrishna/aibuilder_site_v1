@@ -2,37 +2,56 @@
 
 import { motion, useInView } from "framer-motion"
 import { useRef } from "react"
-import { Check, Star, Store } from "lucide-react"
+import { Check, Star, Store, Users, Rocket } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const plans = [
   {
-    name: "Standard",
-    description: "Perfect for those who want to learn AI development, are exploring options, or want to check if this is right for them. Full curriculum access with option to upgrade later.",
+    name: "Foundational",
+    tagline: "Learn the Basics",
+    description: "Perfect for beginners who want to understand AI development fundamentals through live sessions and recordings.",
     features: [
       "All 4 weeks of live sessions",
       "All session recordings",
-      "Full resource pack per week",
+      "Free resource pack",
       "Community chat access",
       "Certificate of completion",
-      "Can upgrade to Contributor anytime",
     ],
-    cta: "Apply as Standard",
+    cta: "Apply as Foundational",
     highlighted: false,
+    icon: Star,
   },
   {
-    name: "Contributor",
-    description: "For those ready to build and earn. Get everything in Standard plus access to our AI Store where you can upload and sell your AI products and keep 100% of your earnings.",
+    name: "Builder",
+    tagline: "Learn + Guidance",
+    description: "Everything in Foundational plus dedicated mentor support to help you build your first AI product with confidence.",
     features: [
-      "Everything in Standard",
+      "Everything in Foundational",
+      "1-on-1 mentor support",
+      "Code review sessions",
+      "Priority Q&A in sessions",
+      "Project feedback & guidance",
+      "Can upgrade to Architect anytime",
+    ],
+    cta: "Apply as Builder",
+    highlighted: false,
+    icon: Users,
+  },
+  {
+    name: "Architect",
+    tagline: "Learn + Earn",
+    description: "The complete package. Everything in Builder plus AI Store access where you can sell your products and keep 100% of earnings.",
+    features: [
+      "Everything in Builder",
       "AI Store publishing access",
       "Keep 100% of your earnings",
       "Priority platform placement",
       "Early audience access",
-      "Shape the platform with feedback",
+      "Shape the platform roadmap",
     ],
-    cta: "Apply as Contributor",
+    cta: "Apply as Architect",
     highlighted: true,
+    icon: Rocket,
   },
 ]
 
@@ -74,10 +93,10 @@ export function Pricing() {
             className="text-3xl sm:text-4xl font-bold text-[#1A0A3D] mb-4"
             style={{ fontFamily: "var(--font-instrument-sans)" }}
           >
-            Join the Cohort
+            Choose Your Path
           </h2>
           <p className="text-[#6B5B9E] max-w-2xl mx-auto">
-            Two paths to join. Standard to learn, Contributor to learn and earn. Exact fees shared during onboarding.
+            Three tiers to match your goals. Learn, build with support, or create and earn. Exact fees shared during onboarding.
           </p>
         </motion.div>
 
@@ -86,7 +105,7 @@ export function Pricing() {
           initial={{ opacity: 0, y: 40 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-20"
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-20"
         >
           {plans.map((plan, index) => (
             <motion.div
@@ -104,13 +123,21 @@ export function Pricing() {
 
               {plan.highlighted && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#FF6B34] text-white text-xs font-medium rounded-full">
-                  Recommended
+                  Best Value
                 </div>
               )}
 
               <div className="mb-6">
-                <h3 className="text-xl font-semibold text-[#1A0A3D] mb-2">{plan.name}</h3>
-                <p className="text-[#6B5B9E] text-sm leading-relaxed">{plan.description}</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`p-2 rounded-lg ${plan.highlighted ? "bg-[#FF6B34]/10" : "bg-[#F4F1FB]"}`}>
+                    <plan.icon className={`w-5 h-5 ${plan.highlighted ? "text-[#FF6B34]" : "text-[#492B8C]"}`} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-[#1A0A3D]">{plan.name}</h3>
+                    <p className="text-xs text-[#6B5B9E]">{plan.tagline}</p>
+                  </div>
+                </div>
+                <p className="text-[#6B5B9E] text-sm leading-relaxed mt-3">{plan.description}</p>
               </div>
 
               <ul className="space-y-3 mb-8">
@@ -138,7 +165,7 @@ export function Pricing() {
           ))}
         </motion.div>
 
-        {/* 100% Earnings Section - Contributors Only */}
+        {/* 100% Earnings Section - Architects Only */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -147,16 +174,16 @@ export function Pricing() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-[#E8E3F3] mb-6">
             <Store className="w-4 h-4 text-[#FF6B34]" />
-            <span className="text-sm text-[#492B8C] font-medium">Contributors: 100% of AI App Earnings</span>
+            <span className="text-sm text-[#492B8C] font-medium">Architects: 100% of AI App Earnings</span>
           </div>
           <h3
             className="text-2xl sm:text-3xl font-bold text-[#1A0A3D] mb-4"
             style={{ fontFamily: "var(--font-instrument-sans)" }}
           >
-            How Contributors Earn
+            How Architects Earn
           </h3>
           <p className="text-[#6B5B9E] max-w-2xl mx-auto mb-12">
-            As a Contributor, you get access to our AI Store. Upload your completed AI apps, set your own prices, and keep 100% of earnings from your AI app sales. No platform fees. No commissions.
+            As an Architect, you get access to our AI Store. Upload your completed AI apps, set your own prices, and keep 100% of earnings from your AI app sales. No platform fees. No commissions.
           </p>
 
           {/* How You Earn Steps */}
