@@ -9,6 +9,7 @@ const plans = [
   {
     name: "Foundational",
     tagline: "Learn the Basics",
+    price: "2,000",
     description: "Perfect for beginners who want to understand AI development fundamentals through live sessions and recordings.",
     features: [
       "All 4 weeks of live sessions",
@@ -24,6 +25,7 @@ const plans = [
   {
     name: "Builder",
     tagline: "Learn + Guidance",
+    price: "4,999",
     description: "Everything in Foundational plus dedicated mentor support to help you build your first AI product with confidence.",
     features: [
       "Everything in Foundational",
@@ -40,6 +42,7 @@ const plans = [
   {
     name: "Architect",
     tagline: "Learn + Earn",
+    price: "10,000",
     description: "The complete package. Everything in Builder plus AI Store access where you can sell your products and keep 100% of earnings.",
     features: [
       "Everything in Builder",
@@ -96,7 +99,7 @@ export function Pricing() {
             Choose Your Path
           </h2>
           <p className="text-[#6B5B9E] max-w-2xl mx-auto">
-            Three tiers to match your goals. Learn, build with support, or create and earn. Exact fees shared during onboarding.
+            Three tiers to match your goals. Learn, build with support, or create and earn.
           </p>
         </motion.div>
 
@@ -137,7 +140,11 @@ export function Pricing() {
                     <p className="text-xs text-[#6B5B9E]">{plan.tagline}</p>
                   </div>
                 </div>
-                <p className="text-[#6B5B9E] text-sm leading-relaxed mt-3">{plan.description}</p>
+                <div className="mt-4 mb-3">
+                  <span className="text-3xl font-bold text-[#1A0A3D]">₹{plan.price}</span>
+                  <span className="text-[#6B5B9E] text-sm ml-1">one-time</span>
+                </div>
+                <p className="text-[#6B5B9E] text-sm leading-relaxed">{plan.description}</p>
               </div>
 
               <ul className="space-y-3 mb-8">
