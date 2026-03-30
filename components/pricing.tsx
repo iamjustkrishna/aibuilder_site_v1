@@ -1,15 +1,17 @@
 "use client"
 
 import { motion, useInView } from "framer-motion"
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import { Check, Star, Store, Users, Rocket } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
+// Prices in USD (converted from INR at ~83 INR/USD)
 const plans = [
   {
     name: "Foundational",
     tagline: "Learn the Basics",
-    price: "2,000",
+    priceUSD: 24,
+    priceINR: 2000,
     description: "Perfect for beginners who want to understand AI development fundamentals through live sessions and recordings.",
     features: [
       "All 4 weeks of live sessions",
@@ -25,7 +27,8 @@ const plans = [
   {
     name: "Builder",
     tagline: "Learn + Guidance",
-    price: "4,999",
+    priceUSD: 60,
+    priceINR: 4999,
     description: "Everything in Foundational plus dedicated mentor support to help you build your first AI product with confidence.",
     features: [
       "Everything in Foundational",
@@ -42,7 +45,8 @@ const plans = [
   {
     name: "Architect",
     tagline: "Learn + Earn",
-    price: "10,000",
+    priceUSD: 120,
+    priceINR: 10000,
     description: "The complete package. Everything in Builder plus AI Store access where you can sell your products and keep 100% of earnings.",
     features: [
       "Everything in Builder",
@@ -58,11 +62,16 @@ const plans = [
   },
 ]
 
+const currencies = [
+  { code: "USD", symbol: "$", label: "USD" },
+  { code: "INR", symbol: "₹", label: "INR" },
+]
+
 const earnings = [
   { step: "1", title: "Complete the cohort", desc: "Build your end-to-end AI product during the 4 weeks" },
   { step: "2", title: "Upload to AI Store", desc: "Publish your finished AI app on our marketplace" },
   { step: "3", title: "Set your price", desc: "Free, one-time, or monthly subscription - your choice" },
-  { step: "4", title: "Keep 100% of earnings", desc: "Every rupee from your AI app goes to you. No platform cut." },
+  { step: "4", title: "Keep 100% of earnings", desc: "Every dollar from your AI app goes to you. No platform cut." },
 ]
 
 function BorderBeam() {
@@ -81,6 +90,14 @@ function BorderBeam() {
 export function Pricing() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: "-100px" })
+  const [currency, setCurrency] = useState<"USD" | "INR">("USD")
+
+  const formatPrice = (plan: typeof plans[0]) => {
+    if (currency === "USD") {
+      return `$${plan.priceUSD}`
+    }
+    return `₹${plan.priceINR.toLocaleString("en-IN")}`
+  }
 
   return (
     <section id="pricing" className="py-24 px-4 bg-[#F4F1FB]">
@@ -98,9 +115,26 @@ export function Pricing() {
           >
             Choose Your Path
           </h2>
-          <p className="text-[#6B5B9E] max-w-2xl mx-auto">
+          <p className="text-[#6B5B9E] max-w-2xl mx-auto mb-6">
             Three tiers to match your goals. Learn, build with support, or create and earn.
           </p>
+          
+          {/* Currency Toggle */}
+          <div className="inline-flex items-center gap-1 p-1 rounded-full bg-white border border-[#E8E3F3]">
+            {currencies.map((curr) => (
+              <button
+                key={curr.code}
+                onClick={() => setCurrency(curr.code as "USD" | "INR")}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  currency === curr.code
+                    ? "bg-[#2D1A69] text-white"
+                    : "text-[#6B5B9E] hover:text-[#1A0A3D]"
+                }`}
+              >
+                {curr.symbol} {curr.label}
+              </button>
+            ))}
+          </div>
         </motion.div>
 
         <motion.div
@@ -141,7 +175,7 @@ export function Pricing() {
                   </div>
                 </div>
                 <div className="mt-4 mb-3">
-                  <span className="text-3xl font-bold text-[#1A0A3D]">₹{plan.price}</span>
+                  <span className="text-3xl font-bold text-[#1A0A3D]">{formatPrice(plan)}</span>
                   <span className="text-[#6B5B9E] text-sm ml-1">one-time</span>
                 </div>
                 <p className="text-[#6B5B9E] text-sm leading-relaxed">{plan.description}</p>
