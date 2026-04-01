@@ -1,17 +1,14 @@
 "use client"
 
 import { motion, useInView } from "framer-motion"
-import { useRef, useState } from "react"
+import { useRef } from "react"
 import { Check, Star, Store, Users, Rocket } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-// Prices in USD (converted from INR at ~83 INR/USD)
 const plans = [
   {
     name: "Foundational",
     tagline: "Learn the Basics",
-    priceUSD: 24,
-    priceINR: 2000,
     description: "Perfect for beginners who want to understand AI development fundamentals through live sessions and recordings.",
     features: [
       "All 4 weeks of live sessions",
@@ -27,8 +24,6 @@ const plans = [
   {
     name: "Builder",
     tagline: "Learn + Guidance",
-    priceUSD: 60,
-    priceINR: 4999,
     description: "Everything in Foundational plus dedicated mentor support to help you build your first AI product with confidence.",
     features: [
       "Everything in Foundational",
@@ -45,8 +40,6 @@ const plans = [
   {
     name: "Architect",
     tagline: "Learn + Earn",
-    priceUSD: 120,
-    priceINR: 10000,
     description: "The complete package. Everything in Builder plus AI Store access where you can sell your products and keep 100% of earnings.",
     features: [
       "Everything in Builder",
@@ -60,11 +53,6 @@ const plans = [
     highlighted: true,
     icon: Rocket,
   },
-]
-
-const currencies = [
-  { code: "USD", symbol: "$", label: "USD" },
-  { code: "INR", symbol: "₹", label: "INR" },
 ]
 
 const earnings = [
@@ -90,14 +78,6 @@ function BorderBeam() {
 export function Pricing() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: "-100px" })
-  const [currency, setCurrency] = useState<"USD" | "INR">("USD")
-
-  const formatPrice = (plan: typeof plans[0]) => {
-    if (currency === "USD") {
-      return `$${plan.priceUSD}`
-    }
-    return `₹${plan.priceINR.toLocaleString("en-IN")}`
-  }
 
   return (
     <section id="pricing" className="py-24 px-4 bg-[#F4F1FB]">
@@ -115,26 +95,9 @@ export function Pricing() {
           >
             Choose Your Path
           </h2>
-          <p className="text-[#6B5B9E] max-w-2xl mx-auto mb-6">
+          <p className="text-[#6B5B9E] max-w-2xl mx-auto">
             Three tiers to match your goals. Learn, build with support, or create and earn.
           </p>
-          
-          {/* Currency Toggle */}
-          <div className="inline-flex items-center gap-1 p-1 rounded-full bg-white border border-[#E8E3F3]">
-            {currencies.map((curr) => (
-              <button
-                key={curr.code}
-                onClick={() => setCurrency(curr.code as "USD" | "INR")}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  currency === curr.code
-                    ? "bg-[#2D1A69] text-white"
-                    : "text-[#6B5B9E] hover:text-[#1A0A3D]"
-                }`}
-              >
-                {curr.symbol} {curr.label}
-              </button>
-            ))}
-          </div>
         </motion.div>
 
         <motion.div
@@ -174,11 +137,7 @@ export function Pricing() {
                     <p className="text-xs text-[#6B5B9E]">{plan.tagline}</p>
                   </div>
                 </div>
-                <div className="mt-4 mb-3">
-                  <span className="text-3xl font-bold text-[#1A0A3D]">{formatPrice(plan)}</span>
-                  <span className="text-[#6B5B9E] text-sm ml-1">one-time</span>
-                </div>
-                <p className="text-[#6B5B9E] text-sm leading-relaxed">{plan.description}</p>
+                <p className="text-[#6B5B9E] text-sm leading-relaxed mt-3">{plan.description}</p>
               </div>
 
               <ul className="space-y-3 mb-8">
@@ -204,6 +163,24 @@ export function Pricing() {
               </Button>
             </motion.div>
           ))}
+        </motion.div>
+
+        {/* Contact for Pricing */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="text-center mb-20"
+        >
+          <div className="inline-flex flex-col sm:flex-row items-center gap-3 px-6 py-4 rounded-2xl bg-white border border-[#E8E3F3] shadow-sm">
+            <p className="text-[#1A0A3D] font-medium">Want to know the pricing?</p>
+            <a 
+              href="mailto:support@aibuilder.space" 
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#2D1A69] text-white font-medium hover:bg-[#492B8C] transition-colors"
+            >
+              Contact Us
+            </a>
+          </div>
         </motion.div>
 
         {/* 100% Earnings Section - Architects Only */}
