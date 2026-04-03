@@ -67,6 +67,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [activeTab, setActiveTab] = useState<"resources" | "users">("resources")
   const [resources, setResources] = useState<Resource[]>([])
   const [users, setUsers] = useState<User[]>([])
+  const [adminEmails, setAdminEmails] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -85,8 +86,28 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const supabase = createClient()
 
   useEffect(() => {
+    fetchAdminEmails()
+  }, [])
+
+  useEffect(() => {
     fetchData()
   }, [activeTab])
+
+  async function fetchAdminEmails() {
+    try {
+      const res = await fetch("/api/admin/emails")
+      if (res.ok) {
+        const data = await res.json()
+        setAdminEmails(data.emails || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch admin emails")
+    }
+  }
+
+  function isUserAdmin(email: string): boolean {
+    return adminEmails.map(e => e.toLowerCase()).includes(email?.toLowerCase())
+  }
 
   async function fetchData() {
     setLoading(true)
@@ -491,13 +512,21 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
               <div className="grid gap-3">
                 {filteredUsers.map((user) => {
                   const tierData = tierConfig[user.membership_tier as keyof typeof tierConfig] || tierConfig.initial
+                  const userIsAdmin = isUserAdmin(user.email)
                   return (
                     <div key={user.id} className="bg-white/95 backdrop-blur rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full ${tierData.color} flex items-center justify-center text-white font-bold flex-shrink-0`}>
+                      <div className={`w-10 h-10 rounded-full ${userIsAdmin ? "bg-[#FF6B34]" : tierData.color} flex items-center justify-center text-white font-bold flex-shrink-0`}>
                         {(user.full_name?.[0] || user.email?.[0] || "?").toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-[#1A0A3D] truncate">{user.full_name || "No name"}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-[#1A0A3D] truncate">{user.full_name || "No name"}</h4>
+                          {userIsAdmin && (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-[#FF6B34] text-white font-medium">
+                              Admin
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-[#6B5B9E] truncate">{user.email}</p>
                         <p className="text-xs text-[#6B5B9E]/60 mt-1">
                           Joined {new Date(user.created_at).toLocaleDateString()}
@@ -507,19 +536,25 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                         <span className={`px-2.5 py-1 rounded-full text-xs text-white ${tierData.color}`}>
                           {tierData.label}
                         </span>
-                        <div className="relative">
-                          <select
-                            value={user.membership_tier}
-                            onChange={(e) => handleUpdateUserTier(user.id, e.target.value)}
-                            className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-[#E8E3F3] rounded-lg text-sm text-[#1A0A3D] cursor-pointer focus:outline-none focus:border-[#492B8C] hover:border-[#492B8C] transition-colors"
-                          >
-                            <option value="initial">Explorer</option>
-                            <option value="foundational">Foundational</option>
-                            <option value="builder">Builder</option>
-                            <option value="architect">Architect</option>
-                          </select>
-                          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B5B9E] pointer-events-none" />
-                        </div>
+                        {userIsAdmin ? (
+                          <span className="px-3 py-1.5 bg-[#F4F1FB] text-[#6B5B9E] text-sm rounded-lg">
+                            Protected
+                          </span>
+                        ) : (
+                          <div className="relative">
+                            <select
+                              value={user.membership_tier}
+                              onChange={(e) => handleUpdateUserTier(user.id, e.target.value)}
+                              className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-[#E8E3F3] rounded-lg text-sm text-[#1A0A3D] cursor-pointer focus:outline-none focus:border-[#492B8C] hover:border-[#492B8C] transition-colors"
+                            >
+                              <option value="initial">Explorer</option>
+                              <option value="foundational">Foundational</option>
+                              <option value="builder">Builder</option>
+                              <option value="architect">Architect</option>
+                            </select>
+                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B5B9E] pointer-events-none" />
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
