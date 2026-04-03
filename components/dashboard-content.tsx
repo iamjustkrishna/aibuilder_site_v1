@@ -31,7 +31,7 @@ interface Profile {
   email: string
   full_name: string
   avatar_url: string
-  membership_tier: "initial" | "standard" | "contributor"
+  membership_tier: "initial" | "foundational" | "builder" | "architect"
   created_at: string
 }
 
@@ -126,7 +126,7 @@ const initialResources = [
   },
 ]
 
-const standardResources = [
+const foundationalResources = [
   {
     title: "Week 1: Understanding AI",
     description: "Foundation concepts and prompt engineering",
@@ -155,6 +155,23 @@ const standardResources = [
     icon: Video,
     url: "#",
   },
+]
+
+const builderResources = [
+  {
+    title: "1-on-1 Mentor Sessions",
+    description: "Schedule personal guidance with mentors",
+    type: "video",
+    icon: Video,
+    url: "#",
+  },
+  {
+    title: "Code Review Sessions",
+    description: "Get feedback on your AI projects",
+    type: "video",
+    icon: Video,
+    url: "#",
+  },
   {
     title: "LangChain Documentation",
     description: "Official LangChain docs for building AI apps",
@@ -171,7 +188,7 @@ const standardResources = [
   },
 ]
 
-const contributorResources = [
+const architectResources = [
   {
     title: "AI Store Onboarding",
     description: "How to publish and sell on our store",
@@ -209,17 +226,23 @@ const tierInfo = {
     textColor: "text-[#6B5B9E]",
     description: "You have access to free introductory resources. Upgrade to unlock the full curriculum!",
   },
-  standard: {
-    label: "Standard",
+  foundational: {
+    label: "Foundational",
     color: "bg-[#00C8A7]",
     textColor: "text-[#00C8A7]",
-    description: "You have full access to the curriculum, live classes, and recorded sessions.",
+    description: "You have access to all live sessions, recordings, and free resources.",
   },
-  contributor: {
-    label: "Contributor",
+  builder: {
+    label: "Builder",
+    color: "bg-[#FFD13F]",
+    textColor: "text-[#FFD13F]",
+    description: "You have everything in Foundational plus 1-on-1 mentor support and code reviews.",
+  },
+  architect: {
+    label: "Architect",
     color: "bg-[#FF6B34]",
     textColor: "text-[#FF6B34]",
-    description: "You have full curriculum access plus AI Store access to publish and earn 100% of your AI app sales!",
+    description: "You have full access plus AI Store access to publish and earn 100% of your AI app sales!",
   },
 }
 
@@ -238,11 +261,14 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   }
 
   const getResources = () => {
-    if (tier === "contributor") {
-      return [...initialResources, ...standardResources, ...contributorResources]
+    if (tier === "architect") {
+      return [...initialResources, ...foundationalResources, ...builderResources, ...architectResources]
     }
-    if (tier === "standard") {
-      return [...initialResources, ...standardResources]
+    if (tier === "builder") {
+      return [...initialResources, ...foundationalResources, ...builderResources]
+    }
+    if (tier === "foundational") {
+      return [...initialResources, ...foundationalResources]
     }
     return initialResources
   }
@@ -354,8 +380,9 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className={`px-3 py-1 rounded-full ${tierData.color} text-white text-sm font-medium flex items-center gap-1`}>
-                {tier === "contributor" && <Crown className="w-3 h-3" />}
-                {tier === "standard" && <Star className="w-3 h-3" />}
+                {tier === "architect" && <Crown className="w-3 h-3" />}
+                {tier === "builder" && <Star className="w-3 h-3" />}
+                {tier === "foundational" && <Star className="w-3 h-3" />}
                 {tierData.label}
               </div>
               <span className="text-sm text-[#6B5B9E]">Current Membership</span>
@@ -371,20 +398,33 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                   target="_blank" 
                   rel="noopener noreferrer"
                 >
-                  Upgrade to Standard or Contributor
+                  Upgrade to Foundational, Builder, or Architect
                   <ExternalLink className="w-4 h-4 ml-2" />
                 </a>
               </Button>
             )}
             
-            {tier === "standard" && (
+            {tier === "foundational" && (
               <Button
                 asChild
                 variant="outline"
                 className="border-[#FF6B34] text-[#FF6B34] hover:bg-[#FF6B34] hover:text-white rounded-full"
               >
                 <a href="mailto:support@aibuilder.space">
-                  Contact to Upgrade to Contributor
+                  Upgrade to Builder or Architect
+                  <Mail className="w-4 h-4 ml-2" />
+                </a>
+              </Button>
+            )}
+            
+            {tier === "builder" && (
+              <Button
+                asChild
+                variant="outline"
+                className="border-[#FF6B34] text-[#FF6B34] hover:bg-[#FF6B34] hover:text-white rounded-full"
+              >
+                <a href="mailto:support@aibuilder.space">
+                  Upgrade to Architect
                   <Mail className="w-4 h-4 ml-2" />
                 </a>
               </Button>
@@ -514,14 +554,21 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
         </div>
 
         {/* Locked Resources Preview */}
-        {tier !== "contributor" && (
+        {tier !== "architect" && (
           <div className="mt-8">
             <h2 className="text-xl font-bold text-[#1A0A3D] mb-4" style={{ fontFamily: "var(--font-cal-sans)" }}>
               <Lock className="w-5 h-5 inline-block mr-2 text-[#6B5B9E]" />
-              {tier === "initial" ? "Unlock with Standard or Contributor" : "Unlock with Contributor"}
+              {tier === "initial" && "Unlock with Foundational, Builder, or Architect"}
+              {tier === "foundational" && "Unlock with Builder or Architect"}
+              {tier === "builder" && "Unlock with Architect"}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(tier === "initial" ? [...standardResources.slice(0, 3), ...contributorResources.slice(0, 1)] : contributorResources).map((resource, index) => (
+              {(tier === "initial" 
+                ? [...foundationalResources.slice(0, 2), ...architectResources.slice(0, 1)] 
+                : tier === "foundational" 
+                  ? [...builderResources.slice(0, 2), ...architectResources.slice(0, 1)]
+                  : architectResources
+              ).map((resource, index) => (
                 <div
                   key={index}
                   className="relative p-5 rounded-xl bg-[#F4F1FB]/50 border border-[#E8E3F3] opacity-60"
