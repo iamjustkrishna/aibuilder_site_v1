@@ -118,11 +118,11 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         setResources(data)
       }
     } else {
-      const { data } = await supabase
-        .from("users")
-        .select("*")
-        .order("created_at", { ascending: false })
-      setUsers(data || [])
+      const res = await fetch("/api/admin/users")
+      if (res.ok) {
+        const data = await res.json()
+        setUsers(data || [])
+      }
     }
     setLoading(false)
   }
