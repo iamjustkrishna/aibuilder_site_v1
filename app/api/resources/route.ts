@@ -1,0 +1,20 @@
+import { createClient } from "@/lib/supabase/server"
+import { NextResponse } from "next/server"
+
+// GET - Fetch resources based on user's tier
+export async function GET() {
+  const supabase = await createClient()
+  
+  const { data: resources, error } = await supabase
+    .from("resources")
+    .select("*")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ resources })
+}
