@@ -20,7 +20,9 @@ import {
   Package,
   Eye,
   EyeOff,
-  ArrowLeft
+  ArrowLeft,
+  Search,
+  ChevronDown
 } from "lucide-react"
 import Link from "next/link"
 
@@ -54,11 +56,11 @@ const typeIcons = {
   other: MoreHorizontal,
 }
 
-const tierColors = {
-  initial: "bg-gray-500",
-  foundational: "bg-[#00C8A7]",
-  builder: "bg-[#FFD13F]",
-  architect: "bg-[#FF6B34]",
+const tierConfig = {
+  initial: { label: "Explorer", color: "bg-[#6B5B9E]", text: "text-[#6B5B9E]" },
+  foundational: { label: "Foundational", color: "bg-[#00C8A7]", text: "text-[#00C8A7]" },
+  builder: { label: "Builder", color: "bg-[#FFD13F]", text: "text-[#FFD13F]" },
+  architect: { label: "Architect", color: "bg-[#FF6B34]", text: "text-[#FF6B34]" },
 }
 
 export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
@@ -68,6 +70,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -130,13 +133,9 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   }
 
   async function handleDeleteResource(id: string) {
-    if (!confirm("Are you sure you want to delete this resource?")) return
-    const res = await fetch(`/api/admin/resources?id=${id}`, {
-      method: "DELETE",
-    })
-    if (res.ok) {
-      fetchData()
-    }
+    if (!confirm("Delete this resource?")) return
+    const res = await fetch(`/api/admin/resources?id=${id}`, { method: "DELETE" })
+    if (res.ok) fetchData()
   }
 
   async function handleToggleActive(id: string, currentActive: boolean) {
@@ -145,9 +144,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, is_active: !currentActive }),
     })
-    if (res.ok) {
-      fetchData()
-    }
+    if (res.ok) fetchData()
   }
 
   async function handleUpdateUserTier(userId: string, newTier: string) {
@@ -155,9 +152,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       .from("users")
       .update({ membership_tier: newTier, updated_at: new Date().toISOString() })
       .eq("id", userId)
-    if (!error) {
-      fetchData()
-    }
+    if (!error) fetchData()
   }
 
   function resetForm() {
@@ -194,87 +189,121 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     window.location.href = "/"
   }
 
+  const filteredResources = resources.filter(r => 
+    r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const filteredUsers = users.filter(u => 
+    u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   return (
-    <div className="min-h-screen bg-[#F4F1FB]">
+    <div className="min-h-screen bg-gradient-to-br from-[#1A0A3D] via-[#2D1A69] to-[#492B8C]">
       {/* Header */}
-      <header className="bg-[#2D1A69] text-white px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <h1 className="text-xl font-bold">Admin Dashboard</h1>
-              <p className="text-sm text-[#C3AFFF]">{userEmail}</p>
+      <header className="sticky top-0 z-50 bg-[#1A0A3D]/80 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+              <Link 
+                href="/dashboard" 
+                className="p-2 hover:bg-white/10 rounded-xl transition-colors flex-shrink-0"
+              >
+                <ArrowLeft className="w-5 h-5 text-white" />
+              </Link>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl font-bold text-white truncate">Admin Panel</h1>
+                <p className="text-xs sm:text-sm text-[#C3AFFF] truncate">{userEmail}</p>
+              </div>
             </div>
+            <Button 
+              variant="ghost" 
+              onClick={handleSignOut} 
+              className="text-white hover:bg-white/10 flex-shrink-0"
+              size="sm"
+            >
+              <LogOut className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
           </div>
-          <Button variant="ghost" onClick={handleSignOut} className="text-white hover:bg-white/10">
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setActiveTab("resources")}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-              activeTab === "resources"
-                ? "bg-[#2D1A69] text-white"
-                : "bg-white text-[#1A0A3D] hover:bg-[#E8E3F3]"
-            }`}
-          >
-            <Package className="w-4 h-4" />
-            Resources ({resources.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("users")}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-              activeTab === "users"
-                ? "bg-[#2D1A69] text-white"
-                : "bg-white text-[#1A0A3D] hover:bg-[#E8E3F3]"
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            Users ({users.length})
-          </button>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        {/* Tabs & Search */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex gap-2 p-1 bg-white/10 rounded-xl backdrop-blur-sm">
+            <button
+              onClick={() => { setActiveTab("resources"); setSearchQuery(""); }}
+              className={`flex-1 sm:flex-none px-4 py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                activeTab === "resources"
+                  ? "bg-white text-[#1A0A3D] shadow-lg"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              <span>Resources</span>
+              <span className="px-1.5 py-0.5 rounded-full text-xs bg-[#FF6B34] text-white">{resources.length}</span>
+            </button>
+            <button
+              onClick={() => { setActiveTab("users"); setSearchQuery(""); }}
+              className={`flex-1 sm:flex-none px-4 py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                activeTab === "users"
+                  ? "bg-white text-[#1A0A3D] shadow-lg"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Users</span>
+              <span className="px-1.5 py-0.5 rounded-full text-xs bg-[#00C8A7] text-white">{users.length}</span>
+            </button>
+          </div>
+          
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+            <input
+              type="text"
+              placeholder={`Search ${activeTab}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-white/40 focus:bg-white/15 transition-all"
+            />
+          </div>
         </div>
 
         {/* Resources Tab */}
         {activeTab === "resources" && (
-          <div>
+          <div className="space-y-4">
             {/* Add Resource Button */}
-            <div className="mb-4">
-              <Button
-                onClick={() => setShowAddForm(!showAddForm)}
-                className="bg-[#FF6B34] hover:bg-[#FF6B34]/90 text-white"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Resource
-              </Button>
-            </div>
+            <Button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="bg-[#FF6B34] hover:bg-[#FF6B34]/90 text-white shadow-lg shadow-[#FF6B34]/25"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Resource
+            </Button>
 
             {/* Add Form */}
             {showAddForm && (
-              <div className="bg-white rounded-xl p-6 mb-6 border border-[#E8E3F3]">
-                <h3 className="font-bold text-[#1A0A3D] mb-4">Add New Resource</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-xl">
+                <h3 className="font-bold text-[#1A0A3D] mb-4 text-lg">Add New Resource</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1">Title</label>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Title *</label>
                     <Input
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       placeholder="Resource title"
+                      className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1">Type</label>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Type *</label>
                     <select
                       value={formData.type}
                       onChange={(e) => setFormData({ ...formData, type: e.target.value as Resource["type"] })}
-                      className="w-full px-3 py-2 border border-[#E8E3F3] rounded-lg"
+                      className="w-full px-3 py-2 bg-white border border-[#E8E3F3] rounded-lg text-[#1A0A3D] focus:outline-none focus:border-[#492B8C] focus:ring-1 focus:ring-[#492B8C]"
                     >
                       <option value="video">Video</option>
                       <option value="pdf">PDF</option>
@@ -283,66 +312,53 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                       <option value="other">Other</option>
                     </select>
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1">Description</label>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Description</label>
                     <Input
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       placeholder="Brief description"
+                      className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1">URL</label>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">URL *</label>
                     <Input
                       value={formData.url}
                       onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                      placeholder="https://..."
+                      placeholder="https://youtube.com/watch?v=... or PDF link"
+                      className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1">Thumbnail URL (optional)</label>
-                    <Input
-                      value={formData.thumbnail_url}
-                      onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
-                      placeholder="https://..."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1">Tier Required</label>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Tier Required *</label>
                     <select
                       value={formData.tier_required}
                       onChange={(e) => setFormData({ ...formData, tier_required: e.target.value as Resource["tier_required"] })}
-                      className="w-full px-3 py-2 border border-[#E8E3F3] rounded-lg"
+                      className="w-full px-3 py-2 bg-white border border-[#E8E3F3] rounded-lg text-[#1A0A3D] focus:outline-none focus:border-[#492B8C] focus:ring-1 focus:ring-[#492B8C]"
                     >
-                      <option value="initial">Initial (Free)</option>
+                      <option value="initial">Explorer (Free)</option>
                       <option value="foundational">Foundational</option>
                       <option value="builder">Builder</option>
                       <option value="architect">Architect</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1">Category</label>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Category</label>
                     <Input
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      placeholder="e.g., Week 1, Tools, etc."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1">Sort Order</label>
-                    <Input
-                      type="number"
-                      value={formData.sort_order}
-                      onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
+                      placeholder="e.g., Week 1, Tools"
+                      className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
                     />
                   </div>
                 </div>
-                <div className="flex gap-2 mt-4">
-                  <Button onClick={handleAddResource} className="bg-[#00C8A7] hover:bg-[#00C8A7]/90">
+                <div className="flex flex-col sm:flex-row gap-2 mt-6">
+                  <Button onClick={handleAddResource} className="bg-[#00C8A7] hover:bg-[#00C8A7]/90 text-white">
                     <Save className="w-4 h-4 mr-2" />
                     Save Resource
                   </Button>
-                  <Button variant="outline" onClick={() => { setShowAddForm(false); resetForm(); }}>
+                  <Button variant="outline" onClick={() => { setShowAddForm(false); resetForm(); }} className="border-[#E8E3F3] text-[#6B5B9E]">
                     <X className="w-4 h-4 mr-2" />
                     Cancel
                   </Button>
@@ -352,122 +368,110 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
 
             {/* Resources List */}
             {loading ? (
-              <div className="text-center py-8">Loading...</div>
+              <div className="text-center py-12 text-white/60">Loading resources...</div>
+            ) : filteredResources.length === 0 ? (
+              <div className="text-center py-12 bg-white/5 rounded-2xl border border-white/10">
+                <Package className="w-12 h-12 mx-auto text-white/30 mb-3" />
+                <p className="text-white/60">{searchQuery ? "No matching resources" : "No resources yet"}</p>
+              </div>
             ) : (
-              <div className="bg-white rounded-xl border border-[#E8E3F3] overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-[#F4F1FB]">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-[#1A0A3D]">Resource</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-[#1A0A3D]">Type</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-[#1A0A3D]">Tier</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-[#1A0A3D]">Status</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-[#1A0A3D]">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E8E3F3]">
-                    {resources.map((resource) => {
-                      const Icon = typeIcons[resource.type] || MoreHorizontal
-                      const isEditing = editingId === resource.id
+              <div className="grid gap-3">
+                {filteredResources.map((resource) => {
+                  const Icon = typeIcons[resource.type] || MoreHorizontal
+                  const tierData = tierConfig[resource.tier_required]
+                  const isEditing = editingId === resource.id
 
-                      if (isEditing) {
-                        return (
-                          <tr key={resource.id} className="bg-[#F4F1FB]">
-                            <td colSpan={5} className="p-4">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <Input
-                                  value={formData.title}
-                                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                  placeholder="Title"
-                                />
-                                <Input
-                                  value={formData.url}
-                                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                                  placeholder="URL"
-                                />
-                                <Input
-                                  value={formData.description}
-                                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                  placeholder="Description"
-                                />
-                                <select
-                                  value={formData.tier_required}
-                                  onChange={(e) => setFormData({ ...formData, tier_required: e.target.value as Resource["tier_required"] })}
-                                  className="px-3 py-2 border border-[#E8E3F3] rounded-lg"
-                                >
-                                  <option value="initial">Initial</option>
-                                  <option value="foundational">Foundational</option>
-                                  <option value="builder">Builder</option>
-                                  <option value="architect">Architect</option>
-                                </select>
-                              </div>
-                              <div className="flex gap-2 mt-4">
-                                <Button size="sm" onClick={() => handleUpdateResource(resource.id)} className="bg-[#00C8A7]">
-                                  <Save className="w-4 h-4 mr-1" /> Save
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => { setEditingId(null); resetForm(); }}>
-                                  <X className="w-4 h-4 mr-1" /> Cancel
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      }
+                  if (isEditing) {
+                    return (
+                      <div key={resource.id} className="bg-white rounded-2xl p-4 sm:p-5 shadow-xl">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <Input
+                            value={formData.title}
+                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                            placeholder="Title"
+                            className="border-[#E8E3F3]"
+                          />
+                          <Input
+                            value={formData.url}
+                            onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                            placeholder="URL"
+                            className="border-[#E8E3F3]"
+                          />
+                          <Input
+                            value={formData.description}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            placeholder="Description"
+                            className="border-[#E8E3F3]"
+                          />
+                          <select
+                            value={formData.tier_required}
+                            onChange={(e) => setFormData({ ...formData, tier_required: e.target.value as Resource["tier_required"] })}
+                            className="px-3 py-2 bg-white border border-[#E8E3F3] rounded-lg text-[#1A0A3D] focus:outline-none focus:border-[#492B8C]"
+                          >
+                            <option value="initial">Explorer</option>
+                            <option value="foundational">Foundational</option>
+                            <option value="builder">Builder</option>
+                            <option value="architect">Architect</option>
+                          </select>
+                        </div>
+                        <div className="flex gap-2 mt-4">
+                          <Button size="sm" onClick={() => handleUpdateResource(resource.id)} className="bg-[#00C8A7] hover:bg-[#00C8A7]/90">
+                            <Save className="w-4 h-4 mr-1" /> Save
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => { setEditingId(null); resetForm(); }} className="border-[#E8E3F3]">
+                            <X className="w-4 h-4 mr-1" /> Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  }
 
-                      return (
-                        <tr key={resource.id} className={!resource.is_active ? "opacity-50" : ""}>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <Icon className="w-5 h-5 text-[#492B8C]" />
-                              <div>
-                                <p className="font-medium text-[#1A0A3D]">{resource.title}</p>
-                                <p className="text-xs text-[#6B5B9E] truncate max-w-xs">{resource.description}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-[#6B5B9E] capitalize">{resource.type}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-1 rounded-full text-xs text-white ${tierColors[resource.tier_required]}`}>
-                              {resource.tier_required}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <button
-                              onClick={() => handleToggleActive(resource.id, resource.is_active)}
-                              className={`flex items-center gap-1 text-xs ${resource.is_active ? "text-[#00C8A7]" : "text-[#6B5B9E]"}`}
-                            >
-                              {resource.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                              {resource.is_active ? "Active" : "Hidden"}
-                            </button>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => startEdit(resource)}
-                                className="p-2 hover:bg-[#F4F1FB] rounded-lg text-[#492B8C]"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteResource(resource.id)}
-                                className="p-2 hover:bg-red-50 rounded-lg text-red-500"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-                {resources.length === 0 && (
-                  <div className="text-center py-8 text-[#6B5B9E]">
-                    No resources yet. Add your first resource above.
-                  </div>
-                )}
+                  return (
+                    <div 
+                      key={resource.id} 
+                      className={`bg-white/95 backdrop-blur rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 transition-all ${!resource.is_active ? "opacity-50" : ""}`}
+                    >
+                      <div className={`p-2.5 rounded-xl ${tierData.color}/10 flex-shrink-0 self-start`}>
+                        <Icon className={`w-5 h-5 ${tierData.text}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <h4 className="font-medium text-[#1A0A3D] truncate">{resource.title}</h4>
+                          <span className={`px-2 py-0.5 rounded-full text-xs text-white ${tierData.color}`}>
+                            {tierData.label}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-xs bg-[#F4F1FB] text-[#6B5B9E] capitalize">
+                            {resource.type}
+                          </span>
+                        </div>
+                        <p className="text-sm text-[#6B5B9E] truncate">{resource.description}</p>
+                      </div>
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        <button
+                          onClick={() => handleToggleActive(resource.id, resource.is_active)}
+                          className={`p-2 rounded-lg transition-colors ${resource.is_active ? "text-[#00C8A7] hover:bg-[#00C8A7]/10" : "text-[#6B5B9E] hover:bg-[#F4F1FB]"}`}
+                          title={resource.is_active ? "Hide" : "Show"}
+                        >
+                          {resource.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                        </button>
+                        <button
+                          onClick={() => startEdit(resource)}
+                          className="p-2 hover:bg-[#F4F1FB] rounded-lg text-[#492B8C] transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteResource(resource.id)}
+                          className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -475,56 +479,51 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
 
         {/* Users Tab */}
         {activeTab === "users" && (
-          <div className="bg-white rounded-xl border border-[#E8E3F3] overflow-hidden">
+          <div>
             {loading ? (
-              <div className="text-center py-8">Loading...</div>
+              <div className="text-center py-12 text-white/60">Loading users...</div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="text-center py-12 bg-white/5 rounded-2xl border border-white/10">
+                <Users className="w-12 h-12 mx-auto text-white/30 mb-3" />
+                <p className="text-white/60">{searchQuery ? "No matching users" : "No users yet"}</p>
+              </div>
             ) : (
-              <table className="w-full">
-                <thead className="bg-[#F4F1FB]">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#1A0A3D]">User</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#1A0A3D]">Membership</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-[#1A0A3D]">Joined</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-[#1A0A3D]">Change Tier</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E8E3F3]">
-                  {users.map((user) => (
-                    <tr key={user.id}>
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="font-medium text-[#1A0A3D]">{user.full_name || "No name"}</p>
-                          <p className="text-xs text-[#6B5B9E]">{user.email}</p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs text-white ${tierColors[user.membership_tier as keyof typeof tierColors] || "bg-gray-500"}`}>
-                          {user.membership_tier}
+              <div className="grid gap-3">
+                {filteredUsers.map((user) => {
+                  const tierData = tierConfig[user.membership_tier as keyof typeof tierConfig] || tierConfig.initial
+                  return (
+                    <div key={user.id} className="bg-white/95 backdrop-blur rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+                      <div className={`w-10 h-10 rounded-full ${tierData.color} flex items-center justify-center text-white font-bold flex-shrink-0`}>
+                        {(user.full_name?.[0] || user.email?.[0] || "?").toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-[#1A0A3D] truncate">{user.full_name || "No name"}</h4>
+                        <p className="text-sm text-[#6B5B9E] truncate">{user.email}</p>
+                        <p className="text-xs text-[#6B5B9E]/60 mt-1">
+                          Joined {new Date(user.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        <span className={`px-2.5 py-1 rounded-full text-xs text-white ${tierData.color}`}>
+                          {tierData.label}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-[#6B5B9E]">
-                        {new Date(user.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <select
-                          value={user.membership_tier}
-                          onChange={(e) => handleUpdateUserTier(user.id, e.target.value)}
-                          className="px-3 py-1 text-sm border border-[#E8E3F3] rounded-lg"
-                        >
-                          <option value="initial">Initial</option>
-                          <option value="foundational">Foundational</option>
-                          <option value="builder">Builder</option>
-                          <option value="architect">Architect</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            {users.length === 0 && !loading && (
-              <div className="text-center py-8 text-[#6B5B9E]">
-                No users yet.
+                        <div className="relative">
+                          <select
+                            value={user.membership_tier}
+                            onChange={(e) => handleUpdateUserTier(user.id, e.target.value)}
+                            className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-[#E8E3F3] rounded-lg text-sm text-[#1A0A3D] cursor-pointer focus:outline-none focus:border-[#492B8C] hover:border-[#492B8C] transition-colors"
+                          >
+                            <option value="initial">Explorer</option>
+                            <option value="foundational">Foundational</option>
+                            <option value="builder">Builder</option>
+                            <option value="architect">Architect</option>
+                          </select>
+                          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B5B9E] pointer-events-none" />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

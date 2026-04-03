@@ -267,6 +267,8 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   const [dbResources, setDbResources] = useState<DBResource[]>([])
   const [loadingResources, setLoadingResources] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null)
+  const [selectedPdfTitle, setSelectedPdfTitle] = useState<string>("")
 
   // Check if user is admin
   useEffect(() => {
@@ -598,6 +600,9 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                         if (resource.type === "video" && resource.url.includes("youtube")) {
                           const videoId = resource.url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]
                           if (videoId) setSelectedVideo(videoId)
+                        } else if (resource.type === "pdf" && resource.url !== "#") {
+                          setSelectedPdfUrl(resource.url)
+                          setSelectedPdfTitle(resource.title)
                         } else if (resource.url !== "#") {
                           window.open(resource.url, "_blank")
                         }
@@ -789,8 +794,8 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
 
       {/* Video Player Modal */}
       {selectedVideo && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
-          <div className="relative w-full max-w-4xl aspect-video">
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setSelectedVideo(null)}>
+          <div className="relative w-full max-w-4xl aspect-video" onClick={(e) => e.stopPropagation()}>
             <Button
               variant="ghost"
               size="sm"
@@ -801,12 +806,52 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
               Close
             </Button>
             <iframe
-              src={`https://www.youtube.com/embed/${selectedVideo}?autoplay=1`}
+              src={`https://www.youtube-nocookie.com/embed/${selectedVideo}?autoplay=1`}
               className="w-full h-full rounded-xl"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               title="YouTube Video"
             />
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic PDF Viewer Modal */}
+      {selectedPdfUrl && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setSelectedPdfUrl(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-[#E8E3F3]">
+              <h3 className="font-bold text-[#1A0A3D] truncate" style={{ fontFamily: "var(--font-cal-sans)" }}>
+                {selectedPdfTitle || "Document"}
+              </h3>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="border-[#492B8C] text-[#492B8C] hover:bg-[#492B8C] hover:text-white rounded-full"
+                >
+                  <a href={selectedPdfUrl} download target="_blank" rel="noopener noreferrer">
+                    Download
+                  </a>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedPdfUrl(null)}
+                  className="text-[#6B5B9E] hover:text-[#1A0A3D]"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex-1 bg-[#F4F1FB]">
+              <iframe
+                src={selectedPdfUrl}
+                className="w-full h-full"
+                title={selectedPdfTitle}
+              />
+            </div>
           </div>
         </div>
       )}
