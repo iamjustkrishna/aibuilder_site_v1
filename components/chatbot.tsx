@@ -56,8 +56,8 @@ export function Chatbot() {
     if (lastMessage.includes("curriculum") || lastMessage.includes("week")) {
       return ["Tell me about Week 2", "What tools will I use?", "Are sessions recorded?"]
     }
-    if (lastMessage.includes("pricing") || lastMessage.includes("tier") || lastMessage.includes("contributor")) {
-      return ["What's in Standard tier?", "How does earning work?", "Can I upgrade later?"]
+    if (lastMessage.includes("pricing") || lastMessage.includes("tier") || lastMessage.includes("architect")) {
+      return ["What's in Builder tier?", "How does earning work?", "Can I upgrade later?"]
     }
     if (lastMessage.includes("earn") || lastMessage.includes("store") || lastMessage.includes("100%")) {
       return ["What can I build?", "When can I start earning?", "How do I set prices?"]
