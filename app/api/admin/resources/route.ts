@@ -37,7 +37,7 @@ export async function GET() {
     return NextResponse.json({ error: dbError.message }, { status: 500 })
   }
 
-  return NextResponse.json({ resources })
+  return NextResponse.json(resources || [])
 }
 
 // POST - Create a new resource

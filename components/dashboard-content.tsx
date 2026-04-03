@@ -266,6 +266,23 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
   const [dbResources, setDbResources] = useState<DBResource[]>([])
   const [loadingResources, setLoadingResources] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // Check if user is admin
+  useEffect(() => {
+    async function checkAdmin() {
+      try {
+        const res = await fetch("/api/admin/check")
+        if (res.ok) {
+          const data = await res.json()
+          setIsAdmin(data.isAdmin)
+        }
+      } catch (error) {
+        console.error("Failed to check admin status:", error)
+      }
+    }
+    checkAdmin()
+  }, [])
 
   // Fetch resources from database based on user's tier
   useEffect(() => {
@@ -360,6 +377,18 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                 <p className="text-xs text-[#6B5B9E]">{user.email}</p>
               </div>
             </div>
+            {isAdmin && (
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="text-[#FF6B34] hover:text-[#FF6B34] hover:bg-[#FF6B34]/10"
+              >
+                <Link href="/admin">
+                  Admin
+                </Link>
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
