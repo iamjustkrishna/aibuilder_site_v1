@@ -23,7 +23,7 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { User } from "@supabase/supabase-js"
 
 interface Profile {
@@ -38,6 +38,18 @@ interface Profile {
 interface DashboardContentProps {
   user: User
   profile: Profile | null
+}
+
+interface DBResource {
+  id: string
+  title: string
+  description: string
+  type: "video" | "pdf" | "article" | "code" | "other"
+  url: string
+  thumbnail_url: string | null
+  tier_required: "initial" | "foundational" | "builder" | "architect"
+  category: string
+  sort_order: number
 }
 
 // Best AI Tools to use - compact list for dashboard
@@ -252,6 +264,26 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   const tierData = tierInfo[tier]
   const [showPdfViewer, setShowPdfViewer] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
+  const [dbResources, setDbResources] = useState<DBResource[]>([])
+  const [loadingResources, setLoadingResources] = useState(true)
+
+  // Fetch resources from database based on user's tier
+  useEffect(() => {
+    async function fetchResources() {
+      try {
+        const res = await fetch(`/api/resources?tier=${tier}`)
+        if (res.ok) {
+          const data = await res.json()
+          setDbResources(data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch resources:", error)
+      } finally {
+        setLoadingResources(false)
+      }
+    }
+    fetchResources()
+  }, [tier])
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -517,11 +549,68 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
           </div>
         </div>
 
-        {/* Resources Grid */}
+        {/* Database Resources (from Admin) */}
+        {dbResources.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-[#1A0A3D] mb-4" style={{ fontFamily: "var(--font-cal-sans)" }}>
+              <BookOpen className="w-5 h-5 inline-block mr-2 text-[#492B8C]" />
+              Cohort Resources
+            </h2>
+            {loadingResources ? (
+              <div className="text-center py-8 text-[#6B5B9E]">Loading resources...</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {dbResources.map((resource) => {
+                  const IconComponent = resource.type === "video" ? Video : resource.type === "pdf" ? FileText : BookOpen
+                  return (
+                    <div
+                      key={resource.id}
+                      onClick={() => {
+                        if (resource.type === "video" && resource.url.includes("youtube")) {
+                          const videoId = resource.url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]
+                          if (videoId) setSelectedVideo(videoId)
+                        } else if (resource.url !== "#") {
+                          window.open(resource.url, "_blank")
+                        }
+                      }}
+                      className="group p-5 rounded-xl bg-white border border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-md transition-all cursor-pointer"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="p-2 rounded-lg bg-[#F4F1FB] group-hover:bg-[#492B8C] transition-colors">
+                          <IconComponent className="w-5 h-5 text-[#492B8C] group-hover:text-white transition-colors" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-medium text-[#1A0A3D] group-hover:text-[#492B8C] transition-colors">
+                              {resource.title}
+                            </h3>
+                            <span className={`px-2 py-0.5 rounded-full text-xs text-white ${
+                              resource.tier_required === "architect" ? "bg-[#FF6B34]" :
+                              resource.tier_required === "builder" ? "bg-[#FFD13F]" :
+                              resource.tier_required === "foundational" ? "bg-[#00C8A7]" : "bg-[#6B5B9E]"
+                            }`}>
+                              {resource.tier_required}
+                            </span>
+                          </div>
+                          <p className="text-sm text-[#6B5B9E]">{resource.description}</p>
+                          {resource.category && resource.category !== "general" && (
+                            <p className="text-xs text-[#FF6B34] mt-1">{resource.category}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Static Resources Grid */}
         <div className="mb-6">
           <h2 className="text-xl font-bold text-[#1A0A3D] mb-4" style={{ fontFamily: "var(--font-cal-sans)" }}>
             <BookOpen className="w-5 h-5 inline-block mr-2 text-[#492B8C]" />
-            Your Resources
+            Quick Resources
           </h2>
         </div>
 
