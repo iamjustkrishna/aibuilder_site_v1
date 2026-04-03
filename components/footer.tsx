@@ -10,8 +10,9 @@ const footerLinks = {
     { label: "FAQs", href: "#faqs" },
   ],
   Resources: [
-    { label: "Session Recordings", href: "#curriculum" },
-    { label: "Templates", href: "#curriculum" },
+    { label: "Resources Hub", href: "/resources" },
+    { label: "Session Recordings", href: "/resources" },
+    { label: "Starter Code", href: "/resources" },
     { label: "Community", href: "https://whatsapp.com/channel/0029VbCJ26365yDAn7xmbq2R", external: true },
   ],
 }

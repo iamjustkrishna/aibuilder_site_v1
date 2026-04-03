@@ -9,6 +9,7 @@ import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 const navItems = [
   { label: "Curriculum", href: "#curriculum" },
+  { label: "Resources", href: "/resources" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQs", href: "#faqs" },
   { label: "Community", href: "https://whatsapp.com/channel/0029VbCJ26365yDAn7xmbq2R", external: true },
