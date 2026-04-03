@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
-import { isAdmin } from "@/lib/admin"
+import { isAdminEmail } from "@/lib/admin"
 
 export async function GET() {
   const supabase = await createClient()
@@ -10,5 +10,6 @@ export async function GET() {
     return NextResponse.json({ isAdmin: false })
   }
 
-  return NextResponse.json({ isAdmin: isAdmin(user.email) })
+  const adminStatus = await isAdminEmail(user.email)
+  return NextResponse.json({ isAdmin: adminStatus })
 }
