@@ -169,11 +169,12 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   }
 
   async function handleUpdateUserTier(userId: string, newTier: string) {
-    const { error } = await supabase
-      .from("users")
-      .update({ membership_tier: newTier, updated_at: new Date().toISOString() })
-      .eq("id", userId)
-    if (!error) fetchData()
+    const res = await fetch("/api/admin/users", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: userId, membership_tier: newTier }),
+    })
+    if (res.ok) fetchData()
   }
 
   function resetForm() {
