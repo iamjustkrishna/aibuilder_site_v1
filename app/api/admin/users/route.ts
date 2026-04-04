@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createServiceClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { isAdminEmail } from "@/lib/admin"
 
@@ -26,10 +26,11 @@ export async function GET() {
     return NextResponse.json({ error }, { status: 401 })
   }
 
-  const supabase = await createClient()
-  const { data: users, error: dbError } = await supabase
+  // Use service client to bypass RLS and fetch ALL users
+  const serviceClient = createServiceClient()
+  const { data: users, error: dbError } = await serviceClient
     .from("users")
-    .select("*")
+    .select("id, email, full_name, membership_tier, created_at, avatar_url")
     .order("created_at", { ascending: false })
 
   if (dbError) {
@@ -59,10 +60,11 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Invalid membership tier" }, { status: 400 })
   }
 
-  const supabase = await createClient()
+  // Use service client to bypass RLS for all operations
+  const serviceClient = createServiceClient()
   
   // Get user email to check if they're an admin
-  const { data: userData } = await supabase
+  const { data: userData } = await serviceClient
     .from("users")
     .select("email")
     .eq("id", userId)
@@ -75,7 +77,7 @@ export async function PUT(request: Request) {
     }
   }
 
-  const { data, error: dbError } = await supabase
+  const { data, error: dbError } = await serviceClient
     .from("users")
     .update({ membership_tier })
     .eq("id", userId)
