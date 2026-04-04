@@ -18,7 +18,10 @@ import {
   X,
   Wrench,
   Zap,
-  Gift
+  Gift,
+  ChevronRight,
+  Play,
+  Calendar
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -231,7 +234,16 @@ const architectResources = [
   },
 ]
 
-const tierInfo = {
+const cohortWeeks = [
+  { key: "week-1", label: "Week 1", topic: "Understanding AI", color: "from-[#492B8C] to-[#2D1A69]", tier: "foundational" },
+  { key: "week-2", label: "Week 2", topic: "Building AI Apps", color: "from-[#00C8A7] to-[#009E87]", tier: "foundational" },
+  { key: "week-3", label: "Week 3", topic: "AI Agents", color: "from-[#FFD13F] to-[#FF9F00]", tier: "builder" },
+  { key: "week-4", label: "Week 4", topic: "Launch & Monetize", color: "from-[#FF6B34] to-[#E84C1E]", tier: "architect" },
+]
+
+const tierOrder = { initial: 0, foundational: 1, builder: 2, architect: 3 }
+
+
   initial: {
     label: "Explorer",
     color: "bg-[#6B5B9E]",
@@ -264,11 +276,13 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   const tierData = tierInfo[tier]
   const [showPdfViewer, setShowPdfViewer] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
+  const [selectedVideoTitle, setSelectedVideoTitle] = useState<string>("")
   const [dbResources, setDbResources] = useState<DBResource[]>([])
   const [loadingResources, setLoadingResources] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null)
   const [selectedPdfTitle, setSelectedPdfTitle] = useState<string>("")
+  const [selectedWeek, setSelectedWeek] = useState<string | null>(null)
 
   // Check if user is admin
   useEffect(() => {
@@ -303,6 +317,15 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
     }
     fetchResources()
   }, [tier])
+
+  function extractYouTubeId(url: string): string | null {
+    const match = url.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/)
+    return match?.[1] || null
+  }
+
+  function getWeekVideos(weekKey: string): DBResource[] {
+    return dbResources.filter(r => r.category === weekKey && r.type === "video")
+  }
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -438,6 +461,140 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
           </Button>
         </div>
 
+        {/* Cohort Weeks - shown for foundational and above */}
+        {tierOrder[tier] >= tierOrder["foundational"] && (
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-[#1A0A3D] mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
+              <Calendar className="w-5 h-5 text-[#492B8C]" />
+              Cohort Sessions
+            </h2>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {cohortWeeks.map((week) => {
+                const videos = getWeekVideos(week.key)
+                const isLocked = tierOrder[tier] < tierOrder[week.tier as keyof typeof tierOrder]
+                return (
+                  <button
+                    key={week.key}
+                    onClick={() => !isLocked && setSelectedWeek(week.key)}
+                    disabled={isLocked}
+                    className={`relative group text-left rounded-2xl p-5 bg-gradient-to-br ${week.color} transition-all ${
+                      isLocked ? "opacity-50 cursor-not-allowed" : "hover:shadow-lg hover:scale-[1.02] cursor-pointer"
+                    }`}
+                  >
+                    {isLocked && (
+                      <div className="absolute top-3 right-3">
+                        <Lock className="w-4 h-4 text-white/80" />
+                      </div>
+                    )}
+                    <p className="text-white/70 text-xs font-medium uppercase tracking-wider mb-1">{week.label}</p>
+                    <h3 className="text-white font-bold text-base leading-snug mb-3">{week.topic}</h3>
+                    <div className="flex items-center gap-1.5">
+                      <Play className="w-3.5 h-3.5 text-white/80" />
+                      <span className="text-white/80 text-xs">
+                        {videos.length > 0 ? `${videos.length} video${videos.length !== 1 ? "s" : ""}` : "Coming soon"}
+                      </span>
+                    </div>
+                    {!isLocked && videos.length > 0 && (
+                      <div className="absolute bottom-3 right-3 w-7 h-7 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                        <ChevronRight className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Week Videos Popup */}
+        {selectedWeek && (
+          <div
+            className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+            onClick={() => setSelectedWeek(null)}
+          >
+            <div
+              className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal header */}
+              {(() => {
+                const week = cohortWeeks.find(w => w.key === selectedWeek)!
+                const videos = getWeekVideos(selectedWeek)
+                return (
+                  <>
+                    <div className={`bg-gradient-to-r ${week.color} px-6 py-5 flex items-center justify-between`}>
+                      <div>
+                        <p className="text-white/70 text-xs uppercase tracking-wider">{week.label}</p>
+                        <h3 className="text-white font-bold text-xl" style={{ fontFamily: "var(--font-cal-sans)" }}>
+                          {week.topic}
+                        </h3>
+                      </div>
+                      <button
+                        onClick={() => setSelectedWeek(null)}
+                        className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
+                      >
+                        <X className="w-4 h-4 text-white" />
+                      </button>
+                    </div>
+                    <div className="overflow-y-auto flex-1 p-4">
+                      {videos.length === 0 ? (
+                        <div className="text-center py-12 text-[#6B5B9E]">
+                          <Video className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                          <p className="font-medium text-[#1A0A3D]">Videos coming soon</p>
+                          <p className="text-sm mt-1">Session recordings will appear here after each live class.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {videos.map((video) => {
+                            const videoId = extractYouTubeId(video.url)
+                            return (
+                              <button
+                                key={video.id}
+                                onClick={() => {
+                                  if (videoId) {
+                                    setSelectedVideoTitle(video.title)
+                                    setSelectedVideo(videoId)
+                                    setSelectedWeek(null)
+                                  }
+                                }}
+                                className="w-full group flex items-center gap-4 p-3 rounded-xl hover:bg-[#F4F1FB] transition-colors text-left border border-transparent hover:border-[#E8E3F3]"
+                              >
+                                <div className="relative flex-shrink-0 w-28 aspect-video rounded-lg overflow-hidden bg-[#1A0A3D]">
+                                  {videoId ? (
+                                    <img
+                                      src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
+                                      alt={video.title}
+                                      className="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
+                                    />
+                                  ) : null}
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-8 h-8 rounded-full bg-[#FF6B34] flex items-center justify-center shadow group-hover:scale-110 transition-transform">
+                                      <Play className="w-4 h-4 text-white ml-0.5" />
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium text-[#1A0A3D] group-hover:text-[#492B8C] transition-colors line-clamp-2">
+                                    {video.title}
+                                  </h4>
+                                  {video.description && (
+                                    <p className="text-sm text-[#6B5B9E] mt-0.5 line-clamp-2">{video.description}</p>
+                                  )}
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-[#6B5B9E] flex-shrink-0 group-hover:text-[#492B8C] transition-colors" />
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          </div>
+        )}
+
         {/* Membership Tier Card */}
         <div className="mb-8 p-6 rounded-2xl bg-[#F4F1FB] border border-[#E8E3F3]">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -553,7 +710,10 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
               <div
                 key={index}
                 className="group rounded-xl bg-white border border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-md transition-all overflow-hidden cursor-pointer"
-                onClick={() => setSelectedVideo(video.videoId)}
+                onClick={() => {
+                  setSelectedVideoTitle(video.title)
+                  setSelectedVideo(video.videoId)
+                }}
               >
                 <div className="relative aspect-video bg-[#1A0A3D]">
                   <Image
@@ -598,8 +758,11 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                       key={resource.id}
                       onClick={() => {
                         if (resource.type === "video" && resource.url.includes("youtube")) {
-                          const videoId = resource.url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]
-                          if (videoId) setSelectedVideo(videoId)
+                          const videoId = resource.url.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/)?.[1]
+                          if (videoId) {
+                            setSelectedVideoTitle(resource.title)
+                            setSelectedVideo(videoId)
+                          }
                         } else if (resource.type === "pdf" && resource.url !== "#") {
                           setSelectedPdfUrl(resource.url)
                           setSelectedPdfTitle(resource.title)
@@ -794,24 +957,27 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
 
       {/* Video Player Modal */}
       {selectedVideo && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setSelectedVideo(null)}>
-          <div className="relative w-full max-w-4xl aspect-video" onClick={(e) => e.stopPropagation()}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedVideo(null)}
-              className="absolute -top-12 right-0 text-white hover:text-[#FF6B34] hover:bg-transparent"
-            >
-              <X className="w-6 h-6" />
-              Close
-            </Button>
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${selectedVideo}?autoplay=1`}
-              className="w-full h-full rounded-xl"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              title="YouTube Video"
-            />
+        <div className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4" onClick={() => setSelectedVideo(null)}>
+          <div className="w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <p className="text-white font-medium truncate max-w-[80%]">{selectedVideoTitle || "Video"}</p>
+              <button
+                onClick={() => setSelectedVideo(null)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm transition-colors"
+              >
+                <X className="w-4 h-4" />
+                Close
+              </button>
+            </div>
+            <div className="aspect-video w-full rounded-2xl overflow-hidden">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${selectedVideo}?autoplay=1&rel=0`}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title={selectedVideoTitle || "Video"}
+              />
+            </div>
           </div>
         </div>
       )}
