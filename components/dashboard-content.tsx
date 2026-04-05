@@ -243,7 +243,7 @@ const cohortWeeks = [
 
 const tierOrder = { initial: 0, foundational: 1, builder: 2, architect: 3 }
 
-
+const tierInfo = {
   initial: {
     label: "Explorer",
     color: "bg-[#6B5B9E]",
