@@ -2,12 +2,12 @@
 
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { 
-  Sparkles, 
-  LogOut, 
-  PlayCircle, 
-  FileText, 
-  Video, 
+import {
+  Sparkles,
+  LogOut,
+  PlayCircle,
+  FileText,
+  Video,
   Lock,
   Crown,
   Star,
@@ -371,9 +371,9 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
               size="sm"
               className="border-[#00C8A7] text-[#00C8A7] hover:bg-[#00C8A7] hover:text-white rounded-full hidden sm:flex"
             >
-              <a 
-                href="https://whatsapp.com/channel/0029VbCJ26365yDAn7xmbq2R" 
-                target="_blank" 
+              <a
+                href="https://whatsapp.com/channel/0029VbCJ26365yDAn7xmbq2R"
+                target="_blank"
                 rel="noopener noreferrer"
               >
                 <MessageCircle className="w-4 h-4 mr-2" />
@@ -442,9 +442,9 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
             asChild
             className="bg-[#00C8A7] text-white hover:bg-[#00C8A7]/90 rounded-full"
           >
-            <a 
-              href="https://whatsapp.com/channel/0029VbCJ26365yDAn7xmbq2R" 
-              target="_blank" 
+            <a
+              href="https://whatsapp.com/channel/0029VbCJ26365yDAn7xmbq2R"
+              target="_blank"
               rel="noopener noreferrer"
             >
               <MessageCircle className="w-4 h-4 mr-2" />
@@ -477,9 +477,8 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                     key={week.key}
                     onClick={() => !isLocked && setSelectedWeek(week.key)}
                     disabled={isLocked}
-                    className={`relative group text-left rounded-2xl p-5 bg-gradient-to-br ${week.color} transition-all ${
-                      isLocked ? "opacity-50 cursor-not-allowed" : "hover:shadow-lg hover:scale-[1.02] cursor-pointer"
-                    }`}
+                    className={`relative group text-left rounded-2xl p-5 bg-gradient-to-br ${week.color} transition-all ${isLocked ? "opacity-50 cursor-not-allowed" : "hover:shadow-lg hover:scale-[1.02] cursor-pointer"
+                      }`}
                   >
                     {isLocked && (
                       <div className="absolute top-3 right-3">
@@ -561,10 +560,11 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                               >
                                 <div className="relative flex-shrink-0 w-28 aspect-video rounded-lg overflow-hidden bg-[#1A0A3D]">
                                   {videoId ? (
-                                    <img
+                                    <Image
                                       src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
                                       alt={video.title}
-                                      className="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
+                                      fill
+                                      className="object-cover group-hover:opacity-80 transition-opacity"
                                     />
                                   ) : null}
                                   <div className="absolute inset-0 flex items-center justify-center">
@@ -607,15 +607,15 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
               </div>
               <span className="text-sm text-[#6B5B9E]">Current Membership</span>
             </div>
-            
+
             {tier === "initial" && (
               <Button
                 asChild
                 className="bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full"
               >
-                <a 
-                  href="https://docs.google.com/forms/d/e/1FAIpQLSelAKQrkxz97RxCo7B8K-xNOAe3-wXhtmnxyW6qx-WNA_82ZA/viewform?usp=header" 
-                  target="_blank" 
+                <a
+                  href="https://docs.google.com/forms/d/e/1FAIpQLSelAKQrkxz97RxCo7B8K-xNOAe3-wXhtmnxyW6qx-WNA_82ZA/viewform?usp=header"
+                  target="_blank"
                   rel="noopener noreferrer"
                 >
                   Upgrade to Foundational, Builder, or Architect
@@ -623,7 +623,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                 </a>
               </Button>
             )}
-            
+
             {tier === "foundational" && (
               <Button
                 asChild
@@ -636,7 +636,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                 </a>
               </Button>
             )}
-            
+
             {tier === "builder" && (
               <Button
                 asChild
@@ -658,7 +658,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
             <Wrench className="w-4 h-4 text-[#492B8C]" />
             Best AI Tools
           </h2>
-          
+
           {/* v0 - Highlighted */}
           <a
             href="https://v0.app/ref/RAIJ6R"
@@ -781,11 +781,10 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                             <h3 className="font-medium text-[#1A0A3D] group-hover:text-[#492B8C] transition-colors">
                               {resource.title}
                             </h3>
-                            <span className={`px-2 py-0.5 rounded-full text-xs text-white ${
-                              resource.tier_required === "architect" ? "bg-[#FF6B34]" :
-                              resource.tier_required === "builder" ? "bg-[#FFD13F]" :
-                              resource.tier_required === "foundational" ? "bg-[#00C8A7]" : "bg-[#6B5B9E]"
-                            }`}>
+                            <span className={`px-2 py-0.5 rounded-full text-xs text-white ${resource.tier_required === "architect" ? "bg-[#FF6B34]" :
+                                resource.tier_required === "builder" ? "bg-[#FFD13F]" :
+                                  resource.tier_required === "foundational" ? "bg-[#00C8A7]" : "bg-[#6B5B9E]"
+                              }`}>
                               {resource.tier_required}
                             </span>
                           </div>
@@ -849,9 +848,9 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
               {tier === "builder" && "Unlock with Architect"}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(tier === "initial" 
-                ? [...foundationalResources.slice(0, 2), ...architectResources.slice(0, 1)] 
-                : tier === "foundational" 
+              {(tier === "initial"
+                ? [...foundationalResources.slice(0, 2), ...architectResources.slice(0, 1)]
+                : tier === "foundational"
                   ? [...builderResources.slice(0, 2), ...architectResources.slice(0, 1)]
                   : architectResources
               ).map((resource, index) => (
@@ -902,9 +901,9 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
               variant="outline"
               className="border-white text-white hover:bg-white hover:text-[#2D1A69] rounded-full"
             >
-              <a 
-                href="https://whatsapp.com/channel/0029VbCJ26365yDAn7xmbq2R" 
-                target="_blank" 
+              <a
+                href="https://whatsapp.com/channel/0029VbCJ26365yDAn7xmbq2R"
+                target="_blank"
                 rel="noopener noreferrer"
               >
                 <MessageCircle className="w-4 h-4 mr-2" />
