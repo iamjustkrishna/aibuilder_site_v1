@@ -678,12 +678,12 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
                   className={`group relative p-5 rounded-xl border transition-all ${isLocked
                     ? "bg-[#F4F1FB]/50 border-[#E8E3F3]"
                     : "bg-white border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-md cursor-pointer"
-                    }`}
+                    } ${resource.url === "#" && !isLocked ? "opacity-75" : ""}`}
                   onClick={() => {
-                    if (!isLocked) {
+                    if (!isLocked && resource.url !== "#") {
                       if (resource.type === "pdf" && resource.url === "/ai-builder-cohort-guide.pdf") {
                         setShowPdfViewer(true)
-                      } else if (resource.url !== "#") {
+                      } else {
                         window.open(resource.url, "_blank")
                       }
                     }
@@ -705,21 +705,29 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
                   )}
 
                   <div className="flex items-start gap-4">
-                    <div className={`p-2 rounded-lg ${isLocked ? "bg-[#F4F1FB]" : "bg-[#F4F1FB] group-hover:bg-[#492B8C]"} transition-colors`}>
+                    <div className={`p-2 rounded-lg ${isLocked ? "bg-[#F4F1FB]" : "bg-[#F4F1FB] group-hover:bg-[#492B8C]"} transition-colors relative`}>
                       <IconComponent className={`w-5 h-5 ${isLocked ? "text-[#6B5B9E]" : "text-[#492B8C] group-hover:text-white"} transition-colors`} />
+                      {resource.url === "#" && !isLocked && (
+                        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#FF6B34] rounded-full ring-2 ring-white animate-pulse" />
+                      )}
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${resource.tier === "free" ? "bg-[#00C8A7]/10 text-[#00C8A7]" :
-                          resource.tier === "builder" ? "bg-[#492B8C]/10 text-[#492B8C]" :
-                            "bg-[#FF6B34]/10 text-[#FF6B34]"
-                          }`}>
-                          {resource.tier === "free" ? "Free" : resource.tier.charAt(0).toUpperCase() + resource.tier.slice(1)}
-                        </span>
-                        {resource.featured && (
-                          <span className="px-2 py-0.5 rounded-full bg-[#FFD13F]/20 text-[#FF6B34] text-xs font-medium">
-                            Featured
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${resource.tier === "free" ? "bg-[#00C8A7]/10 text-[#00C8A7]" :
+                            resource.tier === "builder" ? "bg-[#492B8C]/10 text-[#492B8C]" :
+                              "bg-[#FF6B34]/10 text-[#FF6B34]"
+                            }`}>
+                            {resource.tier === "free" ? "Free" : resource.tier.charAt(0).toUpperCase() + resource.tier.slice(1)}
                           </span>
+                          {resource.featured && (
+                            <span className="px-2 py-0.5 rounded-full bg-[#FFD13F]/20 text-[#FF6B34] text-xs font-medium">
+                              Featured
+                            </span>
+                          )}
+                        </div>
+                        {resource.url === "#" && !isLocked && (
+                          <span className="text-[10px] font-bold text-[#FF6B34] uppercase tracking-wider">Coming Soon</span>
                         )}
                       </div>
                       <h3 className={`font-medium mb-1 ${isLocked ? "text-[#6B5B9E]" : "text-[#1A0A3D] group-hover:text-[#492B8C]"} transition-colors`}>
@@ -727,7 +735,7 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
                       </h3>
                       <p className="text-sm text-[#6B5B9E]">{resource.description}</p>
                     </div>
-                    {!isLocked && <ExternalLink className="w-4 h-4 text-[#6B5B9E] opacity-0 group-hover:opacity-100 transition-opacity" />}
+                    {!isLocked && resource.url !== "#" && <ExternalLink className="w-4 h-4 text-[#6B5B9E] opacity-0 group-hover:opacity-100 transition-opacity" />}
                   </div>
                 </div>
               )

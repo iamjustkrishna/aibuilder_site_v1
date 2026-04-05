@@ -21,7 +21,9 @@ import {
   Gift,
   ChevronRight,
   Play,
-  Calendar
+  Calendar,
+  Users,
+  Check
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -283,6 +285,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   const [selectedPdfUrl, setSelectedPdfUrl] = useState<string | null>(null)
   const [selectedPdfTitle, setSelectedPdfTitle] = useState<string>("")
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null)
+  const [showMentorModal, setShowMentorModal] = useState(false)
 
   // Check if user is admin
   useEffect(() => {
@@ -782,8 +785,8 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                               {resource.title}
                             </h3>
                             <span className={`px-2 py-0.5 rounded-full text-xs text-white ${resource.tier_required === "architect" ? "bg-[#FF6B34]" :
-                                resource.tier_required === "builder" ? "bg-[#FFD13F]" :
-                                  resource.tier_required === "foundational" ? "bg-[#00C8A7]" : "bg-[#6B5B9E]"
+                              resource.tier_required === "builder" ? "bg-[#FFD13F]" :
+                                resource.tier_required === "foundational" ? "bg-[#00C8A7]" : "bg-[#6B5B9E]"
                               }`}>
                               {resource.tier_required}
                             </span>
@@ -811,31 +814,44 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {resources.map((resource, index) => (
-            <div
-              key={index}
-              onClick={() => {
-                if (resource.isPdfViewer) {
-                  setShowPdfViewer(true)
-                } else if (resource.url !== "#") {
-                  window.open(resource.url, "_blank")
-                }
-              }}
-              className="group p-5 rounded-xl bg-white border border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-md transition-all cursor-pointer"
-            >
-              <div className="flex items-start gap-4">
-                <div className="p-2 rounded-lg bg-[#F4F1FB] group-hover:bg-[#492B8C] transition-colors">
-                  <resource.icon className="w-5 h-5 text-[#492B8C] group-hover:text-white transition-colors" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-[#1A0A3D] mb-1 group-hover:text-[#492B8C] transition-colors">
-                    {resource.title}
-                  </h3>
-                  <p className="text-sm text-[#6B5B9E]">{resource.description}</p>
+          {resources.map((resource, index) => {
+            const isComingSoon = resource.url === "#" && resource.title !== "1-on-1 Mentor Sessions"
+            return (
+              <div
+                key={index}
+                onClick={() => {
+                  if (resource.title === "1-on-1 Mentor Sessions") {
+                    setShowMentorModal(true)
+                  } else if (resource.isPdfViewer) {
+                    setShowPdfViewer(true)
+                  } else if (resource.url !== "#") {
+                    window.open(resource.url, "_blank")
+                  }
+                }}
+                className={`group p-5 rounded-xl bg-white border border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-md transition-all cursor-pointer ${isComingSoon ? "opacity-70" : ""}`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="p-2 rounded-lg bg-[#F4F1FB] group-hover:bg-[#492B8C] transition-colors relative">
+                    <resource.icon className="w-5 h-5 text-[#492B8C] group-hover:text-white transition-colors" />
+                    {isComingSoon && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#FF6B34] rounded-full ring-2 ring-white animate-pulse" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-medium text-[#1A0A3D] group-hover:text-[#492B8C] transition-colors">
+                        {resource.title}
+                      </h3>
+                      {isComingSoon && (
+                        <span className="text-[10px] font-bold text-[#FF6B34] uppercase tracking-wider">Coming Soon</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-[#6B5B9E]">{resource.description}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Locked Resources Preview */}
@@ -1016,6 +1032,59 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                 className="w-full h-full"
                 title={selectedPdfTitle}
               />
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 1-on-1 Mentor Session Modal */}
+      {showMentorModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setShowMentorModal(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-md p-8 text-center relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Background elements */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#FF6B34]/5 rounded-full -mr-16 -mt-16" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-[#492B8C]/5 rounded-full -ml-12 -mb-12" />
+
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#492B8C] to-[#2D1A69] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-[#2D1A69]/20 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
+              <Users className="w-10 h-10 text-white" />
+            </div>
+
+            <h3 className="text-2xl font-bold text-[#1A0A3D] mb-3" style={{ fontFamily: "var(--font-cal-sans)" }}>
+              1-on-1 Mentor Session
+            </h3>
+
+            <div className="space-y-4 mb-8">
+              <p className="text-[#6B5B9E] leading-relaxed">
+                Unlock personalized guidance and project feedback directed by our expert mentors.
+              </p>
+
+              <div className="p-4 rounded-2xl bg-[#F4F1FB] border border-[#E8E3F3] text-sm">
+                <p className="font-semibold text-[#1A0A3D] mb-1">How to schedule:</p>
+                <p className="text-[#6B5B9E]">Mail to <span className="text-[#492B8C] font-bold">support@aibuilder.space</span> for one on one session.</p>
+              </div>
+
+              <p className="text-sm font-medium text-[#00C8A7] flex items-center justify-center gap-2">
+                <Check className="w-4 h-4" />
+                We will contact you shortly!
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <Button
+                asChild
+                className="bg-[#2D1A69] text-white hover:bg-[#492B8C] rounded-full py-6 text-lg"
+              >
+                <a href="mailto:support@aibuilder.space">
+                  <Mail className="w-5 h-5 mr-3" />
+                  Email Support
+                </a>
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setShowMentorModal(false)}
+                className="text-[#6B5B9E] hover:text-[#1A0A3D] rounded-full"
+              >
+                Maybe Later
+              </Button>
             </div>
           </div>
         </div>
