@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -325,21 +325,12 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [selectedTierForPayment, setSelectedTierForPayment] = useState<"foundational" | "builder" | "architect" | null>(null)
   const [copiedUPI, setCopiedUPI] = useState(false)
-  const [selectedArticle, setSelectedArticle] = useState<typeof curatedArticles[0] | null>(null)
-  const [articleContent, setArticleContent] = useState<string | null>(null)
-  const [loadingArticle, setLoadingArticle] = useState(false)
 
   const UPI_ID = "thekrishnajeena@ybl"
 
-  const handleArticleClick = async (article: typeof curatedArticles[0]) => {
-    setSelectedArticle(article)
-    setLoadingArticle(true)
-    try {
-      // For now, we'll open in an iframe. In production, you could fetch and render content.
-      setArticleContent(article.url)
-    } finally {
-      setLoadingArticle(false)
-    }
+  const handleArticleClick = (article: typeof curatedArticles[0]) => {
+    // Open article in new tab since most sites block iframe embedding (X-Frame-Options)
+    window.open(article.url, '_blank', 'noopener,noreferrer')
   }
 
   const handleLockedResourceClick = (resourceTier: string) => {
@@ -474,6 +465,18 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
     return matchesSearch && matchesType && hasValidUrl
   })
 
+  // Filter curated articles based on search
+  const filteredArticles = curatedArticles.filter(article => {
+    const matchesSearch = searchQuery === "" || 
+      article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      article.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      article.source.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesSearch
+  })
+
+  // Determine if we should show articles section based on filter
+  const showArticlesSection = selectedType === "all" || selectedType === "article"
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -540,6 +543,7 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
         </div>
 
         {/* Premium Resources Section (from Database) - MOVED TO TOP */}
+        {selectedType === "all" && (
         <div className="mb-12">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-[#1A0A3D] flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
@@ -671,54 +675,58 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
             </div>
           )}
         </div>
+        )}
 
         {/* Curated AI Articles Section */}
-        <div className="mb-12">
-          <h2 className="text-xl font-bold text-[#1A0A3D] mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
-            <BookOpen className="w-5 h-5 text-[#492B8C]" />
-            Must-Read AI Articles
-          </h2>
-          <p className="text-[#6B5B9E] mb-6">
-            Hand-picked articles from top AI publications to accelerate your learning journey.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {curatedArticles.map((article) => (
-              <button
-                key={article.id}
-                onClick={() => handleArticleClick(article)}
-                className="group text-left p-5 rounded-xl border border-[#E8E3F3] bg-white hover:border-[#492B8C] hover:shadow-md transition-all"
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    article.category === "beginner" ? "bg-[#00C8A7]/10 text-[#00C8A7]" :
-                    article.category === "tutorial" ? "bg-[#492B8C]/10 text-[#492B8C]" :
-                    "bg-[#FF6B34]/10 text-[#FF6B34]"
-                  }`}>
-                    {article.category.charAt(0).toUpperCase() + article.category.slice(1)}
-                  </span>
-                  <span className="text-xs text-[#6B5B9E]">{article.readTime}</span>
-                </div>
-                <h3 className="font-medium text-[#1A0A3D] group-hover:text-[#492B8C] transition-colors mb-2 line-clamp-2">
-                  {article.title}
-                </h3>
-                <p className="text-sm text-[#6B5B9E] line-clamp-2 mb-3">{article.description}</p>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-[#6B5B9E]">{article.source}</span>
-                  <span className="text-[#492B8C] font-medium group-hover:underline flex items-center gap-1">
-                    Read Article <ArrowRight className="w-3 h-3" />
-                  </span>
-                </div>
-              </button>
-            ))}
+        {showArticlesSection && filteredArticles.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-xl font-bold text-[#1A0A3D] mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
+              <BookOpen className="w-5 h-5 text-[#492B8C]" />
+              Must-Read AI Articles
+            </h2>
+            <p className="text-[#6B5B9E] mb-6">
+              Hand-picked articles from top AI publications to accelerate your learning journey.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredArticles.map((article) => (
+                <button
+                  key={article.id}
+                  onClick={() => handleArticleClick(article)}
+                  className="group text-left p-5 rounded-xl border border-[#E8E3F3] bg-white hover:border-[#492B8C] hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      article.category === "beginner" ? "bg-[#00C8A7]/10 text-[#00C8A7]" :
+                      article.category === "tutorial" ? "bg-[#492B8C]/10 text-[#492B8C]" :
+                      "bg-[#FF6B34]/10 text-[#FF6B34]"
+                    }`}>
+                      {article.category.charAt(0).toUpperCase() + article.category.slice(1)}
+                    </span>
+                    <span className="text-xs text-[#6B5B9E]">{article.readTime}</span>
+                  </div>
+                  <h3 className="font-medium text-[#1A0A3D] group-hover:text-[#492B8C] transition-colors mb-2 line-clamp-2">
+                    {article.title}
+                  </h3>
+                  <p className="text-sm text-[#6B5B9E] line-clamp-2 mb-3">{article.description}</p>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[#6B5B9E]">{article.source}</span>
+                    <span className="text-[#492B8C] font-medium group-hover:underline flex items-center gap-1">
+                      Read Article <ExternalLink className="w-3 h-3" />
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* One-Click Clone Section */}
-        <div className="mb-12">
-          <h2 className="text-xl font-bold text-[#1A0A3D] mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
-            <Code className="w-5 h-5 text-[#492B8C]" />
-            Starter Code - Build Something Fast
-          </h2>
+        {selectedType === "all" && (
+          <div className="mb-12">
+            <h2 className="text-xl font-bold text-[#1A0A3D] mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
+              <Code className="w-5 h-5 text-[#492B8C]" />
+              Starter Code - Build Something Fast
+            </h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {starterSnippets.map((snippet, i) => {
               const isLocked = !canAccess(snippet.tier)
@@ -785,8 +793,10 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
             })}
           </div>
         </div>
+        )}
 
         {/* GitHub Repo Cards */}
+        {selectedType === "all" && (
         <div className="mb-12">
           <h2 className="text-xl font-bold text-[#1A0A3D] mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
             <Github className="w-5 h-5 text-[#1A0A3D]" />
@@ -829,15 +839,17 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
             ))}
           </div>
         </div>
+        )}
 
         {/* Curated Videos */}
-        <div className="mb-12">
-          <h2 className="text-xl font-bold text-[#1A0A3D] mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
-            <PlayCircle className="w-5 h-5 text-[#FF6B34]" />
-            Learn AI - Curated Videos
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {youtubeVideos.map((video, i) => (
+        {(selectedType === "all" || selectedType === "video") && (
+          <div className="mb-12">
+            <h2 className="text-xl font-bold text-[#1A0A3D] mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
+              <PlayCircle className="w-5 h-5 text-[#FF6B34]" />
+              Learn AI - Curated Videos
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {youtubeVideos.map((video, i) => (
               <div
                 key={i}
                 className="group rounded-xl bg-white border border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-md transition-all overflow-hidden cursor-pointer"
@@ -860,10 +872,11 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
                   <p className="text-xs text-[#FF6B34] font-medium mb-1">{video.channel}</p>
                   <h3 className="font-medium text-sm text-[#1A0A3D] line-clamp-2">{video.title}</h3>
                 </div>
-              </div>
-            ))}
+</div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* All Resources Grid */}
         <div className="mb-12">
@@ -1095,74 +1108,6 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
               src="/ai-builder-cohort-guide.pdf"
               className="w-full h-[calc(100%-60px)]"
             />
-          </div>
-        </div>
-      )}
-
-      {/* Article Reader Modal */}
-      {selectedArticle && (
-        <div
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-          onClick={() => {
-            setSelectedArticle(null)
-            setArticleContent(null)
-          }}
-        >
-          <div 
-            className="relative w-full max-w-5xl h-[90vh] bg-white rounded-xl overflow-hidden flex flex-col" 
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-[#E8E3F3] bg-white flex-shrink-0">
-              <div className="flex-1 min-w-0 mr-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    selectedArticle.category === "beginner" ? "bg-[#00C8A7]/10 text-[#00C8A7]" :
-                    selectedArticle.category === "tutorial" ? "bg-[#492B8C]/10 text-[#492B8C]" :
-                    "bg-[#FF6B34]/10 text-[#FF6B34]"
-                  }`}>
-                    {selectedArticle.category.charAt(0).toUpperCase() + selectedArticle.category.slice(1)}
-                  </span>
-                  <span className="text-xs text-[#6B5B9E]">{selectedArticle.source}</span>
-                  <span className="text-xs text-[#6B5B9E]">{selectedArticle.readTime}</span>
-                </div>
-                <h3 className="font-bold text-[#1A0A3D] truncate">{selectedArticle.title}</h3>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <a 
-                  href={selectedArticle.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-lg hover:bg-[#F4F1FB] text-[#6B5B9E] hover:text-[#492B8C] transition-colors"
-                  title="Open in new tab"
-                >
-                  <ExternalLink className="w-5 h-5" />
-                </a>
-                <button
-                  onClick={() => {
-                    setSelectedArticle(null)
-                    setArticleContent(null)
-                  }}
-                  className="p-2 rounded-lg hover:bg-[#F4F1FB] text-[#6B5B9E] hover:text-[#1A0A3D] transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            {/* Content */}
-            <div className="flex-1 overflow-hidden">
-              {loadingArticle ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="w-8 h-8 border-2 border-[#492B8C] border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : (
-                <iframe
-                  src={articleContent || selectedArticle.url}
-                  className="w-full h-full"
-                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                />
-              )}
-            </div>
           </div>
         </div>
       )}
