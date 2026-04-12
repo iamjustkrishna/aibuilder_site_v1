@@ -2,7 +2,7 @@
 
 import { motion, useInView } from "framer-motion"
 import { useRef, useState } from "react"
-import { Check, Star, Store, Users, Rocket, IndianRupee, CreditCard, Copy, X, MessageCircle } from "lucide-react"
+import { Check, Star, Users, Rocket, IndianRupee, CreditCard, Copy, X, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const plans = [
@@ -154,7 +154,89 @@ export function Pricing() {
                   <div>
                     <h3 className="text-xl font-semibold text-[#1A0A3D]">{plan.name}</h3>
                     <p className="text-xs text-[#6B5B9E]">{plan.tagline}</p>
-</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 mt-3 mb-2">
+                  <IndianRupee className="w-5 h-5 text-[#1A0A3D]" />
+                  <span className="text-2xl font-bold text-[#1A0A3D]">{plan.price}</span>
+                  <span className="text-sm text-[#6B5B9E]">one-time</span>
+                </div>
+                <p className="text-[#6B5B9E] text-sm leading-relaxed">{plan.description}</p>
+              </div>
+
+              <ul className="space-y-2 mb-6">
+                {plan.features.map((feature) => (
+                  <li key={feature} className="flex items-center gap-2 text-sm text-[#1A0A3D]">
+                    <Check className="w-4 h-4 text-[#00C8A7] flex-shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+
+              <Button
+                onClick={() => handlePlanClick(plan)}
+                className={`w-full rounded-full ${
+                  plan.highlighted
+                    ? "shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90"
+                    : "bg-[#2D1A69] text-white hover:bg-[#492B8C]"
+                }`}
+              >
+                {plan.cta}
+              </Button>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Questions Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="text-center mb-20"
+        >
+          <div className="inline-flex flex-col sm:flex-row items-center gap-3 px-6 py-4 rounded-2xl bg-white border border-[#E8E3F3] shadow-sm">
+            <p className="text-[#1A0A3D] font-medium">Have questions about our plans?</p>
+            <a 
+              href="mailto:support@aibuilder.space" 
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#2D1A69] text-white font-medium hover:bg-[#492B8C] transition-colors"
+            >
+              Contact Us
+            </a>
+          </div>
+        </motion.div>
+
+        {/* How to Earn Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className="max-w-4xl mx-auto"
+        >
+          <div className="text-center mb-10">
+            <h3 className="text-2xl sm:text-3xl font-bold text-[#1A0A3D] mb-3" style={{ fontFamily: "var(--font-instrument-sans)" }}>
+              How Architects Earn
+            </h3>
+            <p className="text-[#6B5B9E]">Turn your cohort project into a revenue stream</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {earnings.map((item, index) => (
+              <motion.div
+                key={item.step}
+                initial={{ opacity: 0, y: 20 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.5, delay: 0.7 + index * 0.1 }}
+                className="relative p-5 rounded-xl bg-white border border-[#E8E3F3] hover:border-[#492B8C]/30 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-[#FF6B34] text-white font-bold flex items-center justify-center text-sm mb-3">
+                  {item.step}
+                </div>
+                <h4 className="font-semibold text-[#1A0A3D] mb-1">{item.title}</h4>
+                <p className="text-sm text-[#6B5B9E]">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
       </div>
 
       {/* UPI Payment Modal */}
