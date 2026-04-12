@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -24,11 +24,15 @@ import {
   Calendar,
   Play,
   CreditCard,
-  IndianRupee
+  IndianRupee,
+  Download,
+  ShoppingCart
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import type { User } from "@supabase/supabase-js"
+import { PaymentModal } from "@/components/payment-modal"
+import { toast } from "sonner"
 
 interface Profile {
   membership_tier: "initial" | "foundational" | "builder" | "architect"
@@ -325,6 +329,77 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
     await navigator.clipboard.writeText(UPI_ID)
     setCopiedUPI(true)
     setTimeout(() => setCopiedUPI(false), 2000)
+  }
+
+  // Payment & Purchase State
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false)
+  const [selectedResource, setSelectedResource] = useState<any>(null)
+  const [purchasedResources, setPurchasedResources] = useState<Set<string>>(new Set())
+  const [loadingPurchases, setLoadingPurchases] = useState(true)
+  const [downloadingResource, setDownloadingResource] = useState<string | null>(null)
+
+  // Fetch purchased resources on mount
+  useEffect(() => {
+    if (user) {
+      fetchPurchasedResources()
+    } else {
+      setLoadingPurchases(false)
+    }
+  }, [user])
+
+  const fetchPurchasedResources = async () => {
+    try {
+      const response = await fetch('/api/resources/purchased')
+      const data = await response.json()
+
+      if (data.success) {
+        const purchasedIds = new Set(data.purchases.map((p: any) => p.resource.id))
+        setPurchasedResources(purchasedIds)
+      }
+    } catch (error) {
+      console.error('Failed to fetch purchases:', error)
+    } finally {
+      setLoadingPurchases(false)
+    }
+  }
+
+  const handlePurchase = (resource: any) => {
+    if (!user) {
+      toast.error('Please login to purchase')
+      return
+    }
+    setSelectedResource(resource)
+    setPaymentModalOpen(true)
+  }
+
+  const handleDownload = async (resourceId: string) => {
+    if (!user) {
+      toast.error('Please login to download')
+      return
+    }
+
+    setDownloadingResource(resourceId)
+    try {
+      const response = await fetch(`/api/resources/${resourceId}/download`)
+      const data = await response.json()
+
+      if (data.success) {
+        // Open download URL in new tab
+        window.open(data.downloadUrl, '_blank')
+        toast.success('Download started!')
+      } else {
+        toast.error(data.error || 'Failed to download')
+      }
+    } catch (error) {
+      console.error('Download error:', error)
+      toast.error('Failed to download resource')
+    } finally {
+      setDownloadingResource(null)
+    }
+  }
+
+  const isPurchased = (resourceId: string) => {
+    return purchasedResources.has(resourceId)
   }
 
   const getWeekVideos = (weekKey: string) => {
@@ -729,17 +804,8 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
                   key={i}
                   className={`group relative p-5 rounded-xl border transition-all ${isLocked
                     ? "bg-[#F4F1FB]/50 border-[#E8E3F3]"
-                    : "bg-white border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-md cursor-pointer"
+                    : "bg-white border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-md"
                     } ${resource.url === "#" && !isLocked ? "opacity-75" : ""}`}
-                  onClick={() => {
-                    if (!isLocked && resource.url !== "#") {
-                      if (resource.type === "pdf" && resource.url === "/ai-builder-cohort-guide.pdf") {
-                        setShowPdfViewer(true)
-                      } else {
-                        window.open(resource.url, "_blank")
-                      }
-                    }
-                  }}
                 >
                   {/* Locked Overlay */}
                   {isLocked && (
@@ -800,8 +866,82 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
                       </h3>
                       <p className="text-sm text-[#6B5B9E]">{resource.description}</p>
                     </div>
-                    {!isLocked && resource.url !== "#" && <ExternalLink className="w-4 h-4 text-[#6B5B9E] opacity-0 group-hover:opacity-100 transition-opacity" />}
                   </div>
+
+                  {/* Purchase/Download Buttons */}
+                  {!isLocked && (resource as any).is_purchasable && (
+                    <div className="mt-4 pt-4 border-t border-[#E8E3F3]">
+                      {isPurchased(resource.id) ? (
+                        <Button
+                          onClick={() => handleDownload(resource.id)}
+                          disabled={downloadingResource === resource.id}
+                          className="w-full bg-[#00C8A7] hover:bg-[#00C8A7]/90 text-white rounded-full"
+                          size="sm"
+                        >
+                          {downloadingResource === resource.id ? (
+                            <>
+                              <Download className="w-3 h-3 mr-2 animate-bounce" />
+                              Downloading...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="w-3 h-3 mr-2" />
+                              Download
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-[#6B5B9E]">Price:</span>
+                            <div className="text-right">
+                              {(resource as any).price_inr && (
+                                <span className="text-sm font-semibold text-[#1A0A3D]">
+                                  ₹{((resource as any).price_inr / 100).toFixed(0)}
+                                </span>
+                              )}
+                              {(resource as any).price_inr && (resource as any).price_usd && (
+                                <span className="text-xs text-[#6B5B9E] mx-1">or</span>
+                              )}
+                              {(resource as any).price_usd && (
+                                <span className="text-sm font-semibold text-[#1A0A3D]">
+                                  ${((resource as any).price_usd / 100).toFixed(2)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            onClick={() => handlePurchase(resource)}
+                            className="w-full bg-[#FF6B34] hover:bg-[#FF6B34]/90 text-white rounded-full"
+                            size="sm"
+                          >
+                            <ShoppingCart className="w-3 h-3 mr-2" />
+                            Buy Now
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!isLocked && !(resource as any).is_purchasable && resource.url !== "#" && (
+                    <div className="mt-4 pt-4 border-t border-[#E8E3F3]">
+                      <Button
+                        onClick={() => {
+                          if (resource.type === "pdf" && resource.url === "/ai-builder-cohort-guide.pdf") {
+                            setShowPdfViewer(true)
+                          } else {
+                            window.open(resource.url, "_blank")
+                          }
+                        }}
+                        variant="outline"
+                        className="w-full rounded-full border-[#492B8C] text-[#492B8C] hover:bg-[#492B8C] hover:text-white"
+                        size="sm"
+                      >
+                        <ExternalLink className="w-3 h-3 mr-2" />
+                        View Resource
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -995,6 +1135,30 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
           </div>
         </div>
       )}
+
+      {/* Payment Modal */}
+      {selectedResource && (
+        <PaymentModal
+          open={paymentModalOpen}
+          onClose={() => {
+            setPaymentModalOpen(false)
+            setSelectedResource(null)
+          }}
+          resource={selectedResource}
+          onSuccess={() => {
+            fetchPurchasedResources()
+            toast.success('Purchase successful! You can now download the resource.')
+          }}
+        />
+      )}
+
+      {/* Wiggle Animation */}
+      <style jsx global>{`
+        @keyframes wiggle {
+          0%, 100% { transform: rotate(-3deg); }
+          50% { transform: rotate(3deg); }
+        }
+      `}</style>
     </div>
   )
 }
