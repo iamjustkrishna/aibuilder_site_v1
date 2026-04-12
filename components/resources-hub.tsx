@@ -16,18 +16,15 @@ import {
   Copy,
   Check,
   Code,
-  Zap,
-  TrendingUp,
-  Users,
   Star,
   Github,
   ChevronDown,
-  Filter,
-  Rocket,
   MessageCircle,
   ArrowRight,
   Calendar,
   Play,
+  CreditCard,
+  IndianRupee,
   Download,
   ShoppingCart
 } from "lucide-react"
@@ -44,6 +41,13 @@ interface Profile {
 interface ResourcesHubProps {
   user: User | null
   profile: Profile | null
+}
+
+// Pricing tiers for UPI payment
+const tierPricing = {
+  foundational: { price: 499, label: "Foundational" },
+  builder: { price: 999, label: "Builder" },
+  architect: { price: 1999, label: "Architect" },
 }
 
 // Cohort Weeks - Configuration
@@ -305,6 +309,27 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
   const [selectedVideoTitle, setSelectedVideoTitle] = useState<string>("")
   const [showPdfViewer, setShowPdfViewer] = useState(false)
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [selectedTierForPayment, setSelectedTierForPayment] = useState<"foundational" | "builder" | "architect" | null>(null)
+  const [copiedUPI, setCopiedUPI] = useState(false)
+
+  const UPI_ID = "thekrishnajeena@ybl"
+
+  const handleLockedResourceClick = (resourceTier: string) => {
+    if (!user) {
+      // User not signed in - redirect to login
+      return
+    }
+    // User signed in but doesn't have access - show payment modal
+    setSelectedTierForPayment(resourceTier as "foundational" | "builder" | "architect")
+    setShowPaymentModal(true)
+  }
+
+  const copyUPIId = async () => {
+    await navigator.clipboard.writeText(UPI_ID)
+    setCopiedUPI(true)
+    setTimeout(() => setCopiedUPI(false), 2000)
+  }
 
   // Payment & Purchase State
   const [paymentModalOpen, setPaymentModalOpen] = useState(false)
@@ -480,9 +505,18 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
               return (
                 <button
                   key={week.key}
-                  onClick={() => !isLocked && setSelectedWeek(week.key)}
-                  disabled={isLocked}
-                  className={`relative group text-left rounded-2xl p-5 bg-gradient-to-br ${week.color} transition-all ${isLocked ? "opacity-50 cursor-not-allowed" : "hover:shadow-lg hover:scale-[1.02] cursor-pointer"
+                  onClick={() => {
+                    if (isLocked) {
+                      if (!user) {
+                        // Not signed in - do nothing, let the link handle it
+                        return
+                      }
+                      handleLockedResourceClick(week.tier)
+                    } else {
+                      setSelectedWeek(week.key)
+                    }
+                  }}
+                  className={`relative group text-left rounded-2xl p-5 bg-gradient-to-br ${week.color} transition-all ${isLocked ? "opacity-70 hover:opacity-90 cursor-pointer" : "hover:shadow-lg hover:scale-[1.02] cursor-pointer"
                     }`}
                 >
                   {isLocked && (
@@ -498,6 +532,9 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
                       {videos.length > 0 ? `${videos.length} video${videos.length !== 1 ? "s" : ""}` : "Coming soon"}
                     </span>
                   </div>
+                  {isLocked && !user && (
+                    <Link href="/login" className="absolute inset-0 z-10" />
+                  )}
                   {!isLocked && videos.length > 0 && (
                     <div className="absolute bottom-3 right-3 w-7 h-7 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
                       <ChevronDown className="w-4 h-4 text-white -rotate-90" />
@@ -637,14 +674,29 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
                   {/* Code */}
                   <div className={`relative ${isLocked ? "" : ""}`}>
                     {isLocked && (
-                      <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
-                        <div className="p-3 rounded-full bg-[#F4F1FB] mb-3 animate-bounce">
+                      <div 
+                        className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center cursor-pointer"
+                        onClick={() => {
+                          if (!user) return // Let the Link handle navigation
+                          handleLockedResourceClick(snippet.tier)
+                        }}
+                      >
+                        <div className="p-3 rounded-full bg-[#F4F1FB] mb-3">
                           <Lock className="w-5 h-5 text-[#6B5B9E]" />
                         </div>
-                        <p className="text-sm font-medium text-[#1A0A3D] mb-2">Builder Tier Required</p>
-                        <Button asChild size="sm" className="bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full">
-                          <Link href="/login">Join to Unlock</Link>
-                        </Button>
+                        <p className="text-sm font-medium text-[#1A0A3D] mb-2">
+                          {snippet.tier === "architect" ? "Architect" : "Builder"} Tier Required
+                        </p>
+                        {!user ? (
+                          <Button asChild size="sm" className="bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full">
+                            <Link href="/login">Sign In to Access</Link>
+                          </Button>
+                        ) : (
+                          <Button size="sm" className="bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full">
+                            <IndianRupee className="w-3 h-3 mr-1" />
+                            Unlock Access
+                          </Button>
+                        )}
                       </div>
                     )}
                     <pre className={`p-4 bg-[#0d0d0d] text-[#00ff00] text-xs overflow-x-auto max-h-48 ${isLocked ? "blur-sm" : ""}`}>
@@ -757,16 +809,29 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
                 >
                   {/* Locked Overlay */}
                   {isLocked && (
-                    <div className="absolute inset-0 rounded-xl bg-white/60 backdrop-blur-[8px] z-10 flex flex-col items-center justify-center">
-                      <div className="p-2 rounded-full bg-[#F4F1FB] mb-2 animate-[wiggle_1s_ease-in-out_infinite] hover:animate-none">
+                    <div 
+                      className="absolute inset-0 rounded-xl bg-white/60 backdrop-blur-[8px] z-10 flex flex-col items-center justify-center cursor-pointer"
+                      onClick={() => {
+                        if (!user) return // Let the Link handle navigation
+                        handleLockedResourceClick(resource.tier)
+                      }}
+                    >
+                      <div className="p-2 rounded-full bg-[#F4F1FB] mb-2">
                         <Lock className="w-4 h-4 text-[#6B5B9E]" />
                       </div>
                       <p className="text-xs font-medium text-[#1A0A3D] mb-2">
-                        {resource.tier === "architect" ? "Architect" : "Builder"} Exclusive
+                        {resource.tier === "architect" ? "Architect" : resource.tier === "builder" ? "Builder" : "Foundational"} Exclusive
                       </p>
-                      <Button asChild size="sm" className="bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full text-xs">
-                        <Link href="/login">Join Cohort to Unlock</Link>
-                      </Button>
+                      {!user ? (
+                        <Button asChild size="sm" className="bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full text-xs">
+                          <Link href="/login">Sign In to Access</Link>
+                        </Button>
+                      ) : (
+                        <Button size="sm" className="bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full text-xs">
+                          <IndianRupee className="w-3 h-3 mr-1" />
+                          Unlock Access
+                        </Button>
+                      )}
                     </div>
                   )}
 
@@ -953,6 +1018,120 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
               src="/ai-builder-cohort-guide.pdf"
               className="w-full h-[calc(100%-60px)]"
             />
+          </div>
+        </div>
+      )}
+
+      {/* UPI Payment Modal */}
+      {showPaymentModal && selectedTierForPayment && (
+        <div
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setShowPaymentModal(false)
+            setSelectedTierForPayment(null)
+          }}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-md overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-[#2D1A69] to-[#492B8C] px-6 py-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/70 text-xs uppercase tracking-wider">Unlock Access</p>
+                  <h3 className="text-white font-bold text-xl" style={{ fontFamily: "var(--font-cal-sans)" }}>
+                    {tierPricing[selectedTierForPayment].label} Tier
+                  </h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowPaymentModal(false)
+                    setSelectedTierForPayment(null)
+                  }}
+                  className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
+                >
+                  <X className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              {/* Price Display */}
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center gap-1 text-4xl font-bold text-[#1A0A3D]">
+                  <IndianRupee className="w-8 h-8" />
+                  {tierPricing[selectedTierForPayment].price}
+                </div>
+                <p className="text-[#6B5B9E] text-sm mt-1">One-time payment</p>
+              </div>
+
+              {/* UPI Section */}
+              <div className="bg-[#F4F1FB] rounded-xl p-4 mb-6">
+                <p className="text-sm font-medium text-[#1A0A3D] mb-3 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-[#492B8C]" />
+                  Pay via UPI
+                </p>
+                
+                <div className="flex items-center gap-2 bg-white rounded-lg p-3 border border-[#E8E3F3]">
+                  <span className="flex-1 font-mono text-[#1A0A3D] text-sm">{UPI_ID}</span>
+                  <button
+                    onClick={copyUPIId}
+                    className="p-2 rounded-lg bg-[#F4F1FB] hover:bg-[#E8E3F3] transition-colors"
+                  >
+                    {copiedUPI ? (
+                      <Check className="w-4 h-4 text-[#00C8A7]" />
+                    ) : (
+                      <Copy className="w-4 h-4 text-[#492B8C]" />
+                    )}
+                  </button>
+                </div>
+
+                <p className="text-xs text-[#6B5B9E] mt-3">
+                  Pay using any UPI app (GPay, PhonePe, Paytm, etc.)
+                </p>
+              </div>
+
+              {/* Steps */}
+              <div className="space-y-3 mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-[#FF6B34] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</div>
+                  <p className="text-sm text-[#1A0A3D]">Copy the UPI ID above and pay using any UPI app</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-[#FF6B34] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">2</div>
+                  <p className="text-sm text-[#1A0A3D]">Take a screenshot of the payment confirmation</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-[#FF6B34] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">3</div>
+                  <p className="text-sm text-[#1A0A3D]">Send the screenshot to our support email</p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Button
+                  asChild
+                  className="w-full bg-[#2D1A69] text-white hover:bg-[#492B8C] rounded-full py-6"
+                >
+                  <a href={`mailto:support@aibuilder.space?subject=Payment Confirmation - ${tierPricing[selectedTierForPayment].label} Tier&body=Hi,%0A%0AI have made the payment of ₹${tierPricing[selectedTierForPayment].price} for the ${tierPricing[selectedTierForPayment].label} tier.%0A%0AMy email: ${user?.email || ""}%0A%0APlease find the payment screenshot attached.%0A%0AThank you!`}>
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Send Payment Confirmation
+                  </a>
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setShowPaymentModal(false)
+                    setSelectedTierForPayment(null)
+                  }}
+                  className="w-full text-[#6B5B9E] hover:text-[#1A0A3D] rounded-full"
+                >
+                  Maybe Later
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

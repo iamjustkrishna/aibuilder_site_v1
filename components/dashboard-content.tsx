@@ -23,7 +23,10 @@ import {
   Play,
   Calendar,
   Users,
-  Check
+  Check,
+  IndianRupee,
+  CreditCard,
+  Copy
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -272,6 +275,13 @@ const tierInfo = {
   },
 }
 
+// Pricing tiers for UPI payment
+const tierPricing = {
+  foundational: { price: 499, label: "Foundational", features: ["All 4 weeks of live sessions", "All session recordings", "Free resource pack", "Community chat access"] },
+  builder: { price: 999, label: "Builder", features: ["Everything in Foundational", "1-on-1 mentor support", "Code review sessions", "Priority Q&A"] },
+  architect: { price: 1999, label: "Architect", features: ["Everything in Builder", "AI Store publishing access", "Keep 100% of earnings", "Priority placement"] },
+}
+
 export function DashboardContent({ user, profile }: DashboardContentProps) {
   const router = useRouter()
   const tier = profile?.membership_tier || "initial"
@@ -286,6 +296,24 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   const [selectedPdfTitle, setSelectedPdfTitle] = useState<string>("")
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null)
   const [showMentorModal, setShowMentorModal] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [selectedTierForPayment, setSelectedTierForPayment] = useState<"foundational" | "builder" | "architect" | null>(null)
+  const [copiedUPI, setCopiedUPI] = useState(false)
+
+  const UPI_ID = "thekrishnajeena@ybl"
+
+  const copyUPIId = async () => {
+    await navigator.clipboard.writeText(UPI_ID)
+    setCopiedUPI(true)
+    setTimeout(() => setCopiedUPI(false), 2000)
+  }
+
+  const getUpgradeOptions = () => {
+    if (tier === "initial") return ["foundational", "builder", "architect"] as const
+    if (tier === "foundational") return ["builder", "architect"] as const
+    if (tier === "builder") return ["architect"] as const
+    return [] as const
+  }
 
   // Check if user is admin
   useEffect(() => {
@@ -611,45 +639,18 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
               <span className="text-sm text-[#6B5B9E]">Current Membership</span>
             </div>
 
-            {tier === "initial" && (
+            {tier !== "architect" && (
               <Button
-                asChild
+                onClick={() => {
+                  setSelectedTierForPayment(null)
+                  setShowPaymentModal(true)
+                }}
                 className="bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full"
               >
-                <a
-                  href="https://docs.google.com/forms/d/e/1FAIpQLSelAKQrkxz97RxCo7B8K-xNOAe3-wXhtmnxyW6qx-WNA_82ZA/viewform?usp=header"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Upgrade to Foundational, Builder, or Architect
-                  <ExternalLink className="w-4 h-4 ml-2" />
-                </a>
-              </Button>
-            )}
-
-            {tier === "foundational" && (
-              <Button
-                asChild
-                variant="outline"
-                className="border-[#FF6B34] text-[#FF6B34] hover:bg-[#FF6B34] hover:text-white rounded-full"
-              >
-                <a href="mailto:support@aibuilder.space">
-                  Upgrade to Builder or Architect
-                  <Mail className="w-4 h-4 ml-2" />
-                </a>
-              </Button>
-            )}
-
-            {tier === "builder" && (
-              <Button
-                asChild
-                variant="outline"
-                className="border-[#FF6B34] text-[#FF6B34] hover:bg-[#FF6B34] hover:text-white rounded-full"
-              >
-                <a href="mailto:support@aibuilder.space">
-                  Upgrade to Architect
-                  <Mail className="w-4 h-4 ml-2" />
-                </a>
+                <IndianRupee className="w-4 h-4 mr-2" />
+                {tier === "initial" && "Upgrade to Unlock All Resources"}
+                {tier === "foundational" && "Upgrade to Builder or Architect"}
+                {tier === "builder" && "Upgrade to Architect"}
               </Button>
             )}
           </div>
@@ -1085,6 +1086,166 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
               >
                 Maybe Later
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UPI Payment Modal */}
+      {showPaymentModal && (
+        <div
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setShowPaymentModal(false)
+            setSelectedTierForPayment(null)
+          }}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-[#2D1A69] to-[#492B8C] px-6 py-5 sticky top-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/70 text-xs uppercase tracking-wider">Upgrade Your Plan</p>
+                  <h3 className="text-white font-bold text-xl" style={{ fontFamily: "var(--font-cal-sans)" }}>
+                    {selectedTierForPayment ? `${tierPricing[selectedTierForPayment].label} Tier` : "Choose a Tier"}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowPaymentModal(false)
+                    setSelectedTierForPayment(null)
+                  }}
+                  className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
+                >
+                  <X className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {/* Tier Selection */}
+              {!selectedTierForPayment && (
+                <div className="space-y-3 mb-6">
+                  {getUpgradeOptions().map((tierKey) => (
+                    <button
+                      key={tierKey}
+                      onClick={() => setSelectedTierForPayment(tierKey)}
+                      className="w-full p-4 rounded-xl border border-[#E8E3F3] hover:border-[#492B8C] hover:bg-[#F4F1FB] transition-all text-left flex items-center justify-between group"
+                    >
+                      <div>
+                        <h4 className="font-bold text-[#1A0A3D] group-hover:text-[#492B8C]">{tierPricing[tierKey].label}</h4>
+                        <p className="text-sm text-[#6B5B9E]">{tierPricing[tierKey].features[0]}</p>
+                      </div>
+                      <div className="flex items-center gap-1 font-bold text-[#FF6B34]">
+                        <IndianRupee className="w-4 h-4" />
+                        {tierPricing[tierKey].price}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Payment Details */}
+              {selectedTierForPayment && (
+                <>
+                  {/* Price Display */}
+                  <div className="text-center mb-6">
+                    <div className="inline-flex items-center gap-1 text-4xl font-bold text-[#1A0A3D]">
+                      <IndianRupee className="w-8 h-8" />
+                      {tierPricing[selectedTierForPayment].price}
+                    </div>
+                    <p className="text-[#6B5B9E] text-sm mt-1">One-time payment</p>
+                  </div>
+
+                  {/* Features */}
+                  <div className="bg-[#F4F1FB] rounded-xl p-4 mb-6">
+                    <p className="text-sm font-medium text-[#1A0A3D] mb-3">What you get:</p>
+                    <ul className="space-y-2">
+                      {tierPricing[selectedTierForPayment].features.map((feature, i) => (
+                        <li key={i} className="flex items-center gap-2 text-sm text-[#6B5B9E]">
+                          <Check className="w-4 h-4 text-[#00C8A7] flex-shrink-0" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* UPI Section */}
+                  <div className="bg-[#F4F1FB] rounded-xl p-4 mb-6">
+                    <p className="text-sm font-medium text-[#1A0A3D] mb-3 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-[#492B8C]" />
+                      Pay via UPI
+                    </p>
+                    
+                    <div className="flex items-center gap-2 bg-white rounded-lg p-3 border border-[#E8E3F3]">
+                      <span className="flex-1 font-mono text-[#1A0A3D] text-sm">{UPI_ID}</span>
+                      <button
+                        onClick={copyUPIId}
+                        className="p-2 rounded-lg bg-[#F4F1FB] hover:bg-[#E8E3F3] transition-colors"
+                      >
+                        {copiedUPI ? (
+                          <Check className="w-4 h-4 text-[#00C8A7]" />
+                        ) : (
+                          <Copy className="w-4 h-4 text-[#492B8C]" />
+                        )}
+                      </button>
+                    </div>
+
+                    <p className="text-xs text-[#6B5B9E] mt-3">
+                      Pay using any UPI app (GPay, PhonePe, Paytm, etc.)
+                    </p>
+                  </div>
+
+                  {/* Steps */}
+                  <div className="space-y-3 mb-6">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-[#FF6B34] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</div>
+                      <p className="text-sm text-[#1A0A3D]">Copy the UPI ID above and pay using any UPI app</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-[#FF6B34] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">2</div>
+                      <p className="text-sm text-[#1A0A3D]">Take a screenshot of the payment confirmation</p>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-[#FF6B34] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">3</div>
+                      <p className="text-sm text-[#1A0A3D]">Send the screenshot to our support email</p>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="space-y-3">
+                    <Button
+                      asChild
+                      className="w-full bg-[#2D1A69] text-white hover:bg-[#492B8C] rounded-full py-6"
+                    >
+                      <a href={`mailto:support@aibuilder.space?subject=Payment Confirmation - ${tierPricing[selectedTierForPayment].label} Tier&body=Hi,%0A%0AI have made the payment of ₹${tierPricing[selectedTierForPayment].price} for the ${tierPricing[selectedTierForPayment].label} tier.%0A%0AMy email: ${user?.email || ""}%0A%0APlease find the payment screenshot attached.%0A%0AThank you!`}>
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        Send Payment Confirmation
+                      </a>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setSelectedTierForPayment(null)}
+                      className="w-full text-[#6B5B9E] hover:text-[#1A0A3D] rounded-full border-[#E8E3F3]"
+                    >
+                      Choose Different Tier
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {!selectedTierForPayment && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowPaymentModal(false)}
+                  className="w-full text-[#6B5B9E] hover:text-[#1A0A3D] rounded-full"
+                >
+                  Maybe Later
+                </Button>
+              )}
             </div>
           </div>
         </div>
