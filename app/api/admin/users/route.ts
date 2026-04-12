@@ -48,9 +48,10 @@ export async function PUT(request: Request) {
   }
 
   const body = await request.json()
-  const { userId, membership_tier } = body
+  const { userId, id, membership_tier } = body
+  const targetUserId = userId || id
 
-  if (!userId || !membership_tier) {
+  if (!targetUserId || !membership_tier) {
     return NextResponse.json({ error: "User ID and membership tier are required" }, { status: 400 })
   }
 
@@ -67,7 +68,7 @@ export async function PUT(request: Request) {
   const { data: userData } = await serviceClient
     .from("users")
     .select("email")
-    .eq("id", userId)
+    .eq("id", targetUserId)
     .single()
 
   if (userData?.email) {
@@ -80,7 +81,7 @@ export async function PUT(request: Request) {
   const { data, error: dbError } = await serviceClient
     .from("users")
     .update({ membership_tier })
-    .eq("id", userId)
+    .eq("id", targetUserId)
     .select()
     .single()
 

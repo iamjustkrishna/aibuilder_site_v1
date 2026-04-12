@@ -21,8 +21,6 @@ import {
   ChevronDown,
   MessageCircle,
   ArrowRight,
-  Calendar,
-  Play,
   CreditCard,
   IndianRupee,
   Download,
@@ -50,55 +48,74 @@ const tierPricing = {
   architect: { price: 1999, label: "Architect" },
 }
 
-// Cohort Weeks - Configuration
-const cohortWeeks = [
-  { key: "week-1", label: "Week 1", topic: "Understanding AI", color: "from-[#492B8C] to-[#2D1A69]", tier: "foundational" },
-  { key: "week-2", label: "Week 2", topic: "Building AI Apps", color: "from-[#00C8A7] to-[#009E87]", tier: "foundational" },
-  { key: "week-3", label: "Week 3", topic: "AI Agents", color: "from-[#FFD13F] to-[#FF9F00]", tier: "builder" },
-  { key: "week-4", label: "Week 4", topic: "Launch & Monetize", color: "from-[#FF6B34] to-[#E84C1E]", tier: "architect" },
-]
-
 const tierOrder = { initial: 0, foundational: 1, builder: 2, architect: 3 }
+
+// Curated AI Articles - Best resources from the web
+const curatedArticles = [
+  {
+    id: "art-1",
+    title: "AI for Beginners: Your Complete 2026 Guide",
+    source: "Medium",
+    author: "AI Soul",
+    description: "Demystify AI and machine learning with plain English explanations. Perfect for those just starting their AI journey.",
+    url: "https://medium.com/@aisoul/ai-for-beginners-start-here-your-complete-2026-guide-e0d2424aba1d",
+    category: "beginner",
+    readTime: "12 min",
+  },
+  {
+    id: "art-2",
+    title: "Machine Learning Basics: A Practical Guide",
+    source: "mljar.com",
+    author: "MLJAR Team",
+    description: "Understand the machine learning workflow, common algorithms, and main types of ML with hands-on examples.",
+    url: "https://mljar.com/blog/machine-learning-basics",
+    category: "beginner",
+    readTime: "15 min",
+  },
+  {
+    id: "art-3",
+    title: "Building Your First Machine Learning Model",
+    source: "Weskill",
+    author: "Weskill Blog",
+    description: "Step-by-step tutorial covering data acquisition, cleaning, training, evaluation, and deployment using APIs.",
+    url: "https://blog.weskill.org/2026/03/building-your-first-machine-learning.html",
+    category: "tutorial",
+    readTime: "20 min",
+  },
+  {
+    id: "art-4",
+    title: "Build Autonomous AI Agents: Complete Tutorial",
+    source: "The AI Journal",
+    author: "AI Journal",
+    description: "Go beyond simple API calls - learn to build agents that can reason, decide, use tools, and complete multi-step tasks.",
+    url: "https://theaijournal.co/2026/02/slug-build-autonomous-ai-agents-tutorial/",
+    category: "advanced",
+    readTime: "25 min",
+  },
+  {
+    id: "art-5",
+    title: "From Neuron to Neural Networks: A Beginner's Guide",
+    source: "Medium",
+    author: "Gaurav V",
+    description: "Understand core machine learning concepts through a single equation approach, making advanced topics approachable.",
+    url: "https://gauravvjn.medium.com/from-neuron-to-neural-networks-a-beginners-guide-to-ml-part-1-10ec5f934c60",
+    category: "beginner",
+    readTime: "10 min",
+  },
+  {
+    id: "art-6",
+    title: "Machine Learning Basics Explained",
+    source: "GlyphSignal",
+    author: "GlyphSignal",
+    description: "Comprehensive guide covering ML fundamentals with practical examples and improved tools for learning.",
+    url: "https://glyphsignal.com/guides/machine-learning-basics",
+    category: "beginner",
+    readTime: "18 min",
+  },
+]
 
 // Resources with types
 const allResources = [
-  // Week Specific Resources (Builder/Foundational) - PROMOTED TO TOP
-  {
-    id: "week1-1",
-    title: "Week 1: Understanding AI Foundations",
-    description: "Live session recording + exercises",
-    type: "video",
-    tier: "builder",
-    url: "https://www.youtube.com/watch?v=wjZofJX0v4M", // Example link
-    category: "week-1",
-  },
-  {
-    id: "week2-1",
-    title: "Week 2: Building AI Apps",
-    description: "Hands-on app development workshop",
-    type: "video",
-    tier: "builder",
-    url: "https://www.youtube.com/watch?v=mkBDpBT9ETs", // Example link
-    category: "week-2",
-  },
-  {
-    id: "week3-1",
-    title: "Week 3: AI Agents Deep Dive",
-    description: "Building autonomous agents that think",
-    type: "video",
-    tier: "builder",
-    url: "https://www.youtube.com/watch?v=aywZrzNaKjs", // Example link
-    category: "week-3",
-  },
-  {
-    id: "week4-1",
-    title: "Week 4: Launch & Monetize",
-    description: "From code to cash - shipping your AI product",
-    type: "video",
-    tier: "builder",
-    url: "https://www.youtube.com/watch?v=mkBDpBT9ETs", // Example link
-    category: "week-4",
-  },
   // Free Resources
   {
     id: "guide-1",
@@ -159,7 +176,6 @@ const allResources = [
     type: "video",
     tier: "architect",
     url: "#",
-    category: "week-4",
   },
   {
     id: "pricing-1",
@@ -168,7 +184,6 @@ const allResources = [
     type: "pdf",
     tier: "architect",
     url: "#",
-    category: "week-4",
   },
   {
     id: "marketing-1",
@@ -177,7 +192,6 @@ const allResources = [
     type: "pdf",
     tier: "architect",
     url: "#",
-    category: "week-4",
   },
 ]
 
@@ -308,12 +322,25 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
   const [selectedVideoTitle, setSelectedVideoTitle] = useState<string>("")
   const [showPdfViewer, setShowPdfViewer] = useState(false)
-  const [selectedWeek, setSelectedWeek] = useState<string | null>(null)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [selectedTierForPayment, setSelectedTierForPayment] = useState<"foundational" | "builder" | "architect" | null>(null)
   const [copiedUPI, setCopiedUPI] = useState(false)
+  const [selectedArticle, setSelectedArticle] = useState<typeof curatedArticles[0] | null>(null)
+  const [articleContent, setArticleContent] = useState<string | null>(null)
+  const [loadingArticle, setLoadingArticle] = useState(false)
 
   const UPI_ID = "thekrishnajeena@ybl"
+
+  const handleArticleClick = async (article: typeof curatedArticles[0]) => {
+    setSelectedArticle(article)
+    setLoadingArticle(true)
+    try {
+      // For now, we'll open in an iframe. In production, you could fetch and render content.
+      setArticleContent(article.url)
+    } finally {
+      setLoadingArticle(false)
+    }
+  }
 
   const handleLockedResourceClick = (resourceTier: string) => {
     if (!user) {
@@ -425,10 +452,6 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
     return purchasedResources.has(resourceId)
   }
 
-  const getWeekVideos = (weekKey: string) => {
-    return allResources.filter(r => r.category === weekKey && r.type === "video")
-  }
-
   const canAccess = (resourceTier: string) => {
     if (resourceTier === "free") return true
     if (tier === "architect") return true
@@ -447,7 +470,8 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
     const matchesSearch = r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.description.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesType = selectedType === "all" || r.type === selectedType
-    return matchesSearch && matchesType
+    const hasValidUrl = r.url !== "#" // Exclude coming soon resources
+    return matchesSearch && matchesType && hasValidUrl
   })
 
   return (
@@ -515,149 +539,179 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
           </div>
         </div>
 
-        {/* Cohort Sessions Grid */}
+        {/* Premium Resources Section (from Database) - MOVED TO TOP */}
         <div className="mb-12">
-          <h2 className="text-xl font-bold text-[#1A0A3D] mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
-            <Calendar className="w-5 h-5 text-[#492B8C]" />
-            Cohort Sessions
-          </h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {cohortWeeks.map((week) => {
-              const videos = getWeekVideos(week.key)
-              const isLocked = tierOrder[tier] < tierOrder[week.tier as keyof typeof tierOrder]
-              return (
-                <button
-                  key={week.key}
-                  onClick={() => {
-                    if (isLocked) {
-                      if (!user) {
-                        // Not signed in - do nothing, let the link handle it
-                        return
-                      }
-                      handleLockedResourceClick(week.tier)
-                    } else {
-                      setSelectedWeek(week.key)
-                    }
-                  }}
-                  className={`relative group text-left rounded-2xl p-5 bg-gradient-to-br ${week.color} transition-all ${isLocked ? "opacity-70 hover:opacity-90 cursor-pointer" : "hover:shadow-lg hover:scale-[1.02] cursor-pointer"
-                    }`}
-                >
-                  {isLocked && (
-                    <div className="absolute top-3 right-3">
-                      <Lock className="w-4 h-4 text-white/80" />
-                    </div>
-                  )}
-                  <p className="text-white/70 text-xs font-medium uppercase tracking-wider mb-1">{week.label}</p>
-                  <h3 className="text-white font-bold text-base leading-snug mb-3">{week.topic}</h3>
-                  <div className="flex items-center gap-1.5">
-                    <Play className="w-3.5 h-3.5 text-white/80" />
-                    <span className="text-white/80 text-xs">
-                      {videos.length > 0 ? `${videos.length} video${videos.length !== 1 ? "s" : ""}` : "Coming soon"}
-                    </span>
-                  </div>
-                  {isLocked && !user && (
-                    <Link href="/login" className="absolute inset-0 z-10" />
-                  )}
-                  {!isLocked && videos.length > 0 && (
-                    <div className="absolute bottom-3 right-3 w-7 h-7 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                      <ChevronDown className="w-4 h-4 text-white -rotate-90" />
-                    </div>
-                  )}
-                </button>
-              )
-            })}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-[#1A0A3D] flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
+              <ShoppingCart className="w-5 h-5 text-[#FF6B34]" />
+              Premium Resources
+            </h2>
+            <span className="px-3 py-1 rounded-full bg-gradient-to-r from-[#FF6B34] to-[#E84C1E] text-white text-xs font-medium">
+              Best Value
+            </span>
           </div>
-        </div>
-
-        {/* Week Videos Popup */}
-        {selectedWeek && (
-          <div
-            className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-            onClick={() => setSelectedWeek(null)}
-          >
-            <div
-              className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal header */}
-              {(() => {
-                const week = cohortWeeks.find(w => w.key === selectedWeek)!
-                const videos = getWeekVideos(selectedWeek)
+          <p className="text-[#6B5B9E] mb-6 max-w-2xl">
+            Invest in your AI journey with our carefully curated premium resources. Each resource is crafted to accelerate your learning and help you build real AI products faster. One-time purchase, lifetime access.
+          </p>
+          
+          {loadingDbResources ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-8 h-8 border-2 border-[#492B8C] border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : dbResources.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {dbResources.map((resource) => {
+                const hasPurchased = isPurchased(resource.id)
+                const needsLogin = !user
+                const IconComponent = resource.type === "video" ? Video :
+                  resource.type === "pdf" ? FileText : BookOpen
+                
                 return (
-                  <>
-                    <div className={`bg-gradient-to-r ${week.color} px-6 py-5 flex items-center justify-between`}>
-                      <div>
-                        <p className="text-white/70 text-xs uppercase tracking-wider">{week.label}</p>
-                        <h3 className="text-white font-bold text-xl" style={{ fontFamily: "var(--font-cal-sans)" }}>
-                          {week.topic}
-                        </h3>
-                      </div>
-                      <button
-                        onClick={() => setSelectedWeek(null)}
-                        className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
-                      >
-                        <X className="w-4 h-4 text-white" />
-                      </button>
-                    </div>
-                    <div className="overflow-y-auto flex-1 p-4 custom-scrollbar">
-                      {videos.length === 0 ? (
-                        <div className="text-center py-12 text-[#6B5B9E]">
-                          <Video className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                          <p className="font-medium text-[#1A0A3D]">Videos coming soon</p>
-                          <p className="text-sm mt-1">Session recordings will appear here after each live class.</p>
+                  <div
+                    key={resource.id}
+                    className="group relative p-5 rounded-xl border border-[#E8E3F3] bg-white hover:border-[#FF6B34] hover:shadow-lg transition-all"
+                  >
+                    {/* Login overlay for non-authenticated users */}
+                    {needsLogin && (
+                      <div className="absolute inset-0 rounded-xl bg-white/80 backdrop-blur-[4px] z-10 flex flex-col items-center justify-center">
+                        <div className="p-2 rounded-full bg-[#F4F1FB] mb-2">
+                          <Lock className="w-4 h-4 text-[#6B5B9E]" />
                         </div>
+                        <p className="text-xs font-medium text-[#1A0A3D] mb-2">Sign in to purchase</p>
+                        <Button asChild size="sm" className="bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full text-xs">
+                          <Link href="/login">Sign In</Link>
+                        </Button>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-start gap-4">
+                      <div className="p-2 rounded-lg bg-[#FF6B34]/10 group-hover:bg-[#FF6B34] transition-colors">
+                        <IconComponent className="w-5 h-5 text-[#FF6B34] group-hover:text-white transition-colors" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="px-2 py-0.5 rounded-full bg-[#FF6B34]/10 text-[#FF6B34] text-xs font-medium">
+                            Premium
+                          </span>
+                          {hasPurchased && (
+                            <span className="px-2 py-0.5 rounded-full bg-[#00C8A7]/10 text-[#00C8A7] text-xs font-medium">
+                              Purchased
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="font-medium text-[#1A0A3D] group-hover:text-[#FF6B34] transition-colors mb-1">
+                          {resource.title}
+                        </h3>
+                        <p className="text-sm text-[#6B5B9E] line-clamp-2">{resource.description}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Action Section */}
+                    <div className="mt-4 pt-4 border-t border-[#E8E3F3]">
+                      {hasPurchased ? (
+                        <Button
+                          onClick={() => handleDownload(resource.id)}
+                          disabled={downloadingResource === resource.id}
+                          className="w-full bg-[#00C8A7] hover:bg-[#00C8A7]/90 text-white rounded-full"
+                          size="sm"
+                        >
+                          {downloadingResource === resource.id ? (
+                            <>
+                              <Download className="w-3 h-3 mr-2 animate-bounce" />
+                              Downloading...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="w-3 h-3 mr-2" />
+                              Download
+                            </>
+                          )}
+                        </Button>
                       ) : (
-                        <div className="space-y-3">
-                          {videos.map((video) => {
-                            const videoId = video.url.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/)?.[1]
-                            return (
-                              <button
-                                key={video.id}
-                                onClick={() => {
-                                  if (videoId) {
-                                    setSelectedVideoTitle(video.title)
-                                    setSelectedVideo(videoId)
-                                    setSelectedWeek(null)
-                                  }
-                                }}
-                                className="w-full group flex items-center gap-4 p-3 rounded-xl hover:bg-[#F4F1FB] transition-colors text-left border border-transparent hover:border-[#E8E3F3]"
-                              >
-                                <div className="relative flex-shrink-0 w-28 aspect-video rounded-lg overflow-hidden bg-[#1A0A3D]">
-                                  {videoId ? (
-                                    <Image
-                                      src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
-                                      alt={video.title}
-                                      fill
-                                      className="object-cover group-hover:opacity-80 transition-opacity"
-                                    />
-                                  ) : null}
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="w-8 h-8 rounded-full bg-[#FF6B34] flex items-center justify-center shadow group-hover:scale-110 transition-transform">
-                                      <Play className="w-4 h-4 text-white ml-0.5" />
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="font-medium text-[#1A0A3D] group-hover:text-[#492B8C] transition-colors line-clamp-2">
-                                    {video.title}
-                                  </h4>
-                                  {video.description && (
-                                    <p className="text-sm text-[#6B5B9E] mt-0.5 line-clamp-2">{video.description}</p>
-                                  )}
-                                </div>
-                                <ChevronDown className="w-4 h-4 text-[#6B5B9E] flex-shrink-0 group-hover:text-[#492B8C] transition-colors -rotate-90" />
-                              </button>
-                            )
-                          })}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-[#6B5B9E]">Price:</span>
+                            <div className="text-right">
+                              {resource.price_inr && (
+                                <span className="text-sm font-bold text-[#FF6B34]">
+                                  ₹{(resource.price_inr / 100).toFixed(0)}
+                                </span>
+                              )}
+                              {resource.price_inr && resource.price_usd && (
+                                <span className="text-xs text-[#6B5B9E] mx-1">/</span>
+                              )}
+                              {resource.price_usd && (
+                                <span className="text-sm font-bold text-[#FF6B34]">
+                                  ${(resource.price_usd / 100).toFixed(2)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            onClick={() => handlePurchase(resource)}
+                            className="w-full bg-[#FF6B34] hover:bg-[#FF6B34]/90 text-white rounded-full"
+                            size="sm"
+                            disabled={needsLogin}
+                          >
+                            <ShoppingCart className="w-3 h-3 mr-2" />
+                            Buy Now
+                          </Button>
                         </div>
                       )}
                     </div>
-                  </>
+                  </div>
                 )
-              })()}
+              })}
             </div>
+          ) : (
+            <div className="text-center py-8 bg-[#F4F1FB]/50 rounded-xl border border-dashed border-[#E8E3F3]">
+              <ShoppingCart className="w-10 h-10 text-[#6B5B9E]/40 mx-auto mb-3" />
+              <p className="text-[#6B5B9E] font-medium">Premium resources coming soon</p>
+              <p className="text-sm text-[#6B5B9E]/70 mt-1">We are preparing exclusive content for you</p>
+            </div>
+          )}
+        </div>
+
+        {/* Curated AI Articles Section */}
+        <div className="mb-12">
+          <h2 className="text-xl font-bold text-[#1A0A3D] mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
+            <BookOpen className="w-5 h-5 text-[#492B8C]" />
+            Must-Read AI Articles
+          </h2>
+          <p className="text-[#6B5B9E] mb-6">
+            Hand-picked articles from top AI publications to accelerate your learning journey.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {curatedArticles.map((article) => (
+              <button
+                key={article.id}
+                onClick={() => handleArticleClick(article)}
+                className="group text-left p-5 rounded-xl border border-[#E8E3F3] bg-white hover:border-[#492B8C] hover:shadow-md transition-all"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    article.category === "beginner" ? "bg-[#00C8A7]/10 text-[#00C8A7]" :
+                    article.category === "tutorial" ? "bg-[#492B8C]/10 text-[#492B8C]" :
+                    "bg-[#FF6B34]/10 text-[#FF6B34]"
+                  }`}>
+                    {article.category.charAt(0).toUpperCase() + article.category.slice(1)}
+                  </span>
+                  <span className="text-xs text-[#6B5B9E]">{article.readTime}</span>
+                </div>
+                <h3 className="font-medium text-[#1A0A3D] group-hover:text-[#492B8C] transition-colors mb-2 line-clamp-2">
+                  {article.title}
+                </h3>
+                <p className="text-sm text-[#6B5B9E] line-clamp-2 mb-3">{article.description}</p>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[#6B5B9E]">{article.source}</span>
+                  <span className="text-[#492B8C] font-medium group-hover:underline flex items-center gap-1">
+                    Read Article <ArrowRight className="w-3 h-3" />
+                  </span>
+                </div>
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
         {/* One-Click Clone Section */}
         <div className="mb-12">
@@ -971,133 +1025,6 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
           </div>
         </div>
 
-        {/* Paid Resources Section (from Database) */}
-        {dbResources.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-xl font-bold text-[#1A0A3D] mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
-              <ShoppingCart className="w-5 h-5 text-[#FF6B34]" />
-              Premium Resources
-              <span className="ml-2 px-2 py-0.5 rounded-full bg-[#FF6B34]/10 text-[#FF6B34] text-xs font-medium">
-                Paid
-              </span>
-            </h2>
-            <p className="text-[#6B5B9E] text-sm mb-6">
-              Exclusive resources to accelerate your AI journey. Purchase once, access forever.
-            </p>
-            
-            {loadingDbResources ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="w-8 h-8 border-2 border-[#492B8C] border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {dbResources.map((resource) => {
-                  const hasPurchased = isPurchased(resource.id)
-                  const needsLogin = !user
-                  const IconComponent = resource.type === "video" ? Video :
-                    resource.type === "pdf" ? FileText : BookOpen
-                  
-                  return (
-                    <div
-                      key={resource.id}
-                      className="group relative p-5 rounded-xl border border-[#E8E3F3] bg-white hover:border-[#FF6B34] hover:shadow-md transition-all"
-                    >
-                      {/* Login overlay for non-authenticated users */}
-                      {needsLogin && (
-                        <div className="absolute inset-0 rounded-xl bg-white/80 backdrop-blur-[4px] z-10 flex flex-col items-center justify-center">
-                          <div className="p-2 rounded-full bg-[#F4F1FB] mb-2">
-                            <Lock className="w-4 h-4 text-[#6B5B9E]" />
-                          </div>
-                          <p className="text-xs font-medium text-[#1A0A3D] mb-2">Sign in to purchase</p>
-                          <Button asChild size="sm" className="bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full text-xs">
-                            <Link href="/login">Sign In</Link>
-                          </Button>
-                        </div>
-                      )}
-                      
-                      <div className="flex items-start gap-4">
-                        <div className="p-2 rounded-lg bg-[#FF6B34]/10 group-hover:bg-[#FF6B34] transition-colors">
-                          <IconComponent className="w-5 h-5 text-[#FF6B34] group-hover:text-white transition-colors" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="px-2 py-0.5 rounded-full bg-[#FF6B34]/10 text-[#FF6B34] text-xs font-medium">
-                              Premium
-                            </span>
-                            {hasPurchased && (
-                              <span className="px-2 py-0.5 rounded-full bg-[#00C8A7]/10 text-[#00C8A7] text-xs font-medium">
-                                Purchased
-                              </span>
-                            )}
-                          </div>
-                          <h3 className="font-medium text-[#1A0A3D] group-hover:text-[#FF6B34] transition-colors mb-1">
-                            {resource.title}
-                          </h3>
-                          <p className="text-sm text-[#6B5B9E] line-clamp-2">{resource.description}</p>
-                        </div>
-                      </div>
-                      
-                      {/* Action Section */}
-                      <div className="mt-4 pt-4 border-t border-[#E8E3F3]">
-                        {hasPurchased ? (
-                          <Button
-                            onClick={() => handleDownload(resource.id)}
-                            disabled={downloadingResource === resource.id}
-                            className="w-full bg-[#00C8A7] hover:bg-[#00C8A7]/90 text-white rounded-full"
-                            size="sm"
-                          >
-                            {downloadingResource === resource.id ? (
-                              <>
-                                <Download className="w-3 h-3 mr-2 animate-bounce" />
-                                Downloading...
-                              </>
-                            ) : (
-                              <>
-                                <Download className="w-3 h-3 mr-2" />
-                                Download
-                              </>
-                            )}
-                          </Button>
-                        ) : (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs text-[#6B5B9E]">Price:</span>
-                              <div className="text-right">
-                                {resource.price_inr && (
-                                  <span className="text-sm font-bold text-[#FF6B34]">
-                                    ₹{(resource.price_inr / 100).toFixed(0)}
-                                  </span>
-                                )}
-                                {resource.price_inr && resource.price_usd && (
-                                  <span className="text-xs text-[#6B5B9E] mx-1">/</span>
-                                )}
-                                {resource.price_usd && (
-                                  <span className="text-sm font-bold text-[#FF6B34]">
-                                    ${(resource.price_usd / 100).toFixed(2)}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <Button
-                              onClick={() => handlePurchase(resource)}
-                              className="w-full bg-[#FF6B34] hover:bg-[#FF6B34]/90 text-white rounded-full"
-                              size="sm"
-                              disabled={needsLogin}
-                            >
-                              <ShoppingCart className="w-3 h-3 mr-2" />
-                              Buy Now
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
         {/* CTA */}
         {!user && (
           <div className="text-center p-8 rounded-2xl bg-gradient-to-r from-[#2D1A69] to-[#492B8C] text-white">
@@ -1168,6 +1095,74 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
               src="/ai-builder-cohort-guide.pdf"
               className="w-full h-[calc(100%-60px)]"
             />
+          </div>
+        </div>
+      )}
+
+      {/* Article Reader Modal */}
+      {selectedArticle && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setSelectedArticle(null)
+            setArticleContent(null)
+          }}
+        >
+          <div 
+            className="relative w-full max-w-5xl h-[90vh] bg-white rounded-xl overflow-hidden flex flex-col" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-[#E8E3F3] bg-white flex-shrink-0">
+              <div className="flex-1 min-w-0 mr-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    selectedArticle.category === "beginner" ? "bg-[#00C8A7]/10 text-[#00C8A7]" :
+                    selectedArticle.category === "tutorial" ? "bg-[#492B8C]/10 text-[#492B8C]" :
+                    "bg-[#FF6B34]/10 text-[#FF6B34]"
+                  }`}>
+                    {selectedArticle.category.charAt(0).toUpperCase() + selectedArticle.category.slice(1)}
+                  </span>
+                  <span className="text-xs text-[#6B5B9E]">{selectedArticle.source}</span>
+                  <span className="text-xs text-[#6B5B9E]">{selectedArticle.readTime}</span>
+                </div>
+                <h3 className="font-bold text-[#1A0A3D] truncate">{selectedArticle.title}</h3>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <a 
+                  href={selectedArticle.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-lg hover:bg-[#F4F1FB] text-[#6B5B9E] hover:text-[#492B8C] transition-colors"
+                  title="Open in new tab"
+                >
+                  <ExternalLink className="w-5 h-5" />
+                </a>
+                <button
+                  onClick={() => {
+                    setSelectedArticle(null)
+                    setArticleContent(null)
+                  }}
+                  className="p-2 rounded-lg hover:bg-[#F4F1FB] text-[#6B5B9E] hover:text-[#1A0A3D] transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            {/* Content */}
+            <div className="flex-1 overflow-hidden">
+              {loadingArticle ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="w-8 h-8 border-2 border-[#492B8C] border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (
+                <iframe
+                  src={articleContent || selectedArticle.url}
+                  className="w-full h-full"
+                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                />
+              )}
+            </div>
           </div>
         </div>
       )}
