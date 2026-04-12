@@ -337,6 +337,29 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
   const [purchasedResources, setPurchasedResources] = useState<Set<string>>(new Set())
   const [loadingPurchases, setLoadingPurchases] = useState(true)
   const [downloadingResource, setDownloadingResource] = useState<string | null>(null)
+  
+  // Database purchasable resources
+  const [dbResources, setDbResources] = useState<any[]>([])
+  const [loadingDbResources, setLoadingDbResources] = useState(true)
+
+  // Fetch purchasable resources from database
+  useEffect(() => {
+    fetchDbResources()
+  }, [])
+
+  const fetchDbResources = async () => {
+    try {
+      const response = await fetch('/api/resources/purchasable')
+      const data = await response.json()
+      if (Array.isArray(data)) {
+        setDbResources(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch purchasable resources:', error)
+    } finally {
+      setLoadingDbResources(false)
+    }
+  }
 
   // Fetch purchased resources on mount
   useEffect(() => {
@@ -947,6 +970,133 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
             })}
           </div>
         </div>
+
+        {/* Paid Resources Section (from Database) */}
+        {dbResources.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-xl font-bold text-[#1A0A3D] mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
+              <ShoppingCart className="w-5 h-5 text-[#FF6B34]" />
+              Premium Resources
+              <span className="ml-2 px-2 py-0.5 rounded-full bg-[#FF6B34]/10 text-[#FF6B34] text-xs font-medium">
+                Paid
+              </span>
+            </h2>
+            <p className="text-[#6B5B9E] text-sm mb-6">
+              Exclusive resources to accelerate your AI journey. Purchase once, access forever.
+            </p>
+            
+            {loadingDbResources ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-8 h-8 border-2 border-[#492B8C] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {dbResources.map((resource) => {
+                  const hasPurchased = isPurchased(resource.id)
+                  const needsLogin = !user
+                  const IconComponent = resource.type === "video" ? Video :
+                    resource.type === "pdf" ? FileText : BookOpen
+                  
+                  return (
+                    <div
+                      key={resource.id}
+                      className="group relative p-5 rounded-xl border border-[#E8E3F3] bg-white hover:border-[#FF6B34] hover:shadow-md transition-all"
+                    >
+                      {/* Login overlay for non-authenticated users */}
+                      {needsLogin && (
+                        <div className="absolute inset-0 rounded-xl bg-white/80 backdrop-blur-[4px] z-10 flex flex-col items-center justify-center">
+                          <div className="p-2 rounded-full bg-[#F4F1FB] mb-2">
+                            <Lock className="w-4 h-4 text-[#6B5B9E]" />
+                          </div>
+                          <p className="text-xs font-medium text-[#1A0A3D] mb-2">Sign in to purchase</p>
+                          <Button asChild size="sm" className="bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full text-xs">
+                            <Link href="/login">Sign In</Link>
+                          </Button>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-start gap-4">
+                        <div className="p-2 rounded-lg bg-[#FF6B34]/10 group-hover:bg-[#FF6B34] transition-colors">
+                          <IconComponent className="w-5 h-5 text-[#FF6B34] group-hover:text-white transition-colors" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="px-2 py-0.5 rounded-full bg-[#FF6B34]/10 text-[#FF6B34] text-xs font-medium">
+                              Premium
+                            </span>
+                            {hasPurchased && (
+                              <span className="px-2 py-0.5 rounded-full bg-[#00C8A7]/10 text-[#00C8A7] text-xs font-medium">
+                                Purchased
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="font-medium text-[#1A0A3D] group-hover:text-[#FF6B34] transition-colors mb-1">
+                            {resource.title}
+                          </h3>
+                          <p className="text-sm text-[#6B5B9E] line-clamp-2">{resource.description}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Action Section */}
+                      <div className="mt-4 pt-4 border-t border-[#E8E3F3]">
+                        {hasPurchased ? (
+                          <Button
+                            onClick={() => handleDownload(resource.id)}
+                            disabled={downloadingResource === resource.id}
+                            className="w-full bg-[#00C8A7] hover:bg-[#00C8A7]/90 text-white rounded-full"
+                            size="sm"
+                          >
+                            {downloadingResource === resource.id ? (
+                              <>
+                                <Download className="w-3 h-3 mr-2 animate-bounce" />
+                                Downloading...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="w-3 h-3 mr-2" />
+                                Download
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-[#6B5B9E]">Price:</span>
+                              <div className="text-right">
+                                {resource.price_inr && (
+                                  <span className="text-sm font-bold text-[#FF6B34]">
+                                    ₹{(resource.price_inr / 100).toFixed(0)}
+                                  </span>
+                                )}
+                                {resource.price_inr && resource.price_usd && (
+                                  <span className="text-xs text-[#6B5B9E] mx-1">/</span>
+                                )}
+                                {resource.price_usd && (
+                                  <span className="text-sm font-bold text-[#FF6B34]">
+                                    ${(resource.price_usd / 100).toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <Button
+                              onClick={() => handlePurchase(resource)}
+                              className="w-full bg-[#FF6B34] hover:bg-[#FF6B34]/90 text-white rounded-full"
+                              size="sm"
+                              disabled={needsLogin}
+                            >
+                              <ShoppingCart className="w-3 h-3 mr-2" />
+                              Buy Now
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* CTA */}
         {!user && (
