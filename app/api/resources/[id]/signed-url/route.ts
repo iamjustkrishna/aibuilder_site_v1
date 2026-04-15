@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const supabase = await createClient()
@@ -58,18 +58,14 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to generate download link' }, { status: 500 })
     }
 
-    // Track download
-    await supabase
-      .from('resource_downloads')
-      .insert({
-        user_id: user.id,
-        resource_id: resourceId,
-      })
+    // Calculate expiration time
+    const expiresAt = new Date(Date.now() + 300 * 1000).toISOString()
 
     return NextResponse.json({
       success: true,
-      downloadUrl: signedUrlData.signedUrl,
+      signedUrl: signedUrlData.signedUrl,
       expiresIn: 300, // seconds
+      expiresAt,
       resource: {
         id: resource.id,
         title: resource.title,
@@ -78,9 +74,9 @@ export async function GET(
     })
 
   } catch (error: any) {
-    console.error('Download API error:', error)
+    console.error('Signed URL API error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to process download' },
+      { error: error.message || 'Failed to generate signed URL' },
       { status: 500 }
     )
   }
