@@ -134,7 +134,6 @@ export function Pricing() {
                     <p className="text-xs text-[#6B5B9E]">{plan.tagline}</p>
                   </div>
                 </div>
-                <p className="text-2xl font-bold text-[#1A0A3D] mt-3 mb-2">Contact for pricing</p>
                 <p className="text-[#6B5B9E] text-sm leading-relaxed">{plan.description}</p>
               </div>
 
