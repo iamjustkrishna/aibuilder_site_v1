@@ -277,9 +277,9 @@ const tierInfo = {
 
 // Pricing tiers for UPI payment
 const tierPricing = {
-  foundational: { price: 499, label: "Foundational", features: ["All 4 weeks of live sessions", "All session recordings", "Free resource pack", "Community chat access"] },
-  builder: { price: 999, label: "Builder", features: ["Everything in Foundational", "1-on-1 mentor support", "Code review sessions", "Priority Q&A"] },
-  architect: { price: 1999, label: "Architect", features: ["Everything in Builder", "AI Store publishing access", "Keep 100% of earnings", "Priority placement"] },
+  foundational: { price: 1999, label: "Foundational", features: ["All 4 weeks of live sessions", "All session recordings", "Free resource pack", "Community chat access"] },
+  builder: { price: 4999, label: "Builder", features: ["Everything in Foundational", "1-on-1 mentor support", "Code review sessions", "Priority Q&A"] },
+  architect: { price: 9999, label: "Architect", features: ["Everything in Builder", "AI Store publishing access", "Keep 100% of earnings", "Priority placement"] },
 }
 
 export function DashboardContent({ user, profile }: DashboardContentProps) {
@@ -1179,7 +1179,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                       <CreditCard className="w-4 h-4 text-[#492B8C]" />
                       Pay via UPI
                     </p>
-                    
+
                     <div className="flex items-center gap-2 bg-white rounded-lg p-3 border border-[#E8E3F3]">
                       <span className="flex-1 font-mono text-[#1A0A3D] text-sm">{UPI_ID}</span>
                       <button
