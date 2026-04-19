@@ -379,6 +379,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   }
 
   const resources = getResources()
+  const quickResources = resources.filter((resource) => !/^Week [1-4]:/i.test(resource.title))
 
   return (
     <div className="min-h-screen bg-white">
@@ -815,7 +816,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {resources.map((resource, index) => {
+          {quickResources.map((resource, index) => {
             const isComingSoon = resource.url === "#" && resource.title !== "1-on-1 Mentor Sessions"
             return (
               <div
