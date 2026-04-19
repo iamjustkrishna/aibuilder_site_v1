@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createServiceClient } from "@/lib/supabase/server"
 
 const tierRank: Record<string, number> = {
   initial: 0,
@@ -67,12 +67,16 @@ export async function GET(
       }
     }
 
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+    const serviceClient = createServiceClient()
+    const { data: signedUrlData, error: signedUrlError } = await serviceClient.storage
       .from("resources")
       .createSignedUrl(resource.file_storage_path, 300)
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
-      return NextResponse.json({ error: "Failed to generate resource link" }, { status: 500 })
+      return NextResponse.json(
+        { error: signedUrlError?.message || "Failed to generate resource link" },
+        { status: 500 },
+      )
     }
 
     return NextResponse.redirect(signedUrlData.signedUrl)
