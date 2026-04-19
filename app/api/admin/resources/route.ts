@@ -48,10 +48,13 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { title, description, type, url, thumbnail_url, tier_required, category, sort_order } = body
+  const { title, description, type, url, file_storage_path, thumbnail_url, tier_required, category, sort_order } = body
 
-  if (!title || !type || !url) {
-    return NextResponse.json({ error: "Title, type, and URL are required" }, { status: 400 })
+  const normalizedUrl = typeof url === "string" ? url.trim() : ""
+  const normalizedStoragePath = typeof file_storage_path === "string" ? file_storage_path.trim() : ""
+
+  if (!title || !type || (!normalizedUrl && !normalizedStoragePath)) {
+    return NextResponse.json({ error: "Title, type, and either URL or uploaded file are required" }, { status: 400 })
   }
 
   const supabase = await createClient()
@@ -61,7 +64,8 @@ export async function POST(request: Request) {
       title,
       description: description || "",
       type,
-      url,
+      url: normalizedUrl || "#",
+      file_storage_path: normalizedStoragePath || null,
       thumbnail_url: thumbnail_url || null,
       tier_required: tier_required || "initial",
       category: category || "general",
@@ -73,6 +77,25 @@ export async function POST(request: Request) {
 
   if (dbError) {
     return NextResponse.json({ error: dbError.message }, { status: 500 })
+  }
+
+  if (!normalizedUrl && normalizedStoragePath) {
+    const generatedUrl = `/api/resources/${data.id}/view`
+    const { data: updatedResource, error: updateError } = await supabase
+      .from("resources")
+      .update({
+        url: generatedUrl,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.id)
+      .select()
+      .single()
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ resource: updatedResource })
   }
 
   return NextResponse.json({ resource: data })
@@ -90,6 +113,19 @@ export async function PUT(request: Request) {
 
   if (!id) {
     return NextResponse.json({ error: "Resource ID is required" }, { status: 400 })
+  }
+
+  const normalizedStoragePath = typeof updates.file_storage_path === "string" ? updates.file_storage_path.trim() : updates.file_storage_path
+  const normalizedUrl = typeof updates.url === "string" ? updates.url.trim() : updates.url
+
+  if (typeof normalizedStoragePath === "string" && normalizedStoragePath && (!normalizedUrl || normalizedUrl === "#")) {
+    updates.url = `/api/resources/${id}/view`
+  } else if (typeof normalizedUrl === "string") {
+    updates.url = normalizedUrl
+  }
+
+  if (typeof normalizedStoragePath === "string") {
+    updates.file_storage_path = normalizedStoragePath || null
   }
 
   const supabase = await createClient()

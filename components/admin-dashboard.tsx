@@ -35,6 +35,7 @@ interface Resource {
   description: string
   type: "video" | "pdf" | "article" | "code" | "other"
   url: string
+  file_storage_path: string | null
   thumbnail_url: string | null
   tier_required: "initial" | "foundational" | "builder" | "architect"
   category: string
@@ -89,12 +90,16 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     description: "",
     type: "video" as Resource["type"],
     url: "",
+    file_storage_path: "",
     thumbnail_url: "",
     tier_required: "initial" as Resource["tier_required"],
     category: "general",
     sort_order: 0,
     is_active: true,
   })
+  const [resourceSource, setResourceSource] = useState<"link" | "upload">("link")
+  const [selectedDocument, setSelectedDocument] = useState<File | null>(null)
+  const [uploadingDocument, setUploadingDocument] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -168,6 +173,9 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   }
 
   async function handleAddResource() {
+    if (!formData.title || !formData.type) return
+    if (!formData.url && !formData.file_storage_path) return
+
     const res = await fetch("/api/admin/resources", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -176,7 +184,41 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     if (res.ok) {
       setShowAddForm(false)
       resetForm()
+      setResourceSource("link")
+      setSelectedDocument(null)
       fetchData()
+    }
+  }
+
+  async function handleUploadDocument() {
+    if (!selectedDocument) return
+
+    setUploadingDocument(true)
+    const payload = new FormData()
+    payload.append("file", selectedDocument)
+
+    try {
+      const res = await fetch("/api/admin/resources/upload", {
+        method: "POST",
+        body: payload,
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        console.error(data.error || "Failed to upload document")
+        return
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        type: "pdf",
+        url: "",
+        file_storage_path: data.filePath,
+      }))
+    } catch (error) {
+      console.error("Failed to upload document:", error)
+    } finally {
+      setUploadingDocument(false)
     }
   }
 
@@ -223,6 +265,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       description: "",
       type: "video",
       url: "",
+      file_storage_path: "",
       thumbnail_url: "",
       tier_required: "initial",
       category: "general",
@@ -238,6 +281,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       description: resource.description || "",
       type: resource.type,
       url: resource.url,
+      file_storage_path: resource.file_storage_path || "",
       thumbnail_url: resource.thumbnail_url || "",
       tier_required: resource.tier_required,
       category: resource.category || "general",
@@ -512,7 +556,18 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                     <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Type *</label>
                     <select
                       value={formData.type}
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value as Resource["type"] })}
+                      onChange={(e) => {
+                        const type = e.target.value as Resource["type"]
+                        setFormData((prev) => ({
+                          ...prev,
+                          type,
+                          file_storage_path: type === "pdf" ? prev.file_storage_path : "",
+                        }))
+                        if (type !== "pdf") {
+                          setResourceSource("link")
+                          setSelectedDocument(null)
+                        }
+                      }}
                       className="w-full px-3 py-2 bg-white border border-[#E8E3F3] rounded-lg text-[#1A0A3D] focus:outline-none focus:border-[#492B8C] focus:ring-1 focus:ring-[#492B8C]"
                     >
                       <option value="video">Video</option>
@@ -531,15 +586,80 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                       className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
                     />
                   </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">URL *</label>
-                    <Input
-                      value={formData.url}
-                      onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                      placeholder="https://youtube.com/watch?v=... or PDF link"
-                      className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
-                    />
-                  </div>
+                  {formData.type !== "pdf" && (
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">URL *</label>
+                      <Input
+                        value={formData.url}
+                        onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                        placeholder="https://youtube.com/watch?v=... or resource link"
+                        className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                      />
+                    </div>
+                  )}
+                  {formData.type === "pdf" && (
+                    <div className="sm:col-span-2 space-y-3">
+                      <label className="block text-sm font-medium text-[#1A0A3D]">Document Source *</label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={resourceSource === "link" ? "default" : "outline"}
+                          onClick={() => {
+                            setResourceSource("link")
+                            setSelectedDocument(null)
+                            setFormData((prev) => ({ ...prev, file_storage_path: "" }))
+                          }}
+                          className={resourceSource === "link" ? "bg-[#492B8C] text-white" : "border-[#E8E3F3] text-[#6B5B9E]"}
+                        >
+                          <LinkIcon className="w-4 h-4 mr-2" />
+                          External Link
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={resourceSource === "upload" ? "default" : "outline"}
+                          onClick={() => {
+                            setResourceSource("upload")
+                            setFormData((prev) => ({ ...prev, url: "" }))
+                          }}
+                          className={resourceSource === "upload" ? "bg-[#492B8C] text-white" : "border-[#E8E3F3] text-[#6B5B9E]"}
+                        >
+                          <FileText className="w-4 h-4 mr-2" />
+                          Upload Document
+                        </Button>
+                      </div>
+
+                      {resourceSource === "link" ? (
+                        <Input
+                          value={formData.url}
+                          onChange={(e) => setFormData({ ...formData, url: e.target.value, file_storage_path: "" })}
+                          placeholder="https://example.com/document.pdf"
+                          className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                        />
+                      ) : (
+                        <div className="space-y-2">
+                          <Input
+                            type="file"
+                            accept=".pdf,.doc,.docx,.txt,.md"
+                            onChange={(e) => setSelectedDocument(e.target.files?.[0] || null)}
+                            className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleUploadDocument}
+                            disabled={!selectedDocument || uploadingDocument}
+                            className="bg-[#2D1A69] hover:bg-[#492B8C] text-white"
+                          >
+                            {uploadingDocument ? "Uploading..." : "Upload Document"}
+                          </Button>
+                          <p className="text-xs text-[#6B5B9E]">
+                            {formData.file_storage_path
+                              ? "Document uploaded. Resource link will be auto-generated when you save."
+                              : "Upload a file first. Resource link will be auto-generated when you save."}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Tier Required *</label>
                     <select
@@ -568,7 +688,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                     <Save className="w-4 h-4 mr-2" />
                     Save Resource
                   </Button>
-                  <Button variant="outline" onClick={() => { setShowAddForm(false); resetForm(); }} className="border-[#E8E3F3] text-[#6B5B9E]">
+                  <Button variant="outline" onClick={() => { setShowAddForm(false); resetForm(); setResourceSource("link"); setSelectedDocument(null) }} className="border-[#E8E3F3] text-[#6B5B9E]">
                     <X className="w-4 h-4 mr-2" />
                     Cancel
                   </Button>

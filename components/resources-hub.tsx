@@ -322,6 +322,8 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null)
   const [selectedVideoTitle, setSelectedVideoTitle] = useState<string>("")
   const [showPdfViewer, setShowPdfViewer] = useState(false)
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState<string>("/ai-builder-cohort-guide.pdf")
+  const [selectedPdfTitle, setSelectedPdfTitle] = useState<string>("Document Preview")
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [selectedTierForPayment, setSelectedTierForPayment] = useState<"foundational" | "builder" | "architect" | null>(null)
   const [copiedUPI, setCopiedUPI] = useState(false)
@@ -341,6 +343,12 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
     // User signed in but doesn't have access - show payment modal
     setSelectedTierForPayment(resourceTier as "foundational" | "builder" | "architect")
     setShowPaymentModal(true)
+  }
+
+  const openPdfViewer = (url: string, title: string) => {
+    setSelectedPdfUrl(url)
+    setSelectedPdfTitle(title)
+    setShowPdfViewer(true)
   }
 
   const copyUPIId = async () => {
@@ -1017,8 +1025,8 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
                     <div className="mt-4 pt-4 border-t border-[#E8E3F3]">
                       <Button
                         onClick={() => {
-                          if (resource.type === "pdf" && resource.url === "/ai-builder-cohort-guide.pdf") {
-                            setShowPdfViewer(true)
+                          if (resource.type === "pdf") {
+                            openPdfViewer(resource.url, resource.title)
                           } else {
                             window.open(resource.url, "_blank")
                           }
@@ -1096,7 +1104,7 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
         >
           <div className="relative w-full max-w-4xl h-[80vh] bg-white rounded-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[#E8E3F3]">
-              <h3 className="font-bold text-[#1A0A3D]">AI Builder Cohort Guide</h3>
+              <h3 className="font-bold text-[#1A0A3D]">{selectedPdfTitle}</h3>
               <button
                 onClick={() => setShowPdfViewer(false)}
                 className="p-2 rounded-lg hover:bg-[#F4F1FB] text-[#6B5B9E] hover:text-[#1A0A3D] transition-colors"
@@ -1105,8 +1113,9 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
               </button>
             </div>
             <iframe
-              src="/ai-builder-cohort-guide.pdf"
+              src={selectedPdfUrl}
               className="w-full h-[calc(100%-60px)]"
+              title={selectedPdfTitle}
             />
           </div>
         </div>
