@@ -36,23 +36,25 @@ export async function POST(request: Request) {
   const formData = await request.formData()
   const file = formData.get("file")
 
-  if (!(file instanceof File)) {
+  if (!file || typeof (file as any).arrayBuffer !== "function") {
     return NextResponse.json({ error: "File is required" }, { status: 400 })
   }
 
-  if (file.size === 0) {
+  const uploadFile = file as File
+
+  if (uploadFile.size === 0) {
     return NextResponse.json({ error: "File is empty" }, { status: 400 })
   }
 
-  const safeName = sanitizeFileName(file.name || "document")
+  const safeName = sanitizeFileName(uploadFile.name || "document")
   const filePath = `documents/${Date.now()}-${crypto.randomUUID()}-${safeName}`
-  const fileBuffer = await file.arrayBuffer()
+  const fileBuffer = await uploadFile.arrayBuffer()
 
   const serviceClient = createServiceClient()
   const { error: uploadError } = await serviceClient.storage
     .from("resources")
     .upload(filePath, fileBuffer, {
-      contentType: file.type || "application/octet-stream",
+      contentType: uploadFile.type || "application/octet-stream",
       upsert: false,
     })
 
@@ -63,7 +65,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     success: true,
     filePath,
-    fileName: file.name,
+    fileName: uploadFile.name,
   })
 }
 

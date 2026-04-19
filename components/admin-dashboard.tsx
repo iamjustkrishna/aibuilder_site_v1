@@ -26,6 +26,7 @@ import {
   Calendar,
   Play,
   Link as LinkIcon,
+  Loader2,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -100,6 +101,8 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [resourceSource, setResourceSource] = useState<"link" | "upload">("link")
   const [selectedDocument, setSelectedDocument] = useState<File | null>(null)
   const [uploadingDocument, setUploadingDocument] = useState(false)
+  const [savingResource, setSavingResource] = useState(false)
+  const [resourceFormMessage, setResourceFormMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -172,28 +175,13 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     return match?.[1] || null
   }
 
-  async function handleAddResource() {
-    if (!formData.title || !formData.type) return
-    if (!formData.url && !formData.file_storage_path) return
-
-    const res = await fetch("/api/admin/resources", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    })
-    if (res.ok) {
-      setShowAddForm(false)
-      resetForm()
-      setResourceSource("link")
-      setSelectedDocument(null)
-      fetchData()
+  async function uploadDocumentToStorage() {
+    if (!selectedDocument) {
+      setResourceFormMessage({ type: "error", text: "Please select a document first." })
+      return null
     }
-  }
-
-  async function handleUploadDocument() {
-    if (!selectedDocument) return
-
     setUploadingDocument(true)
+    setResourceFormMessage({ type: "info", text: "Uploading document..." })
     const payload = new FormData()
     payload.append("file", selectedDocument)
 
@@ -205,8 +193,8 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
 
       const data = await res.json()
       if (!res.ok) {
-        console.error(data.error || "Failed to upload document")
-        return
+        setResourceFormMessage({ type: "error", text: data.error || "Failed to upload document." })
+        return null
       }
 
       setFormData((prev) => ({
@@ -215,10 +203,75 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         url: "",
         file_storage_path: data.filePath,
       }))
+      setResourceFormMessage({ type: "success", text: "Document uploaded successfully." })
+      return data.filePath as string
     } catch (error) {
       console.error("Failed to upload document:", error)
+      setResourceFormMessage({ type: "error", text: "Failed to upload document. Please try again." })
+      return null
     } finally {
       setUploadingDocument(false)
+    }
+  }
+
+  async function handleUploadDocument() {
+    await uploadDocumentToStorage()
+  }
+
+  async function handleAddResource() {
+    setResourceFormMessage(null)
+
+    if (!formData.title.trim()) {
+      setResourceFormMessage({ type: "error", text: "Title is required." })
+      return
+    }
+
+    setSavingResource(true)
+
+    try {
+      let fileStoragePath = formData.file_storage_path
+      if (formData.type === "pdf" && resourceSource === "upload" && !fileStoragePath) {
+        const uploadedPath = await uploadDocumentToStorage()
+        if (!uploadedPath) return
+        fileStoragePath = uploadedPath
+      }
+
+      const normalizedUrl = formData.url.trim()
+      if (!normalizedUrl && !fileStoragePath) {
+        setResourceFormMessage({ type: "error", text: "Add a URL or upload a document before saving." })
+        return
+      }
+
+      setResourceFormMessage({ type: "info", text: "Saving resource..." })
+      const payload = {
+        ...formData,
+        url: formData.type === "pdf" && resourceSource === "upload" ? "" : normalizedUrl,
+        file_storage_path: fileStoragePath,
+      }
+
+      const res = await fetch("/api/admin/resources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        setResourceFormMessage({ type: "error", text: data.error || "Failed to save resource." })
+        return
+      }
+
+      setResourceFormMessage({ type: "success", text: "Resource saved successfully." })
+      setShowAddForm(false)
+      resetForm()
+      setResourceSource("link")
+      setSelectedDocument(null)
+      fetchData()
+    } catch (error) {
+      console.error("Failed to save resource:", error)
+      setResourceFormMessage({ type: "error", text: "Failed to save resource. Please try again." })
+    } finally {
+      setSavingResource(false)
     }
   }
 
@@ -272,6 +325,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       sort_order: 0,
       is_active: true,
     })
+    setResourceFormMessage(null)
   }
 
   function startEdit(resource: Resource) {
@@ -608,6 +662,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                             setResourceSource("link")
                             setSelectedDocument(null)
                             setFormData((prev) => ({ ...prev, file_storage_path: "" }))
+                            setResourceFormMessage(null)
                           }}
                           className={resourceSource === "link" ? "bg-[#492B8C] text-white" : "border-[#E8E3F3] text-[#6B5B9E]"}
                         >
@@ -620,6 +675,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                           onClick={() => {
                             setResourceSource("upload")
                             setFormData((prev) => ({ ...prev, url: "" }))
+                            setResourceFormMessage(null)
                           }}
                           className={resourceSource === "upload" ? "bg-[#492B8C] text-white" : "border-[#E8E3F3] text-[#6B5B9E]"}
                         >
@@ -640,16 +696,26 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                           <Input
                             type="file"
                             accept=".pdf,.doc,.docx,.txt,.md"
-                            onChange={(e) => setSelectedDocument(e.target.files?.[0] || null)}
+                            onChange={(e) => {
+                              setSelectedDocument(e.target.files?.[0] || null)
+                              setResourceFormMessage(null)
+                            }}
                             className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
                           />
                           <Button
                             type="button"
                             onClick={handleUploadDocument}
-                            disabled={!selectedDocument || uploadingDocument}
+                            disabled={!selectedDocument || uploadingDocument || savingResource}
                             className="bg-[#2D1A69] hover:bg-[#492B8C] text-white"
                           >
-                            {uploadingDocument ? "Uploading..." : "Upload Document"}
+                            {uploadingDocument ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Uploading...
+                              </>
+                            ) : (
+                              "Upload Document"
+                            )}
                           </Button>
                           <p className="text-xs text-[#6B5B9E]">
                             {formData.file_storage_path
@@ -683,10 +749,23 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                     />
                   </div>
                 </div>
+                {resourceFormMessage && (
+                  <div
+                    className={`mt-4 rounded-lg px-3 py-2 text-sm ${
+                      resourceFormMessage.type === "error"
+                        ? "bg-red-50 text-red-700 border border-red-200"
+                        : resourceFormMessage.type === "success"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-blue-50 text-blue-700 border border-blue-200"
+                    }`}
+                  >
+                    {resourceFormMessage.text}
+                  </div>
+                )}
                 <div className="flex flex-col sm:flex-row gap-2 mt-6">
-                  <Button onClick={handleAddResource} className="bg-[#00C8A7] hover:bg-[#00C8A7]/90 text-white">
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Resource
+                  <Button onClick={handleAddResource} disabled={savingResource || uploadingDocument} className="bg-[#00C8A7] hover:bg-[#00C8A7]/90 text-white">
+                    {savingResource ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                    {savingResource ? "Saving Resource..." : "Save Resource"}
                   </Button>
                   <Button variant="outline" onClick={() => { setShowAddForm(false); resetForm(); setResourceSource("link"); setSelectedDocument(null) }} className="border-[#E8E3F3] text-[#6B5B9E]">
                     <X className="w-4 h-4 mr-2" />
