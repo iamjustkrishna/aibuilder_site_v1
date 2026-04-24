@@ -50,6 +50,7 @@ interface User {
   email: string
   full_name: string
   membership_tier: string
+  avatar_url?: string | null
   created_at: string
 }
 
@@ -83,6 +84,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showAddUserForm, setShowAddUserForm] = useState(false)
   const [addingToWeek, setAddingToWeek] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [weekVideoForm, setWeekVideoForm] = useState({ title: "", description: "", url: "", tier_required: "foundational" as Resource["tier_required"] })
@@ -103,6 +105,14 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [uploadingDocument, setUploadingDocument] = useState(false)
   const [savingResource, setSavingResource] = useState(false)
   const [resourceFormMessage, setResourceFormMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
+  const [creatingUser, setCreatingUser] = useState(false)
+  const [newUserForm, setNewUserForm] = useState({
+    full_name: "",
+    email: "",
+    membership_tier: "initial" as Resource["tier_required"],
+    avatar_url: "",
+  })
+  const [userFormMessage, setUserFormMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -127,6 +137,16 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
 
   function isUserAdmin(email: string): boolean {
     return adminEmails.map(e => e.toLowerCase()).includes(email?.toLowerCase())
+  }
+
+  function resetUserForm() {
+    setNewUserForm({
+      full_name: "",
+      email: "",
+      membership_tier: "initial",
+      avatar_url: "",
+    })
+    setUserFormMessage(null)
   }
 
   async function fetchData() {
@@ -310,6 +330,42 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       body: JSON.stringify({ id: userId, membership_tier: newTier }),
     })
     if (res.ok) fetchData()
+  }
+
+  async function handleAddUser() {
+    setUserFormMessage(null)
+
+    if (!newUserForm.full_name.trim() || !newUserForm.email.trim() || !newUserForm.membership_tier) {
+      setUserFormMessage({ type: "error", text: "Name, email, and tier are required." })
+      return
+    }
+
+    setCreatingUser(true)
+    setUserFormMessage({ type: "info", text: "Creating user and sending invite..." })
+
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newUserForm),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        setUserFormMessage({ type: "error", text: data.error || "Failed to create user." })
+        return
+      }
+
+      setUserFormMessage({ type: "success", text: data.invited ? "User invited successfully." : "User created successfully." })
+      resetUserForm()
+      setShowAddUserForm(false)
+      fetchData()
+    } catch (error) {
+      console.error("Failed to add user:", error)
+      setUserFormMessage({ type: "error", text: "Failed to create user. Please try again." })
+    } finally {
+      setCreatingUser(false)
+    }
   }
 
   function resetForm() {
@@ -889,6 +945,106 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         {/* Users Tab */}
         {activeTab === "users" && (
           <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-white">Users</h3>
+                <p className="text-sm text-white/60">Manage existing members or add a new user invite.</p>
+              </div>
+              <Button
+                onClick={() => {
+                  setShowAddUserForm((prev) => !prev)
+                  setUserFormMessage(null)
+                }}
+                className="bg-[#FF6B34] hover:bg-[#E84C1E] text-white rounded-full"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {showAddUserForm ? "Close Form" : "Add User"}
+              </Button>
+            </div>
+
+            {showAddUserForm && (
+              <div className="mb-6 bg-white/95 backdrop-blur rounded-2xl p-5 border border-white/10 shadow-lg">
+                <h4 className="text-lg font-semibold text-[#1A0A3D] mb-4">Add New User</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Name *</label>
+                    <Input
+                      value={newUserForm.full_name}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, full_name: e.target.value })}
+                      placeholder="Full name"
+                      className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Email *</label>
+                    <Input
+                      type="email"
+                      value={newUserForm.email}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
+                      placeholder="user@example.com"
+                      className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Tier *</label>
+                    <select
+                      value={newUserForm.membership_tier}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, membership_tier: e.target.value as Resource["tier_required"] })}
+                      className="w-full px-3 py-2 bg-white border border-[#E8E3F3] rounded-lg text-[#1A0A3D] focus:outline-none focus:border-[#492B8C] focus:ring-1 focus:ring-[#492B8C]"
+                    >
+                      <option value="initial">Explorer</option>
+                      <option value="foundational">Foundational</option>
+                      <option value="builder">Builder</option>
+                      <option value="architect">Architect</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Avatar URL</label>
+                    <Input
+                      value={newUserForm.avatar_url}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, avatar_url: e.target.value })}
+                      placeholder="https://..."
+                      className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                    />
+                  </div>
+                </div>
+                {userFormMessage && (
+                  <div
+                    className={`mt-4 rounded-lg px-3 py-2 text-sm ${
+                      userFormMessage.type === "error"
+                        ? "bg-red-50 text-red-700 border border-red-200"
+                        : userFormMessage.type === "success"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-blue-50 text-blue-700 border border-blue-200"
+                    }`}
+                  >
+                    {userFormMessage.text}
+                  </div>
+                )}
+                <div className="flex flex-col sm:flex-row gap-2 mt-6">
+                  <Button
+                    onClick={handleAddUser}
+                    disabled={creatingUser}
+                    className="bg-[#00C8A7] hover:bg-[#00C8A7]/90 text-white"
+                  >
+                    {creatingUser ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                    {creatingUser ? "Adding User..." : "Add User"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowAddUserForm(false)
+                      resetUserForm()
+                    }}
+                    className="border-[#E8E3F3] text-[#6B5B9E]"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {loading ? (
               <div className="text-center py-12 text-white/60">Loading users...</div>
             ) : filteredUsers.length === 0 ? (
