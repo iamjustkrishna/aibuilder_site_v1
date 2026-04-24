@@ -51,6 +51,9 @@ interface User {
   full_name: string
   membership_tier: string
   avatar_url?: string | null
+  deletion_request_count?: number
+  deletion_requested_by_me?: boolean
+  deletion_required_count?: number
   created_at: string
 }
 
@@ -106,6 +109,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [savingResource, setSavingResource] = useState(false)
   const [resourceFormMessage, setResourceFormMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
   const [creatingUser, setCreatingUser] = useState(false)
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
   const [newUserForm, setNewUserForm] = useState({
     full_name: "",
     email: "",
@@ -113,6 +117,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     avatar_url: "",
   })
   const [userFormMessage, setUserFormMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
+  const [userDeleteMessage, setUserDeleteMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -365,6 +370,53 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       setUserFormMessage({ type: "error", text: "Failed to create user. Please try again." })
     } finally {
       setCreatingUser(false)
+    }
+  }
+
+  async function handleDeleteUser(userId: string) {
+    const user = users.find((entry) => entry.id === userId)
+    if (!user) return
+
+    const requiredCount = adminEmails.length || 1
+    const approvedCount = user.deletion_request_count || 0
+    const isFinalDelete = approvedCount + 1 >= requiredCount
+    const confirmMessage = isFinalDelete
+      ? `This will permanently delete ${user.full_name || user.email}. Continue?`
+      : `This will mark ${user.full_name || user.email} for deletion. The last admin will complete the delete. Continue?`
+
+    if (!confirm(confirmMessage)) return
+
+    setDeletingUserId(userId)
+    setUserDeleteMessage({ type: "info", text: isFinalDelete ? "Deleting user..." : "Marking user for deletion..." })
+
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: userId }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        setUserDeleteMessage({ type: "error", text: data.error || "Failed to process deletion." })
+        return
+      }
+
+      if (data.deleted) {
+        setUserDeleteMessage({ type: "success", text: "User deleted successfully." })
+      } else {
+        setUserDeleteMessage({
+          type: "success",
+          text: `Deletion marked. ${data.approvedCount}/${data.requiredCount} admin approvals received.`,
+        })
+      }
+
+      fetchData()
+    } catch (error) {
+      console.error("Failed to delete user:", error)
+      setUserDeleteMessage({ type: "error", text: "Failed to process deletion. Please try again." })
+    } finally {
+      setDeletingUserId(null)
     }
   }
 
@@ -962,6 +1014,20 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
               </Button>
             </div>
 
+            {userDeleteMessage && (
+              <div
+                className={`mb-4 rounded-lg px-3 py-2 text-sm ${
+                  userDeleteMessage.type === "error"
+                    ? "bg-red-50 text-red-700 border border-red-200"
+                    : userDeleteMessage.type === "success"
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      : "bg-blue-50 text-blue-700 border border-blue-200"
+                }`}
+              >
+                {userDeleteMessage.text}
+              </div>
+            )}
+
             {showAddUserForm && (
               <div className="mb-6 bg-white/95 backdrop-blur rounded-2xl p-5 border border-white/10 shadow-lg">
                 <h4 className="text-lg font-semibold text-[#1A0A3D] mb-4">Add New User</h4>
@@ -1057,17 +1123,26 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                 {filteredUsers.map((user) => {
                   const tierData = tierConfig[user.membership_tier as keyof typeof tierConfig] || tierConfig.initial
                   const userIsAdmin = isUserAdmin(user.email)
+                  const approvalCount = user.deletion_request_count || 0
+                  const requiredApprovals = user.deletion_required_count || adminEmails.length || 1
+                  const requestedByMe = Boolean(user.deletion_requested_by_me)
+                  const canFinalizeDelete = !requestedByMe && approvalCount + 1 >= requiredApprovals
                   return (
                     <div key={user.id} className="bg-white/95 backdrop-blur rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">
                       <div className={`w-10 h-10 rounded-full ${userIsAdmin ? "bg-[#FF6B34]" : tierData.color} flex items-center justify-center text-white font-bold flex-shrink-0`}>
                         {(user.full_name?.[0] || user.email?.[0] || "?").toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="font-medium text-[#1A0A3D] truncate">{user.full_name || "No name"}</h4>
                           {userIsAdmin && (
                             <span className="px-2 py-0.5 rounded-full text-xs bg-[#FF6B34] text-white font-medium">
                               Admin
+                            </span>
+                          )}
+                          {approvalCount > 0 && !userIsAdmin && (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-[#F4F1FB] text-[#6B5B9E] font-medium">
+                              Deletion pending {approvalCount}/{requiredApprovals}
                             </span>
                           )}
                         </div>
@@ -1085,19 +1160,42 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                             Protected
                           </span>
                         ) : (
-                          <div className="relative">
-                            <select
-                              value={user.membership_tier}
-                              onChange={(e) => handleUpdateUserTier(user.id, e.target.value)}
-                              className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-[#E8E3F3] rounded-lg text-sm text-[#1A0A3D] cursor-pointer focus:outline-none focus:border-[#492B8C] hover:border-[#492B8C] transition-colors"
+                          <>
+                            <div className="relative">
+                              <select
+                                value={user.membership_tier}
+                                onChange={(e) => handleUpdateUserTier(user.id, e.target.value)}
+                                className="appearance-none pl-3 pr-8 py-1.5 bg-white border border-[#E8E3F3] rounded-lg text-sm text-[#1A0A3D] cursor-pointer focus:outline-none focus:border-[#492B8C] hover:border-[#492B8C] transition-colors"
+                              >
+                                <option value="initial">Explorer</option>
+                                <option value="foundational">Foundational</option>
+                                <option value="builder">Builder</option>
+                                <option value="architect">Architect</option>
+                              </select>
+                              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B5B9E] pointer-events-none" />
+                            </div>
+                            <Button
+                              onClick={() => handleDeleteUser(user.id)}
+                              disabled={deletingUserId === user.id || requestedByMe}
+                              variant="outline"
+                              className={`rounded-lg border ${
+                                canFinalizeDelete
+                                  ? "border-red-300 text-red-600 hover:bg-red-50"
+                                  : "border-[#E8E3F3] text-[#6B5B9E]"
+                              }`}
                             >
-                              <option value="initial">Explorer</option>
-                              <option value="foundational">Foundational</option>
-                              <option value="builder">Builder</option>
-                              <option value="architect">Architect</option>
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B5B9E] pointer-events-none" />
-                          </div>
+                              {deletingUserId === user.id ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4 mr-2" />
+                              )}
+                              {requestedByMe
+                                ? "Requested"
+                                : canFinalizeDelete
+                                  ? "Final Delete"
+                                  : "Mark for deletion"}
+                            </Button>
+                          </>
                         )}
                       </div>
                     </div>

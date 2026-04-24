@@ -1,6 +1,6 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
-import { isAdminEmail } from "@/lib/admin"
+import { getAdminEmails, isAdminEmail } from "@/lib/admin"
 
 // Helper to check admin access
 async function checkAdminAccess() {
@@ -21,13 +21,14 @@ async function checkAdminAccess() {
 
 // GET - Fetch all users from users table
 export async function GET() {
-  const { authorized, error } = await checkAdminAccess()
+  const { authorized, error, user } = await checkAdminAccess()
   if (!authorized) {
     return NextResponse.json({ error }, { status: 401 })
   }
 
   // Use service client to bypass RLS and fetch ALL users
   const serviceClient = createServiceClient()
+
   const { data: users, error: dbError } = await serviceClient
     .from("users")
     .select("id, email, full_name, membership_tier, created_at, avatar_url")
@@ -37,7 +38,37 @@ export async function GET() {
     return NextResponse.json({ error: dbError.message }, { status: 500 })
   }
 
-  return NextResponse.json(users || [])
+  const { data: deletionRequests, error: deletionError } = await serviceClient
+    .from("user_deletion_requests")
+    .select("user_id, requested_by_email")
+
+  if (deletionError) {
+    return NextResponse.json({ error: deletionError.message }, { status: 500 })
+  }
+
+  const requestMap = new Map<string, { count: number; requestedByMe: boolean }>()
+  const currentAdminEmail = user.email?.toLowerCase() || ""
+  for (const request of deletionRequests || []) {
+    const entry = requestMap.get(request.user_id) || { count: 0, requestedByMe: false }
+    entry.count += 1
+    if (request.requested_by_email?.toLowerCase() === currentAdminEmail) {
+      entry.requestedByMe = true
+    }
+    requestMap.set(request.user_id, entry)
+  }
+
+  const adminCount = getAdminEmails().length
+  const response = (users || []).map((user) => {
+    const requestState = requestMap.get(user.id) || { count: 0, requestedByMe: false }
+    return {
+      ...user,
+      deletion_request_count: requestState.count,
+      deletion_requested_by_me: requestState.requestedByMe,
+      deletion_required_count: adminCount,
+    }
+  })
+
+  return NextResponse.json(response)
 }
 
 // POST - Create a new user and profile
@@ -108,7 +139,7 @@ export async function POST(request: Request) {
     .eq("id", inviteData.user.id)
     .single()
 
-  return NextResponse.json({
+return NextResponse.json({
     user: createdProfile || {
       id: inviteData.user.id,
       email,
@@ -117,6 +148,82 @@ export async function POST(request: Request) {
       avatar_url: avatarUrl || null,
     },
     invited: true,
+  })
+}
+
+// DELETE - Staged deletion for a non-admin user
+export async function DELETE(request: Request) {
+  const { authorized, error, user } = await checkAdminAccess()
+  if (!authorized) {
+    return NextResponse.json({ error }, { status: 401 })
+  }
+
+  const body = await request.json()
+  const targetUserId = typeof body.id === "string" ? body.id : typeof body.userId === "string" ? body.userId : ""
+  if (!targetUserId) {
+    return NextResponse.json({ error: "User ID is required" }, { status: 400 })
+  }
+
+  const serviceClient = createServiceClient()
+
+  const { data: targetUser, error: targetUserError } = await serviceClient
+    .from("users")
+    .select("id, email, full_name")
+    .eq("id", targetUserId)
+    .single()
+
+  if (targetUserError || !targetUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 })
+  }
+
+  if (targetUser.email && (await isAdminEmail(targetUser.email))) {
+    return NextResponse.json({ error: "Admin users cannot be deleted" }, { status: 403 })
+  }
+
+  const adminEmails = getAdminEmails()
+  if (adminEmails.length === 0) {
+    return NextResponse.json({ error: "No admins configured" }, { status: 500 })
+  }
+
+  const currentAdminEmail = user.email!.toLowerCase()
+  const { error: upsertError } = await serviceClient
+    .from("user_deletion_requests")
+    .upsert({
+      user_id: targetUserId,
+      requested_by_user_id: user.id,
+      requested_by_email: currentAdminEmail,
+      requested_at: new Date().toISOString(),
+    }, { onConflict: "user_id,requested_by_email" })
+
+  if (upsertError) {
+    return NextResponse.json({ error: upsertError.message }, { status: 500 })
+  }
+
+  const { data: requests, error: countError } = await serviceClient
+    .from("user_deletion_requests")
+    .select("requested_by_email")
+    .eq("user_id", targetUserId)
+
+  if (countError) {
+    return NextResponse.json({ error: countError.message }, { status: 500 })
+  }
+
+  const uniqueApprovals = new Set((requests || []).map((row) => row.requested_by_email.toLowerCase()))
+
+  if (uniqueApprovals.size >= adminEmails.length) {
+    const { error: deleteAuthError } = await serviceClient.auth.admin.deleteUser(targetUserId)
+    if (deleteAuthError) {
+      return NextResponse.json({ error: deleteAuthError.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, deleted: true })
+  }
+
+  return NextResponse.json({
+    success: true,
+    pending: true,
+    approvedCount: uniqueApprovals.size,
+    requiredCount: adminEmails.length,
   })
 }
 
