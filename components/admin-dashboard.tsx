@@ -27,8 +27,10 @@ import {
   Play,
   Link as LinkIcon,
   Loader2,
+  Mail,
 } from "lucide-react"
 import Link from "next/link"
+import { Textarea } from "@/components/ui/textarea"
 
 interface Resource {
   id: string
@@ -80,7 +82,7 @@ const weekConfig = [
 ]
 
 export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
-  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users">("weeks")
+  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "mail">("weeks")
   const [resources, setResources] = useState<Resource[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [adminEmails, setAdminEmails] = useState<string[]>([])
@@ -110,6 +112,8 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [resourceFormMessage, setResourceFormMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
   const [creatingUser, setCreatingUser] = useState(false)
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
+  const [selectedMailRecipientIds, setSelectedMailRecipientIds] = useState<string[]>([])
+  const [sendingMail, setSendingMail] = useState(false)
   const [newUserForm, setNewUserForm] = useState({
     full_name: "",
     email: "",
@@ -118,6 +122,15 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   })
   const [userFormMessage, setUserFormMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
   const [userDeleteMessage, setUserDeleteMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
+  const [mailFormMessage, setMailFormMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
+  const [mailForm, setMailForm] = useState({
+    senderEmail: userEmail || "",
+    appPassword: "",
+    subject: "AIBuilder Invite",
+    subtitle: "Learn along with us",
+    body: "Hi {{name}},\n\nYou're invited to AIBuilder.\n\nAccess resources, learn along with us, and grow with the community.\n\nThanks,\nAIBuilder Team",
+    intervalSeconds: 3,
+  })
   const supabase = createClient()
 
   useEffect(() => {
@@ -127,6 +140,15 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   useEffect(() => {
     fetchData()
   }, [activeTab])
+
+  useEffect(() => {
+    if (userEmail) {
+      setMailForm((prev) => ({
+        ...prev,
+        senderEmail: prev.senderEmail || userEmail,
+      }))
+    }
+  }, [userEmail])
 
   async function fetchAdminEmails() {
     try {
@@ -420,6 +442,67 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     }
   }
 
+  const toggleMailRecipient = (userId: string) => {
+    setSelectedMailRecipientIds((current) =>
+      current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId]
+    )
+  }
+
+  const selectVisibleMailRecipients = () => {
+    const visibleIds = filteredUsers
+      .filter((user) => !isUserAdmin(user.email))
+      .map((user) => user.id)
+    setSelectedMailRecipientIds(visibleIds)
+  }
+
+  const clearMailRecipients = () => {
+    setSelectedMailRecipientIds([])
+  }
+
+  async function handleSendMail() {
+    setMailFormMessage(null)
+
+    if (!mailForm.senderEmail.trim() || !mailForm.appPassword.trim()) {
+      setMailFormMessage({ type: "error", text: "Sender email and app password are required." })
+      return
+    }
+
+    if (selectedMailRecipientIds.length === 0) {
+      setMailFormMessage({ type: "error", text: "Select at least one recipient." })
+      return
+    }
+
+    setSendingMail(true)
+    setMailFormMessage({ type: "info", text: "Sending emails..." })
+
+    try {
+      const res = await fetch("/api/admin/send-mail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...mailForm,
+          recipientIds: selectedMailRecipientIds,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        setMailFormMessage({ type: "error", text: data.error || "Failed to send emails." })
+        return
+      }
+
+      setMailFormMessage({
+        type: "success",
+        text: `Sent ${data.sentCount || 0} email(s). ${data.failedCount ? `${data.failedCount} failed.` : "All sent successfully."}`,
+      })
+    } catch (error) {
+      console.error("Failed to send mail:", error)
+      setMailFormMessage({ type: "error", text: "Failed to send emails. Please try again." })
+    } finally {
+      setSendingMail(false)
+    }
+  }
+
   function resetForm() {
     setFormData({
       title: "",
@@ -536,6 +619,17 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
               <Users className="w-4 h-4" />
               <span className="text-sm">Users</span>
               <span className="px-1.5 py-0.5 rounded-full text-xs bg-[#00C8A7] text-white">{users.length}</span>
+            </button>
+            <button
+              onClick={() => { setActiveTab("mail"); setSearchQuery(""); }}
+              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeTab === "mail"
+                  ? "bg-white text-[#1A0A3D] shadow-lg"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <Mail className="w-4 h-4" />
+              <span className="text-sm">Send Mail</span>
             </button>
           </div>
           
@@ -991,6 +1085,173 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Send Mail Tab */}
+        {activeTab === "mail" && (
+          <div className="space-y-4">
+            <div className="bg-white/95 backdrop-blur rounded-2xl p-5 border border-white/10 shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-[#1A0A3D]">Send Mail</h3>
+                  <p className="text-sm text-[#6B5B9E]">Send a personalized Gmail message to selected users.</p>
+                </div>
+                <div className="text-xs text-[#6B5B9E] bg-[#F4F1FB] px-3 py-2 rounded-lg">
+                  Variables: {"{{name}}"} {"{{full_name}}"} {"{{email}}"} {"{{tier}}"}
+                </div>
+              </div>
+
+              {mailFormMessage && (
+                <div
+                  className={`mb-4 rounded-lg px-3 py-2 text-sm ${
+                    mailFormMessage.type === "error"
+                      ? "bg-red-50 text-red-700 border border-red-200"
+                      : mailFormMessage.type === "success"
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : "bg-blue-50 text-blue-700 border border-blue-200"
+                  }`}
+                >
+                  {mailFormMessage.text}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">From Email *</label>
+                      <Input
+                        value={mailForm.senderEmail}
+                        onChange={(e) => setMailForm({ ...mailForm, senderEmail: e.target.value })}
+                        placeholder="your@gmail.com"
+                        className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Gmail App Password *</label>
+                      <Input
+                        type="password"
+                        value={mailForm.appPassword}
+                        onChange={(e) => setMailForm({ ...mailForm, appPassword: e.target.value })}
+                        placeholder="xxxx xxxx xxxx xxxx"
+                        className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Title / Subject *</label>
+                      <Input
+                        value={mailForm.subject}
+                        onChange={(e) => setMailForm({ ...mailForm, subject: e.target.value })}
+                        placeholder="AIBuilder Invite"
+                        className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Subtitle</label>
+                      <Input
+                        value={mailForm.subtitle}
+                        onChange={(e) => setMailForm({ ...mailForm, subtitle: e.target.value })}
+                        placeholder="Access resources, learn along with us"
+                        className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Body *</label>
+                      <Textarea
+                        value={mailForm.body}
+                        onChange={(e) => setMailForm({ ...mailForm, body: e.target.value })}
+                        placeholder="Write your message..."
+                        className="min-h-[180px] border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Gap Between Emails (seconds)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={mailForm.intervalSeconds}
+                        onChange={(e) => setMailForm({ ...mailForm, intervalSeconds: Number(e.target.value) || 0 })}
+                        className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <h4 className="font-semibold text-[#1A0A3D]">Recipients</h4>
+                      <p className="text-sm text-[#6B5B9E]">{selectedMailRecipientIds.length} selected</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={selectVisibleMailRecipients} className="border-[#E8E3F3] text-[#6B5B9E]">
+                        Select All Visible
+                      </Button>
+                      <Button variant="outline" onClick={clearMailRecipients} className="border-[#E8E3F3] text-[#6B5B9E]">
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="max-h-[420px] overflow-y-auto space-y-2 pr-1">
+                    {filteredUsers.length === 0 ? (
+                      <div className="p-4 rounded-xl bg-[#F4F1FB] text-[#6B5B9E] text-sm">No users found.</div>
+                    ) : (
+                      filteredUsers.map((user) => {
+                        const userIsAdmin = isUserAdmin(user.email)
+                        const isSelected = selectedMailRecipientIds.includes(user.id)
+                        return (
+                          <label
+                            key={user.id}
+                            className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer ${
+                              userIsAdmin
+                                ? "bg-[#F4F1FB] border-[#E8E3F3] opacity-70"
+                                : isSelected
+                                  ? "bg-[#492B8C]/5 border-[#492B8C]/30"
+                                  : "bg-white border-[#E8E3F3]"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              disabled={userIsAdmin}
+                              onChange={() => toggleMailRecipient(user.id)}
+                              className="w-4 h-4 accent-[#492B8C]"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-[#1A0A3D] truncate">{user.full_name || "No name"}</p>
+                              <p className="text-sm text-[#6B5B9E] truncate">{user.email}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2 py-0.5 rounded-full text-xs text-white ${tierConfig[user.membership_tier as keyof typeof tierConfig]?.color || tierConfig.initial.color}`}>
+                                {tierConfig[user.membership_tier as keyof typeof tierConfig]?.label || "Explorer"}
+                              </span>
+                              {userIsAdmin && (
+                                <span className="px-2 py-0.5 rounded-full text-xs bg-[#FF6B34] text-white">Admin</span>
+                              )}
+                            </div>
+                          </label>
+                        )
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 mt-6">
+                <Button
+                  onClick={handleSendMail}
+                  disabled={sendingMail}
+                  className="bg-[#492B8C] hover:bg-[#2D1A69] text-white"
+                >
+                  {sendingMail ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Mail className="w-4 h-4 mr-2" />}
+                  {sendingMail ? "Sending..." : "Send Mail"}
+                </Button>
+                <div className="text-xs text-[#6B5B9E] self-center">
+                  Gmail app password is used only for this send and is not stored.
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
