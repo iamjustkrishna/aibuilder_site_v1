@@ -38,12 +38,13 @@ export async function GET() {
     return NextResponse.json({ error: dbError.message }, { status: 500 })
   }
 
-  const { data: deletionRequests, error: deletionError } = await serviceClient
+  let deletionRequests: Array<{ user_id: string; requested_by_email: string }> = []
+  const deletionResult = await serviceClient
     .from("user_deletion_requests")
     .select("user_id, requested_by_email")
 
-  if (deletionError) {
-    return NextResponse.json({ error: deletionError.message }, { status: 500 })
+  if (!deletionResult.error) {
+    deletionRequests = deletionResult.data || []
   }
 
   const requestMap = new Map<string, { count: number; requestedByMe: boolean }>()
