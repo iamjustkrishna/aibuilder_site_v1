@@ -26,7 +26,6 @@ import {
   Calendar,
   Users,
   Check,
-  Clock3,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -58,12 +57,6 @@ interface DBResource {
   tier_required: "initial" | "foundational" | "builder" | "architect"
   category: string
   sort_order: number
-}
-
-interface ActivitySummary {
-  total_active_seconds: number
-  session_count: number
-  last_seen_at: string | null
 }
 
 interface UpcomingSession {
@@ -306,7 +299,6 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   const [selectedPdfTitle, setSelectedPdfTitle] = useState<string>("")
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null)
   const [showMentorModal, setShowMentorModal] = useState(false)
-  const [activitySummary, setActivitySummary] = useState<ActivitySummary | null>(null)
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([])
   const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({})
 
@@ -345,18 +337,6 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   }, [tier])
 
   useEffect(() => {
-    async function fetchActivitySummary() {
-      try {
-        const res = await fetch("/api/activity/me")
-        if (res.ok) {
-          const data = await res.json()
-          setActivitySummary(data)
-        }
-      } catch (error) {
-        console.error("Failed to fetch activity summary:", error)
-      }
-    }
-
     async function fetchUpcomingSessions() {
       try {
         const res = await fetch("/api/sessions")
@@ -369,7 +349,6 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
       }
     }
 
-    fetchActivitySummary()
     fetchUpcomingSessions()
   }, [user.id, tier])
 
@@ -380,19 +359,6 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
 
   function getWeekVideos(weekKey: string): DBResource[] {
     return dbResources.filter(r => r.category === weekKey && r.type === "video")
-  }
-
-  function formatDuration(totalSeconds: number) {
-    if (!totalSeconds || totalSeconds <= 0) {
-      return "0m"
-    }
-
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor((totalSeconds % 3600) / 60)
-    if (hours === 0) {
-      return `${minutes || 1}m`
-    }
-    return `${hours}h ${minutes}m`
   }
 
   function formatSessionTime(sessionAt: string) {
@@ -692,32 +658,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
           </div>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="p-5 rounded-2xl bg-[#F4F1FB] border border-[#E8E3F3]">
-            <div className="flex items-center gap-2 text-[#492B8C] mb-2">
-              <Clock3 className="w-4 h-4" />
-              <span className="text-sm font-medium">Your time on AIBuilder</span>
-            </div>
-            <p className="text-2xl font-bold text-[#1A0A3D]">{formatDuration(activitySummary?.total_active_seconds || 0)}</p>
-            <p className="text-sm text-[#6B5B9E] mt-1">Registered activity only</p>
-          </div>
-          <div className="p-5 rounded-2xl bg-[#F4F1FB] border border-[#E8E3F3]">
-            <div className="flex items-center gap-2 text-[#492B8C] mb-2">
-              <Calendar className="w-4 h-4" />
-              <span className="text-sm font-medium">Tracked sessions</span>
-            </div>
-            <p className="text-2xl font-bold text-[#1A0A3D]">{activitySummary?.session_count || 0}</p>
-            <p className="text-sm text-[#6B5B9E] mt-1">Across logged-in visits</p>
-          </div>
-          <div className="p-5 rounded-2xl bg-[#F4F1FB] border border-[#E8E3F3]">
-            <div className="flex items-center gap-2 text-[#492B8C] mb-2">
-              <Users className="w-4 h-4" />
-              <span className="text-sm font-medium">Upcoming sessions</span>
-            </div>
-            <p className="text-2xl font-bold text-[#1A0A3D]">{upcomingSessions.length}</p>
-            <p className="text-sm text-[#6B5B9E] mt-1">Visible for your access level</p>
-          </div>
-        </div>
+
 
         {upcomingSessions.length > 0 && (
           <div className="mb-8">

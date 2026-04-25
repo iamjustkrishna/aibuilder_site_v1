@@ -29,6 +29,8 @@ import {
   Link as LinkIcon,
   Loader2,
   Mail,
+  Clock,
+  TrendingUp,
 } from "lucide-react"
 import Link from "next/link"
 interface Resource {
@@ -96,7 +98,7 @@ const weekConfig = [
 ]
 
 export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
-  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "mail" | "sessions">("weeks")
+  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "mail" | "sessions" | "activity">("weeks")
   const [resources, setResources] = useState<Resource[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [sessions, setSessions] = useState<SessionRecord[]>([])
@@ -800,6 +802,17 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
             >
               <Mail className="w-4 h-4" />
               <span className="text-sm">Send Mail</span>
+            </button>
+            <button
+              onClick={() => { setActiveTab("activity"); setSearchQuery(""); }}
+              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeTab === "activity"
+                  ? "bg-white text-[#1A0A3D] shadow-lg"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <TrendingUp className="w-4 h-4" />
+              <span className="text-sm">Activity</span>
             </button>
           </div>
           
@@ -1904,6 +1917,108 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Activity Tab */}
+        {activeTab === "activity" && (
+          <div className="space-y-4">
+            <div className="bg-white/95 backdrop-blur rounded-2xl p-5 border border-white/10 shadow-lg">
+              <div>
+                <h3 className="text-lg font-semibold text-[#1A0A3D] mb-2">User Activity Analytics</h3>
+                <p className="text-sm text-[#6B5B9E] mb-4">Track user engagement and time spent on the platform.</p>
+              </div>
+
+              {users.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-[#6B5B9E]">No users yet</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[#E8E3F3]">
+                        <th className="text-left py-3 px-3 font-semibold text-[#1A0A3D]">User</th>
+                        <th className="text-left py-3 px-3 font-semibold text-[#1A0A3D]">Email</th>
+                        <th className="text-left py-3 px-3 font-semibold text-[#1A0A3D]">Tier</th>
+                        <th className="text-left py-3 px-3 font-semibold text-[#1A0A3D]">Time Logged In</th>
+                        <th className="text-left py-3 px-3 font-semibold text-[#1A0A3D]">Sessions</th>
+                        <th className="text-left py-3 px-3 font-semibold text-[#1A0A3D]">Last Seen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users
+                        .filter(user =>
+                          user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          user.email.toLowerCase().includes(searchQuery.toLowerCase())
+                        )
+                        .sort((a, b) => {
+                          const aLastSeen = a.last_seen_at ? new Date(a.last_seen_at).getTime() : 0
+                          const bLastSeen = b.last_seen_at ? new Date(b.last_seen_at).getTime() : 0
+                          return bLastSeen - aLastSeen
+                        })
+                        .map((user) => {
+                          const totalSeconds = user.total_active_seconds || 0
+                          const hours = Math.floor(totalSeconds / 3600)
+                          const minutes = Math.floor((totalSeconds % 3600) / 60)
+                          const lastSeenDate = user.last_seen_at ? new Date(user.last_seen_at) : null
+                          const isOnlineRecently = lastSeenDate && (Date.now() - lastSeenDate.getTime()) < 3600000
+
+                          return (
+                            <tr key={user.id} className="border-b border-[#F4F1FB] hover:bg-[#F4F1FB]/50 transition-colors">
+                              <td className="py-3 px-3">
+                                <div className="font-medium text-[#1A0A3D]">{user.full_name}</div>
+                              </td>
+                              <td className="py-3 px-3 text-[#6B5B9E]">{user.email}</td>
+                              <td className="py-3 px-3">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  user.membership_tier === "architect" ? "bg-[#FF6B34]/10 text-[#FF6B34]" :
+                                  user.membership_tier === "builder" ? "bg-[#FFD13F]/10 text-[#FFD13F]" :
+                                  user.membership_tier === "foundational" ? "bg-[#00C8A7]/10 text-[#00C8A7]" :
+                                  "bg-[#6B5B9E]/10 text-[#6B5B9E]"
+                                }`}>
+                                  {user.membership_tier === "initial" ? "Explorer" : 
+                                   user.membership_tier.charAt(0).toUpperCase() + user.membership_tier.slice(1)}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4 text-[#492B8C]" />
+                                  <span className="text-[#1A0A3D] font-medium">
+                                    {hours}h {minutes}m
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-3 text-[#1A0A3D] font-medium">
+                                {user.activity_session_count || 0}
+                              </td>
+                              <td className="py-3 px-3">
+                                <div className="flex items-center gap-2">
+                                  {isOnlineRecently && (
+                                    <span className="w-2 h-2 bg-[#00C8A7] rounded-full animate-pulse" title="Online in last hour" />
+                                  )}
+                                  <span className="text-[#6B5B9E] text-xs">
+                                    {lastSeenDate ? (
+                                      (() => {
+                                        const now = Date.now()
+                                        const diff = now - lastSeenDate.getTime()
+                                        if (diff < 3600000) return "Just now"
+                                        if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
+                                        if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`
+                                        return lastSeenDate.toLocaleDateString()
+                                      })()
+                                    ) : "Never"}
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
