@@ -20,13 +20,13 @@ import {
   Zap,
   Gift,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Play,
   Calendar,
   Users,
   Check,
-  IndianRupee,
-  CreditCard,
-  Copy
+  Clock3,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -58,6 +58,22 @@ interface DBResource {
   tier_required: "initial" | "foundational" | "builder" | "architect"
   category: string
   sort_order: number
+}
+
+interface ActivitySummary {
+  total_active_seconds: number
+  session_count: number
+  last_seen_at: string | null
+}
+
+interface UpcomingSession {
+  id: string
+  title: string
+  description: string | null
+  meet_link: string
+  session_at: string
+  visibility_scope: "all" | "tiers" | "users"
+  audience_tiers: string[] | null
 }
 
 // Best AI Tools to use - compact list for dashboard
@@ -276,12 +292,6 @@ const tierInfo = {
 }
 
 // Pricing tiers for UPI payment
-const tierPricing = {
-  foundational: { price: 499, label: "Foundational", features: ["All 4 weeks of live sessions", "All session recordings", "Free resource pack", "Community chat access"] },
-  builder: { price: 999, label: "Builder", features: ["Everything in Foundational", "1-on-1 mentor support", "Code review sessions", "Priority Q&A"] },
-  architect: { price: 1999, label: "Architect", features: ["Everything in Builder", "AI Store publishing access", "Keep 100% of earnings", "Priority placement"] },
-}
-
 export function DashboardContent({ user, profile }: DashboardContentProps) {
   const router = useRouter()
   const tier = profile?.membership_tier || "initial"
@@ -296,24 +306,9 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   const [selectedPdfTitle, setSelectedPdfTitle] = useState<string>("")
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null)
   const [showMentorModal, setShowMentorModal] = useState(false)
-  const [showPaymentModal, setShowPaymentModal] = useState(false)
-  const [selectedTierForPayment, setSelectedTierForPayment] = useState<"foundational" | "builder" | "architect" | null>(null)
-  const [copiedUPI, setCopiedUPI] = useState(false)
-
-  const UPI_ID = "thekrishnajeena@ybl"
-
-  const copyUPIId = async () => {
-    await navigator.clipboard.writeText(UPI_ID)
-    setCopiedUPI(true)
-    setTimeout(() => setCopiedUPI(false), 2000)
-  }
-
-  const getUpgradeOptions = () => {
-    if (tier === "initial") return ["foundational", "builder", "architect"] as const
-    if (tier === "foundational") return ["builder", "architect"] as const
-    if (tier === "builder") return ["architect"] as const
-    return [] as const
-  }
+  const [activitySummary, setActivitySummary] = useState<ActivitySummary | null>(null)
+  const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([])
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({})
 
   // Check if user is admin
   useEffect(() => {
@@ -349,6 +344,35 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
     fetchResources()
   }, [tier])
 
+  useEffect(() => {
+    async function fetchActivitySummary() {
+      try {
+        const res = await fetch("/api/activity/me")
+        if (res.ok) {
+          const data = await res.json()
+          setActivitySummary(data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch activity summary:", error)
+      }
+    }
+
+    async function fetchUpcomingSessions() {
+      try {
+        const res = await fetch("/api/sessions")
+        if (res.ok) {
+          const data = await res.json()
+          setUpcomingSessions(data || [])
+        }
+      } catch (error) {
+        console.error("Failed to fetch upcoming sessions:", error)
+      }
+    }
+
+    fetchActivitySummary()
+    fetchUpcomingSessions()
+  }, [user.id, tier])
+
   function extractYouTubeId(url: string): string | null {
     const match = url.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/)
     return match?.[1] || null
@@ -356,6 +380,30 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
 
   function getWeekVideos(weekKey: string): DBResource[] {
     return dbResources.filter(r => r.category === weekKey && r.type === "video")
+  }
+
+  function formatDuration(totalSeconds: number) {
+    if (!totalSeconds || totalSeconds <= 0) {
+      return "0m"
+    }
+
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    if (hours === 0) {
+      return `${minutes || 1}m`
+    }
+    return `${hours}h ${minutes}m`
+  }
+
+  function formatSessionTime(sessionAt: string) {
+    return new Intl.DateTimeFormat("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(sessionAt))
+  }
+
+  function toggleDescription(key: string) {
+    setExpandedDescriptions((current) => ({ ...current, [key]: !current[key] }))
   }
 
   const handleSignOut = async () => {
@@ -640,22 +688,78 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
               <span className="text-sm text-[#6B5B9E]">Current Membership</span>
             </div>
 
-            {tier !== "architect" && (
-              <Button
-                onClick={() => {
-                  setSelectedTierForPayment(null)
-                  setShowPaymentModal(true)
-                }}
-                className="bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full"
-              >
-                <IndianRupee className="w-4 h-4 mr-2" />
-                {tier === "initial" && "Upgrade to Unlock All Resources"}
-                {tier === "foundational" && "Upgrade to Builder or Architect"}
-                {tier === "builder" && "Upgrade to Architect"}
-              </Button>
-            )}
+            {tier !== "architect" && <p className="text-sm text-[#6B5B9E]">Contact to upgrade your tier.</p>}
           </div>
         </div>
+
+        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="p-5 rounded-2xl bg-[#F4F1FB] border border-[#E8E3F3]">
+            <div className="flex items-center gap-2 text-[#492B8C] mb-2">
+              <Clock3 className="w-4 h-4" />
+              <span className="text-sm font-medium">Your time on AIBuilder</span>
+            </div>
+            <p className="text-2xl font-bold text-[#1A0A3D]">{formatDuration(activitySummary?.total_active_seconds || 0)}</p>
+            <p className="text-sm text-[#6B5B9E] mt-1">Registered activity only</p>
+          </div>
+          <div className="p-5 rounded-2xl bg-[#F4F1FB] border border-[#E8E3F3]">
+            <div className="flex items-center gap-2 text-[#492B8C] mb-2">
+              <Calendar className="w-4 h-4" />
+              <span className="text-sm font-medium">Tracked sessions</span>
+            </div>
+            <p className="text-2xl font-bold text-[#1A0A3D]">{activitySummary?.session_count || 0}</p>
+            <p className="text-sm text-[#6B5B9E] mt-1">Across logged-in visits</p>
+          </div>
+          <div className="p-5 rounded-2xl bg-[#F4F1FB] border border-[#E8E3F3]">
+            <div className="flex items-center gap-2 text-[#492B8C] mb-2">
+              <Users className="w-4 h-4" />
+              <span className="text-sm font-medium">Upcoming sessions</span>
+            </div>
+            <p className="text-2xl font-bold text-[#1A0A3D]">{upcomingSessions.length}</p>
+            <p className="text-sm text-[#6B5B9E] mt-1">Visible for your access level</p>
+          </div>
+        </div>
+
+        {upcomingSessions.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-[#1A0A3D] mb-4" style={{ fontFamily: "var(--font-cal-sans)" }}>
+              <Calendar className="w-5 h-5 inline-block mr-2 text-[#492B8C]" />
+              Upcoming Sessions
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {upcomingSessions.map((session) => (
+                <div key={session.id} className="p-5 rounded-2xl bg-white border border-[#E8E3F3] shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold text-[#1A0A3D]">{session.title}</h3>
+                      {session.description && <p className="text-sm text-[#6B5B9E] mt-1 line-clamp-2">{session.description}</p>}
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-[#F4F1FB] text-[#6B5B9E] uppercase tracking-wider">
+                      {session.visibility_scope === "all" ? "All" : session.visibility_scope}
+                    </span>
+                  </div>
+                  <p className="text-sm text-[#492B8C] mt-3">{formatSessionTime(session.session_at)}</p>
+                  {session.audience_tiers?.length ? (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {session.audience_tiers.map((tierName) => (
+                        <span key={tierName} className="px-2 py-1 rounded-full bg-[#F4F1FB] text-[#6B5B9E] text-xs capitalize">
+                          {tierName}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="mt-4">
+                    <Button asChild className="bg-[#492B8C] text-white hover:bg-[#2D1A69] rounded-full">
+                      <a href={session.meet_link} target="_blank" rel="noopener noreferrer">
+                        Join Meet
+                        <ExternalLink className="w-4 h-4 ml-2" />
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Best AI Tools Section - Compact */}
         <div className="mb-8 p-5 rounded-2xl bg-[#F4F1FB] border border-[#E8E3F3]">
@@ -758,6 +862,8 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {dbResources.map((resource) => {
                   const IconComponent = resource.type === "video" ? Video : resource.type === "pdf" ? FileText : BookOpen
+                  const descriptionKey = resource.id
+                  const isExpanded = Boolean(expandedDescriptions[descriptionKey])
                   return (
                     <div
                       key={resource.id}
@@ -782,10 +888,21 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                           <IconComponent className="w-5 h-5 text-[#492B8C] group-hover:text-white transition-colors" />
                         </div>
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-start gap-2 mb-1">
                             <h3 className="font-medium text-[#1A0A3D] group-hover:text-[#492B8C] transition-colors">
                               {resource.title}
                             </h3>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleDescription(descriptionKey)
+                              }}
+                              className="p-1 rounded-full text-[#6B5B9E] hover:text-[#492B8C] hover:bg-[#F4F1FB] transition-colors"
+                              aria-label={isExpanded ? "Collapse description" : "Expand description"}
+                            >
+                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </button>
                             <span className={`px-2 py-0.5 rounded-full text-xs text-white ${resource.tier_required === "architect" ? "bg-[#FF6B34]" :
                               resource.tier_required === "builder" ? "bg-[#FFD13F]" :
                                 resource.tier_required === "foundational" ? "bg-[#00C8A7]" : "bg-[#6B5B9E]"
@@ -793,7 +910,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                               {resource.tier_required}
                             </span>
                           </div>
-                          <p className="text-sm text-[#6B5B9E]">{resource.description}</p>
+                          <p className={`text-sm text-[#6B5B9E] ${isExpanded ? "" : "line-clamp-2"}`}>{resource.description}</p>
                           {resource.category && resource.category !== "general" && (
                             <p className="text-xs text-[#FF6B34] mt-1">{resource.category}</p>
                           )}
@@ -818,13 +935,15 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {quickResources.map((resource, index) => {
             const isComingSoon = resource.url === "#" && resource.title !== "1-on-1 Mentor Sessions"
+            const descriptionKey = `quick-${index}-${resource.title}`
+            const isExpanded = Boolean(expandedDescriptions[descriptionKey])
             return (
               <div
                 key={index}
                 onClick={() => {
                   if (resource.title === "1-on-1 Mentor Sessions") {
                     setShowMentorModal(true)
-                  } else if (resource.isPdfViewer) {
+                  } else if ("isPdfViewer" in resource && resource.isPdfViewer) {
                     setShowPdfViewer(true)
                   } else if (resource.url !== "#") {
                     window.open(resource.url, "_blank")
@@ -840,15 +959,26 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                     )}
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-start justify-between gap-2 mb-1">
                       <h3 className="font-medium text-[#1A0A3D] group-hover:text-[#492B8C] transition-colors">
                         {resource.title}
                       </h3>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleDescription(descriptionKey)
+                        }}
+                        className="p-1 rounded-full text-[#6B5B9E] hover:text-[#492B8C] hover:bg-[#F4F1FB] transition-colors"
+                        aria-label={isExpanded ? "Collapse description" : "Expand description"}
+                      >
+                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </button>
                       {isComingSoon && (
                         <span className="text-[10px] font-bold text-[#FF6B34] uppercase tracking-wider">Coming Soon</span>
                       )}
                     </div>
-                    <p className="text-sm text-[#6B5B9E]">{resource.description}</p>
+                    <p className={`text-sm text-[#6B5B9E] ${isExpanded ? "" : "line-clamp-2"}`}>{resource.description}</p>
                   </div>
                 </div>
               </div>
@@ -881,15 +1011,15 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                       <Lock className="w-4 h-4 text-[#6B5B9E]" />
                     </div>
                   </div>
-                  <div className="flex items-start gap-4 blur-[2px]">
-                    <div className="p-2 rounded-lg bg-[#F4F1FB]">
-                      <resource.icon className="w-5 h-5 text-[#492B8C]" />
+                    <div className="flex items-start gap-4 blur-[2px]">
+                      <div className="p-2 rounded-lg bg-[#F4F1FB]">
+                        <resource.icon className="w-5 h-5 text-[#492B8C]" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-medium text-[#1A0A3D] mb-1">{resource.title}</h3>
+                        <p className="text-sm text-[#6B5B9E] line-clamp-2">{resource.description}</p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-[#1A0A3D] mb-1">{resource.title}</h3>
-                      <p className="text-sm text-[#6B5B9E]">{resource.description}</p>
-                    </div>
-                  </div>
                 </div>
               ))}
             </div>
@@ -1092,165 +1222,6 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
         </div>
       )}
 
-      {/* UPI Payment Modal */}
-      {showPaymentModal && (
-        <div
-          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
-          onClick={() => {
-            setShowPaymentModal(false)
-            setSelectedTierForPayment(null)
-          }}
-        >
-          <div
-            className="bg-white rounded-2xl w-full max-w-lg overflow-hidden max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="bg-gradient-to-r from-[#2D1A69] to-[#492B8C] px-6 py-5 sticky top-0">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-white/70 text-xs uppercase tracking-wider">Upgrade Your Plan</p>
-                  <h3 className="text-white font-bold text-xl" style={{ fontFamily: "var(--font-cal-sans)" }}>
-                    {selectedTierForPayment ? `${tierPricing[selectedTierForPayment].label} Tier` : "Choose a Tier"}
-                  </h3>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowPaymentModal(false)
-                    setSelectedTierForPayment(null)
-                  }}
-                  className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
-                >
-                  <X className="w-4 h-4 text-white" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6">
-              {/* Tier Selection */}
-              {!selectedTierForPayment && (
-                <div className="space-y-3 mb-6">
-                  {getUpgradeOptions().map((tierKey) => (
-                    <button
-                      key={tierKey}
-                      onClick={() => setSelectedTierForPayment(tierKey)}
-                      className="w-full p-4 rounded-xl border border-[#E8E3F3] hover:border-[#492B8C] hover:bg-[#F4F1FB] transition-all text-left flex items-center justify-between group"
-                    >
-                      <div>
-                        <h4 className="font-bold text-[#1A0A3D] group-hover:text-[#492B8C]">{tierPricing[tierKey].label}</h4>
-                        <p className="text-sm text-[#6B5B9E]">{tierPricing[tierKey].features[0]}</p>
-                      </div>
-                      <div className="flex items-center gap-1 font-bold text-[#FF6B34]">
-                        <IndianRupee className="w-4 h-4" />
-                        {tierPricing[tierKey].price}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Payment Details */}
-              {selectedTierForPayment && (
-                <>
-                  {/* Price Display */}
-                  <div className="text-center mb-6">
-                    <div className="inline-flex items-center gap-1 text-4xl font-bold text-[#1A0A3D]">
-                      <IndianRupee className="w-8 h-8" />
-                      {tierPricing[selectedTierForPayment].price}
-                    </div>
-                    <p className="text-[#6B5B9E] text-sm mt-1">One-time payment</p>
-                  </div>
-
-                  {/* Features */}
-                  <div className="bg-[#F4F1FB] rounded-xl p-4 mb-6">
-                    <p className="text-sm font-medium text-[#1A0A3D] mb-3">What you get:</p>
-                    <ul className="space-y-2">
-                      {tierPricing[selectedTierForPayment].features.map((feature, i) => (
-                        <li key={i} className="flex items-center gap-2 text-sm text-[#6B5B9E]">
-                          <Check className="w-4 h-4 text-[#00C8A7] flex-shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* UPI Section */}
-                  <div className="bg-[#F4F1FB] rounded-xl p-4 mb-6">
-                    <p className="text-sm font-medium text-[#1A0A3D] mb-3 flex items-center gap-2">
-                      <CreditCard className="w-4 h-4 text-[#492B8C]" />
-                      Pay via UPI
-                    </p>
-                    
-                    <div className="flex items-center gap-2 bg-white rounded-lg p-3 border border-[#E8E3F3]">
-                      <span className="flex-1 font-mono text-[#1A0A3D] text-sm">{UPI_ID}</span>
-                      <button
-                        onClick={copyUPIId}
-                        className="p-2 rounded-lg bg-[#F4F1FB] hover:bg-[#E8E3F3] transition-colors"
-                      >
-                        {copiedUPI ? (
-                          <Check className="w-4 h-4 text-[#00C8A7]" />
-                        ) : (
-                          <Copy className="w-4 h-4 text-[#492B8C]" />
-                        )}
-                      </button>
-                    </div>
-
-                    <p className="text-xs text-[#6B5B9E] mt-3">
-                      Pay using any UPI app (GPay, PhonePe, Paytm, etc.)
-                    </p>
-                  </div>
-
-                  {/* Steps */}
-                  <div className="space-y-3 mb-6">
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-[#FF6B34] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</div>
-                      <p className="text-sm text-[#1A0A3D]">Copy the UPI ID above and pay using any UPI app</p>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-[#FF6B34] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">2</div>
-                      <p className="text-sm text-[#1A0A3D]">Take a screenshot of the payment confirmation</p>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-[#FF6B34] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">3</div>
-                      <p className="text-sm text-[#1A0A3D]">Send the screenshot to our support email</p>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="space-y-3">
-                    <Button
-                      asChild
-                      className="w-full bg-[#2D1A69] text-white hover:bg-[#492B8C] rounded-full py-6"
-                    >
-                      <a href={`mailto:support@aibuilder.space?subject=Payment Confirmation - ${tierPricing[selectedTierForPayment].label} Tier&body=Hi,%0A%0AI have made the payment of ₹${tierPricing[selectedTierForPayment].price} for the ${tierPricing[selectedTierForPayment].label} tier.%0A%0AMy email: ${user?.email || ""}%0A%0APlease find the payment screenshot attached.%0A%0AThank you!`}>
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        Send Payment Confirmation
-                      </a>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setSelectedTierForPayment(null)}
-                      className="w-full text-[#6B5B9E] hover:text-[#1A0A3D] rounded-full border-[#E8E3F3]"
-                    >
-                      Choose Different Tier
-                    </Button>
-                  </div>
-                </>
-              )}
-
-              {!selectedTierForPayment && (
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowPaymentModal(false)}
-                  className="w-full text-[#6B5B9E] hover:text-[#1A0A3D] rounded-full"
-                >
-                  Maybe Later
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

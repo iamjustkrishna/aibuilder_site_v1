@@ -28,20 +28,23 @@ function buildMimeMessage(options: {
   subject: string
   subtitle?: string
   body: string
+  htmlTemplate?: string
 }) {
   const boundary = `boundary_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
   const plainText = [options.subtitle, options.body].filter(Boolean).join("\n\n")
-  const html = `
-    <html>
-      <body style="font-family: Arial, sans-serif; color: #1A0A3D; line-height: 1.6;">
-        <div style="max-width: 640px; margin: 0 auto; padding: 24px;">
-          <h1 style="font-size: 24px; margin: 0 0 12px;">${escapeHtml(options.subject)}</h1>
-          ${options.subtitle ? `<p style="font-size: 15px; color: #6B5B9E; margin: 0 0 20px;">${escapeHtml(options.subtitle)}</p>` : ""}
-          <div style="font-size: 15px;">${toHtmlBody(options.body)}</div>
-        </div>
-      </body>
-    </html>
-  `
+  const html = options.htmlTemplate
+    ? options.htmlTemplate
+    : `
+      <html>
+        <body style="font-family: Arial, sans-serif; color: #1A0A3D; line-height: 1.6;">
+          <div style="max-width: 640px; margin: 0 auto; padding: 24px;">
+            <h1 style="font-size: 24px; margin: 0 0 12px;">${escapeHtml(options.subject)}</h1>
+            ${options.subtitle ? `<p style="font-size: 15px; color: #6B5B9E; margin: 0 0 20px;">${escapeHtml(options.subtitle)}</p>` : ""}
+            <div style="font-size: 15px;">${toHtmlBody(options.body)}</div>
+          </div>
+        </body>
+      </html>
+    `
 
   return [
     `From: AIBuilder <${options.senderEmail}>`,
@@ -159,6 +162,7 @@ export async function sendGmailMessage(options: {
   subject: string
   subtitle?: string
   body: string
+  htmlTemplate?: string
 }) {
   const socket = tls.connect({
     host: "smtp.gmail.com",

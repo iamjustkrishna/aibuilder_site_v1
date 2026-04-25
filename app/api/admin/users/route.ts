@@ -58,14 +58,38 @@ export async function GET() {
     requestMap.set(request.user_id, entry)
   }
 
+  let activitySessions: Array<{ user_id: string; total_active_seconds: number; last_seen_at: string | null }> = []
+  const activityResult = await serviceClient
+    .from("website_activity_sessions")
+    .select("user_id, total_active_seconds, last_seen_at")
+
+  if (!activityResult.error) {
+    activitySessions = activityResult.data || []
+  }
+
+  const activityMap = new Map<string, { totalActiveSeconds: number; sessionCount: number; lastSeenAt: string | null }>()
+  for (const session of activitySessions) {
+    const entry = activityMap.get(session.user_id) || { totalActiveSeconds: 0, sessionCount: 0, lastSeenAt: null }
+    entry.totalActiveSeconds += session.total_active_seconds || 0
+    entry.sessionCount += 1
+    if (!entry.lastSeenAt || (session.last_seen_at && session.last_seen_at > entry.lastSeenAt)) {
+      entry.lastSeenAt = session.last_seen_at
+    }
+    activityMap.set(session.user_id, entry)
+  }
+
   const adminCount = getAdminEmails().length
   const response = (users || []).map((user) => {
     const requestState = requestMap.get(user.id) || { count: 0, requestedByMe: false }
+    const activityState = activityMap.get(user.id) || { totalActiveSeconds: 0, sessionCount: 0, lastSeenAt: null }
     return {
       ...user,
       deletion_request_count: requestState.count,
       deletion_requested_by_me: requestState.requestedByMe,
       deletion_required_count: adminCount,
+      total_active_seconds: activityState.totalActiveSeconds,
+      activity_session_count: activityState.sessionCount,
+      last_seen_at: activityState.lastSeenAt,
     }
   })
 
@@ -140,7 +164,7 @@ export async function POST(request: Request) {
     .eq("id", inviteData.user.id)
     .single()
 
-return NextResponse.json({
+  return NextResponse.json({
     user: createdProfile || {
       id: inviteData.user.id,
       email,

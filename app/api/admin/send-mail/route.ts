@@ -48,11 +48,12 @@ export async function POST(request: Request) {
   const subject = typeof body.subject === "string" ? body.subject.trim() : ""
   const subtitle = typeof body.subtitle === "string" ? body.subtitle.trim() : ""
   const emailBody = typeof body.body === "string" ? body.body.trim() : ""
+  const htmlTemplate = typeof body.htmlTemplate === "string" ? body.htmlTemplate.trim() : ""
   const intervalSeconds = Number(body.intervalSeconds || 0)
   const recipientIds = Array.isArray(body.recipientIds) ? body.recipientIds.filter((id) => typeof id === "string" && id.trim()) : []
 
-  if (!senderEmail || !appPassword || !subject || !emailBody || recipientIds.length === 0) {
-    return NextResponse.json({ error: "Sender email, app password, subject, body, and recipients are required" }, { status: 400 })
+  if (!senderEmail || !appPassword || !subject || (!emailBody && !htmlTemplate) || recipientIds.length === 0) {
+    return NextResponse.json({ error: "Sender email, app password, subject, and recipients are required" }, { status: 400 })
   }
 
   if (user.email?.toLowerCase() !== senderEmail) {
@@ -92,6 +93,7 @@ export async function POST(request: Request) {
         subject: replaceTemplate(subject, recipient),
         subtitle: subtitle ? replaceTemplate(subtitle, recipient) : undefined,
         body: replaceTemplate(emailBody, recipient),
+        htmlTemplate: htmlTemplate ? replaceTemplate(htmlTemplate, recipient) : undefined,
       })
       sent.push({ email: recipient.email, name: recipient.full_name || recipient.email })
     } catch (mailError: any) {

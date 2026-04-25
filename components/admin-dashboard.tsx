@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { 
   Plus, 
   Trash2, 
@@ -30,8 +31,6 @@ import {
   Mail,
 } from "lucide-react"
 import Link from "next/link"
-import { Textarea } from "@/components/ui/textarea"
-
 interface Resource {
   id: string
   title: string
@@ -56,7 +55,22 @@ interface User {
   deletion_request_count?: number
   deletion_requested_by_me?: boolean
   deletion_required_count?: number
+  total_active_seconds?: number
+  activity_session_count?: number
+  last_seen_at?: string | null
   created_at: string
+}
+
+interface SessionRecord {
+  id: string
+  title: string
+  description: string | null
+  meet_link: string
+  session_at: string
+  visibility_scope: "all" | "tiers" | "users"
+  audience_tiers: string[] | null
+  selected_user_ids: string[]
+  is_active: boolean
 }
 
 const typeIcons = {
@@ -82,14 +96,17 @@ const weekConfig = [
 ]
 
 export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
-  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "mail">("weeks")
+  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "mail" | "sessions">("weeks")
   const [resources, setResources] = useState<Resource[]>([])
   const [users, setUsers] = useState<User[]>([])
+  const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [adminEmails, setAdminEmails] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [showAddUserForm, setShowAddUserForm] = useState(false)
+  const [showSessionForm, setShowSessionForm] = useState(false)
   const [addingToWeek, setAddingToWeek] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [weekVideoForm, setWeekVideoForm] = useState({ title: "", description: "", url: "", tier_required: "foundational" as Resource["tier_required"] })
@@ -114,6 +131,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
   const [selectedMailRecipientIds, setSelectedMailRecipientIds] = useState<string[]>([])
   const [sendingMail, setSendingMail] = useState(false)
+  const [sessionFormMessage, setSessionFormMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
   const [newUserForm, setNewUserForm] = useState({
     full_name: "",
     email: "",
@@ -129,8 +147,21 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     subject: "AIBuilder Invite",
     subtitle: "Learn along with us",
     body: "Hi {{name}},\n\nYou're invited to AIBuilder.\n\nAccess resources, learn along with us, and grow with the community.\n\nThanks,\nAIBuilder Team",
+    htmlTemplate: "",
     intervalSeconds: 3,
   })
+  const [sessionForm, setSessionForm] = useState({
+    title: "",
+    description: "",
+    meet_link: "",
+    session_at: "",
+    visibility_scope: "all" as SessionRecord["visibility_scope"],
+    audience_tiers: [] as string[],
+    selected_user_ids: [] as string[],
+    is_active: true,
+  })
+  const mailFieldClassName = "border-[#E8E3F3] bg-white text-[#1A0A3D] placeholder:text-[#6B5B9E] focus:border-[#492B8C] focus:ring-[#492B8C]"
+  const sessionFieldClassName = "border-[#E8E3F3] bg-white text-[#1A0A3D] placeholder:text-[#6B5B9E] focus:border-[#492B8C] focus:ring-[#492B8C]"
   const supabase = createClient()
 
   useEffect(() => {
@@ -176,6 +207,20 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     setUserFormMessage(null)
   }
 
+  function resetSessionForm() {
+    setSessionForm({
+      title: "",
+      description: "",
+      meet_link: "",
+      session_at: "",
+      visibility_scope: "all",
+      audience_tiers: [],
+      selected_user_ids: [],
+      is_active: true,
+    })
+    setSessionFormMessage(null)
+  }
+
   async function fetchData() {
     setLoading(true)
     if (activeTab === "resources" || activeTab === "weeks") {
@@ -183,6 +228,21 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       if (res.ok) {
         const data = await res.json()
         setResources(data)
+      }
+    } else if (activeTab === "sessions") {
+      const [sessionsRes, usersRes] = await Promise.all([
+        fetch("/api/admin/sessions"),
+        fetch("/api/admin/users"),
+      ])
+
+      if (sessionsRes.ok) {
+        const data = await sessionsRes.json()
+        setSessions(data || [])
+      }
+
+      if (usersRes.ok) {
+        const data = await usersRes.json()
+        setUsers(data || [])
       }
     } else {
       const res = await fetch("/api/admin/users")
@@ -393,6 +453,104 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     } finally {
       setCreatingUser(false)
     }
+  }
+
+  function toggleSessionTier(tier: string) {
+    setSessionForm((current) => ({
+      ...current,
+      audience_tiers: current.audience_tiers.includes(tier)
+        ? current.audience_tiers.filter((item) => item !== tier)
+        : [...current.audience_tiers, tier],
+    }))
+  }
+
+  function toggleSessionUser(userId: string) {
+    setSessionForm((current) => ({
+      ...current,
+      selected_user_ids: current.selected_user_ids.includes(userId)
+        ? current.selected_user_ids.filter((item) => item !== userId)
+        : [...current.selected_user_ids, userId],
+    }))
+  }
+
+  async function handleSaveSession() {
+    setSessionFormMessage(null)
+
+    if (!sessionForm.title.trim() || !sessionForm.meet_link.trim() || !sessionForm.session_at.trim()) {
+      setSessionFormMessage({ type: "error", text: "Title, meet link, and date/time are required." })
+      return
+    }
+
+    if (sessionForm.visibility_scope === "tiers" && sessionForm.audience_tiers.length === 0) {
+      setSessionFormMessage({ type: "error", text: "Select at least one tier." })
+      return
+    }
+
+    if (sessionForm.visibility_scope === "users" && sessionForm.selected_user_ids.length === 0) {
+      setSessionFormMessage({ type: "error", text: "Select at least one user." })
+      return
+    }
+
+    setSessionFormMessage({ type: "info", text: editingSessionId ? "Updating session..." : "Saving session..." })
+
+    try {
+      const res = await fetch("/api/admin/sessions", {
+        method: editingSessionId ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingSessionId,
+          ...sessionForm,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        setSessionFormMessage({ type: "error", text: data.error || "Failed to save session." })
+        return
+      }
+
+      setSessionFormMessage({ type: "success", text: editingSessionId ? "Session updated successfully." : "Session created successfully." })
+      setShowSessionForm(false)
+      setEditingSessionId(null)
+      resetSessionForm()
+      fetchData()
+    } catch (error) {
+      console.error("Failed to save session:", error)
+      setSessionFormMessage({ type: "error", text: "Failed to save session. Please try again." })
+    }
+  }
+
+  async function handleDeleteSession(id: string) {
+    if (!confirm("Delete this session?")) return
+    const res = await fetch(`/api/admin/sessions?id=${id}`, { method: "DELETE" })
+    if (res.ok) {
+      fetchData()
+    }
+  }
+
+  function startEditSession(session: SessionRecord) {
+    setEditingSessionId(session.id)
+    setSessionForm({
+      title: session.title,
+      description: session.description || "",
+      meet_link: session.meet_link,
+      session_at: session.session_at.slice(0, 16),
+      visibility_scope: session.visibility_scope,
+      audience_tiers: session.audience_tiers || [],
+      selected_user_ids: session.selected_user_ids || [],
+      is_active: session.is_active,
+    })
+    setShowSessionForm(true)
+  }
+
+  function formatDuration(totalSeconds: number) {
+    if (!totalSeconds || totalSeconds <= 0) {
+      return "0m"
+    }
+
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes || 1}m`
   }
 
   async function handleDeleteUser(userId: string) {
@@ -619,6 +777,18 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
               <Users className="w-4 h-4" />
               <span className="text-sm">Users</span>
               <span className="px-1.5 py-0.5 rounded-full text-xs bg-[#00C8A7] text-white">{users.length}</span>
+            </button>
+            <button
+              onClick={() => { setActiveTab("sessions"); setSearchQuery(""); }}
+              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeTab === "sessions"
+                  ? "bg-white text-[#1A0A3D] shadow-lg"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              <span className="text-sm">Sessions</span>
+              <span className="px-1.5 py-0.5 rounded-full text-xs bg-[#FF6B34] text-white">{sessions.length}</span>
             </button>
             <button
               onClick={() => { setActiveTab("mail"); setSearchQuery(""); }}
@@ -1086,6 +1256,254 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
               </div>
             )}
           </div>
+        )} 
+
+        {/* Sessions Tab */}
+        {activeTab === "sessions" && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-white">Sessions</h3>
+                <p className="text-sm text-white/60">Create Meet sessions and control who can see them.</p>
+              </div>
+              <Button
+                onClick={() => {
+                  setShowSessionForm((prev) => !prev)
+                  if (showSessionForm) {
+                    setEditingSessionId(null)
+                    resetSessionForm()
+                  }
+                }}
+                className="bg-[#FF6B34] hover:bg-[#E84C1E] text-white rounded-full"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {showSessionForm ? "Close Form" : "Add Session"}
+              </Button>
+            </div>
+
+            {sessionFormMessage && (
+              <div
+                className={`rounded-lg px-3 py-2 text-sm ${
+                  sessionFormMessage.type === "error"
+                    ? "bg-red-50 text-red-700 border border-red-200"
+                    : sessionFormMessage.type === "success"
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      : "bg-blue-50 text-blue-700 border border-blue-200"
+                }`}
+              >
+                {sessionFormMessage.text}
+              </div>
+            )}
+
+            {showSessionForm && (
+              <div className="bg-white/95 backdrop-blur rounded-2xl p-5 border border-white/10 shadow-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Title *</label>
+                    <Input
+                      value={sessionForm.title}
+                      onChange={(e) => setSessionForm({ ...sessionForm, title: e.target.value })}
+                      placeholder="Session title"
+                      className={sessionFieldClassName}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Meet Link *</label>
+                    <Input
+                      value={sessionForm.meet_link}
+                      onChange={(e) => setSessionForm({ ...sessionForm, meet_link: e.target.value })}
+                      placeholder="https://meet.google.com/..."
+                      className={sessionFieldClassName}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Date & Time *</label>
+                    <Input
+                      type="datetime-local"
+                      value={sessionForm.session_at}
+                      onChange={(e) => setSessionForm({ ...sessionForm, session_at: e.target.value })}
+                      className={sessionFieldClassName}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Visibility *</label>
+                    <select
+                      value={sessionForm.visibility_scope}
+                      onChange={(e) => {
+                        const visibility_scope = e.target.value as SessionRecord["visibility_scope"]
+                        setSessionForm({
+                          ...sessionForm,
+                          visibility_scope,
+                          audience_tiers: visibility_scope === "tiers" ? sessionForm.audience_tiers : [],
+                          selected_user_ids: visibility_scope === "users" ? sessionForm.selected_user_ids : [],
+                        })
+                      }}
+                      className="w-full px-3 py-2 bg-white border border-[#E8E3F3] rounded-lg text-[#1A0A3D] focus:outline-none focus:border-[#492B8C] focus:ring-1 focus:ring-[#492B8C]"
+                    >
+                      <option value="all">All users</option>
+                      <option value="tiers">Selected tiers</option>
+                      <option value="users">Specific users</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Description</label>
+                    <Textarea
+                      value={sessionForm.description}
+                      onChange={(e) => setSessionForm({ ...sessionForm, description: e.target.value })}
+                      placeholder="Optional session notes"
+                      className={sessionFieldClassName}
+                    />
+                  </div>
+                </div>
+
+                {sessionForm.visibility_scope === "tiers" && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-2">Select tiers</label>
+                    <div className="flex flex-wrap gap-2">
+                      {(["foundational", "builder", "architect"] as const).map((tier) => (
+                        <button
+                          key={tier}
+                          type="button"
+                          onClick={() => toggleSessionTier(tier)}
+                          className={`px-3 py-2 rounded-full text-sm border transition-colors ${
+                            sessionForm.audience_tiers.includes(tier)
+                              ? "bg-[#492B8C] text-white border-[#492B8C]"
+                              : "bg-white text-[#6B5B9E] border-[#E8E3F3]"
+                          }`}
+                        >
+                          {tierConfig[tier].label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {sessionForm.visibility_scope === "users" && (
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <label className="block text-sm font-medium text-[#1A0A3D]">Select users</label>
+                      <p className="text-xs text-[#6B5B9E]">{sessionForm.selected_user_ids.length} selected</p>
+                    </div>
+                    <div className="max-h-72 overflow-y-auto space-y-2 rounded-xl border border-[#E8E3F3] p-3 bg-[#FAF9FF]">
+                      {filteredUsers
+                        .filter((entry) => !isUserAdmin(entry.email))
+                        .map((entry) => {
+                          const isSelected = sessionForm.selected_user_ids.includes(entry.id)
+                          return (
+                            <label
+                              key={entry.id}
+                              className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer ${
+                                isSelected ? "bg-[#492B8C]/5 border-[#492B8C]/30" : "bg-white border-[#E8E3F3]"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleSessionUser(entry.id)}
+                                className="w-4 h-4 accent-[#492B8C]"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-[#1A0A3D] truncate">{entry.full_name || "No name"}</p>
+                                <p className="text-sm text-[#6B5B9E] truncate">{entry.email}</p>
+                              </div>
+                            </label>
+                          )
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-2 mt-6">
+                  <Button onClick={handleSaveSession} className="bg-[#00C8A7] hover:bg-[#00C8A7]/90 text-white">
+                    <Save className="w-4 h-4 mr-2" />
+                    {editingSessionId ? "Update Session" : "Save Session"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowSessionForm(false)
+                      setEditingSessionId(null)
+                      resetSessionForm()
+                    }}
+                    className="border-[#E8E3F3] text-[#6B5B9E]"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {loading ? (
+              <div className="text-center py-12 text-white/60">Loading sessions...</div>
+            ) : sessions.length === 0 ? (
+              <div className="text-center py-12 bg-white/5 rounded-2xl border border-white/10">
+                <Calendar className="w-12 h-12 mx-auto text-white/30 mb-3" />
+                <p className="text-white/60">{searchQuery ? "No matching sessions" : "No sessions yet"}</p>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {sessions
+                  .filter((session) =>
+                    !searchQuery ||
+                    session.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (session.description || "").toLowerCase().includes(searchQuery.toLowerCase()),
+                  )
+                  .map((session) => (
+                    <div key={session.id} className="bg-white/95 backdrop-blur rounded-xl p-4 flex flex-col gap-3">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <h4 className="font-medium text-[#1A0A3D]">{session.title}</h4>
+                            <span className="px-2 py-0.5 rounded-full text-xs text-white bg-[#492B8C]">
+                              {session.visibility_scope}
+                            </span>
+                            {!session.is_active && (
+                              <span className="px-2 py-0.5 rounded-full text-xs bg-[#F4F1FB] text-[#6B5B9E]">
+                                Inactive
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-[#6B5B9E]">{session.description || "No description"}</p>
+                          <p className="text-sm text-[#492B8C] mt-1">{new Date(session.session_at).toLocaleString()}</p>
+                          <a href={session.meet_link} target="_blank" rel="noopener noreferrer" className="text-sm text-[#FF6B34] hover:underline break-all">
+                            {session.meet_link}
+                          </a>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => startEditSession(session)}
+                            className="p-2 hover:bg-[#F4F1FB] rounded-lg text-[#492B8C] transition-colors"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSession(session.id)}
+                            className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {session.audience_tiers?.length ? session.audience_tiers.map((tier) => (
+                          <span key={tier} className="px-2 py-0.5 rounded-full text-xs bg-[#F4F1FB] text-[#6B5B9E] capitalize">
+                            {tier}
+                          </span>
+                        )) : null}
+                        {session.selected_user_ids?.length ? (
+                          <span className="px-2 py-0.5 rounded-full text-xs bg-[#00C8A7]/10 text-[#00C8A7]">
+                            {session.selected_user_ids.length} selected user{session.selected_user_ids.length === 1 ? "" : "s"}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Send Mail Tab */}
@@ -1125,7 +1543,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                         value={mailForm.senderEmail}
                         onChange={(e) => setMailForm({ ...mailForm, senderEmail: e.target.value })}
                         placeholder="your@gmail.com"
-                        className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                        className={mailFieldClassName}
                       />
                     </div>
                     <div>
@@ -1135,7 +1553,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                         value={mailForm.appPassword}
                         onChange={(e) => setMailForm({ ...mailForm, appPassword: e.target.value })}
                         placeholder="xxxx xxxx xxxx xxxx"
-                        className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                        className={mailFieldClassName}
                       />
                     </div>
                     <div className="sm:col-span-2">
@@ -1144,7 +1562,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                         value={mailForm.subject}
                         onChange={(e) => setMailForm({ ...mailForm, subject: e.target.value })}
                         placeholder="AIBuilder Invite"
-                        className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                        className={mailFieldClassName}
                       />
                     </div>
                     <div className="sm:col-span-2">
@@ -1153,17 +1571,33 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                         value={mailForm.subtitle}
                         onChange={(e) => setMailForm({ ...mailForm, subtitle: e.target.value })}
                         placeholder="Access resources, learn along with us"
-                        className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                        className={mailFieldClassName}
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Body *</label>
+                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Body (plain text fallback)</label>
                       <Textarea
                         value={mailForm.body}
                         onChange={(e) => setMailForm({ ...mailForm, body: e.target.value })}
                         placeholder="Write your message..."
-                        className="min-h-[180px] border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                        className={`${mailFieldClassName} min-h-[180px]`}
                       />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">HTML Template (optional)</label>
+                      <Textarea
+                        value={mailForm.htmlTemplate}
+                        onChange={(e) => setMailForm({ ...mailForm, htmlTemplate: e.target.value })}
+                        placeholder={`<div style="font-family: Arial, sans-serif; padding: 24px;">
+  <h1>AIBuilder Invite</h1>
+  <p>Hello {{name}},</p>
+  <p>Access resources, learn along with us.</p>
+</div>`}
+                        className={`${mailFieldClassName} min-h-[220px] font-mono text-sm`}
+                      />
+                      <p className="mt-2 text-xs text-[#6B5B9E]">
+                        Leave blank to use the default rich email layout. Variables work here too.
+                      </p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Gap Between Emails (seconds)</label>
@@ -1172,7 +1606,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                         min="0"
                         value={mailForm.intervalSeconds}
                         onChange={(e) => setMailForm({ ...mailForm, intervalSeconds: Number(e.target.value) || 0 })}
-                        className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                        className={mailFieldClassName}
                       />
                     </div>
                   </div>
@@ -1411,6 +1845,12 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                         <p className="text-xs text-[#6B5B9E]/60 mt-1">
                           Joined {new Date(user.created_at).toLocaleDateString()}
                         </p>
+                        {(user.total_active_seconds || 0) > 0 && (
+                          <p className="text-xs text-[#6B5B9E]/60 mt-1">
+                            Active time: {formatDuration(user.total_active_seconds || 0)}
+                            {user.last_seen_at ? ` • Last seen ${new Date(user.last_seen_at).toLocaleDateString()}` : ""}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 self-end sm:self-center">
                         <span className={`px-2.5 py-1 rounded-full text-xs text-white ${tierData.color}`}>
