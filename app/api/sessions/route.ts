@@ -1,4 +1,4 @@
-import { createClient, createServiceClient } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
 async function getAuthenticatedUser() {
@@ -8,27 +8,28 @@ async function getAuthenticatedUser() {
 }
 
 export async function GET() {
+  const supabase = await createClient()
   const user = await getAuthenticatedUser()
   if (!user?.id) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  const serviceClient = createServiceClient()
   const [{ data: profile, error: profileError }, { data: sessions, error: sessionsError }, { data: sessionUsers, error: sessionUsersError }] = await Promise.all([
-    serviceClient
+    supabase
       .from("users")
       .select("id, membership_tier")
       .eq("id", user.id)
       .maybeSingle(),
-    serviceClient
+    supabase
       .from("upcoming_sessions")
       .select("*")
       .eq("is_active", true)
       .gte("session_at", new Date().toISOString())
       .order("session_at", { ascending: true }),
-    serviceClient
+    supabase
       .from("upcoming_session_users")
-      .select("session_id, user_id"),
+      .select("session_id, user_id")
+      .eq("user_id", user.id),
   ])
 
   if (profileError) {
