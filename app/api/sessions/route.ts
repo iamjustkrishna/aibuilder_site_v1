@@ -14,7 +14,7 @@ export async function GET() {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  const [{ data: profile, error: profileError }, { data: sessions, error: sessionsError }, { data: sessionUsers, error: sessionUsersError }] = await Promise.all([
+  const [{ data: profile }, { data: sessions, error: sessionsError }, { data: sessionUsers }] = await Promise.all([
     supabase
       .from("users")
       .select("id, membership_tier")
@@ -24,7 +24,6 @@ export async function GET() {
       .from("upcoming_sessions")
       .select("*")
       .eq("is_active", true)
-      .gte("session_at", new Date().toISOString())
       .order("session_at", { ascending: true }),
     supabase
       .from("upcoming_session_users")
@@ -32,16 +31,8 @@ export async function GET() {
       .eq("user_id", user.id),
   ])
 
-  if (profileError) {
-    return NextResponse.json({ error: profileError.message }, { status: 500 })
-  }
-
   if (sessionsError) {
     return NextResponse.json({ error: sessionsError.message }, { status: 500 })
-  }
-
-  if (sessionUsersError) {
-    return NextResponse.json({ error: sessionUsersError.message }, { status: 500 })
   }
 
   const selectedSessionUsers = new Map<string, string[]>()
@@ -51,17 +42,28 @@ export async function GET() {
     selectedSessionUsers.set(row.session_id, current)
   }
 
-  const userTier = profile?.membership_tier || "initial"
+  const userTier = (profile?.membership_tier || "initial").toLowerCase()
+  const now = Date.now()
   const visibleSessions = (sessions || []).filter((session) => {
-    if (session.visibility_scope === "all") {
+    const sessionAt = new Date(session.session_at).getTime()
+    const isUpcoming = Number.isFinite(sessionAt) ? sessionAt >= now - 24 * 60 * 60 * 1000 : true
+    if (!isUpcoming) {
+      return false
+    }
+
+    const visibilityScope = typeof session.visibility_scope === "string" ? session.visibility_scope : "all"
+    if (visibilityScope === "all") {
       return true
     }
 
-    if (session.visibility_scope === "tiers") {
-      return Array.isArray(session.audience_tiers) && session.audience_tiers.includes(userTier)
+    if (visibilityScope === "tiers") {
+      const audienceTiers = Array.isArray(session.audience_tiers)
+        ? session.audience_tiers.map((tier: string) => tier.toLowerCase())
+        : []
+      return audienceTiers.includes(userTier)
     }
 
-    if (session.visibility_scope === "users") {
+    if (visibilityScope === "users") {
       return (selectedSessionUsers.get(session.id) || []).includes(user.id)
     }
 
