@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   // Get user profile with membership tier
   const { data: profile } = await supabase
     .from("users")
-    .illect("*")
+    .select("*")
     .eq("id", user.id)
     .single()
 
