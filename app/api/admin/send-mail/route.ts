@@ -49,6 +49,7 @@ export async function POST(request: Request) {
   const subtitle = typeof body.subtitle === "string" ? body.subtitle.trim() : ""
   const emailBody = typeof body.body === "string" ? body.body.trim() : ""
   const htmlTemplate = typeof body.htmlTemplate === "string" ? body.htmlTemplate.trim() : ""
+  const isHtml = typeof body.isHtml === "boolean" ? body.isHtml : !!htmlTemplate
   const intervalSeconds = Number(body.intervalSeconds || 0)
   const recipientIds = Array.isArray(body.recipientIds) ? body.recipientIds.filter((id) => typeof id === "string" && id.trim()) : []
 
@@ -96,8 +97,47 @@ export async function POST(request: Request) {
         htmlTemplate: htmlTemplate ? replaceTemplate(htmlTemplate, recipient) : undefined,
       })
       sent.push({ email: recipient.email, name: recipient.full_name || recipient.email })
+
+      // Save mail history record
+      try {
+        await serviceClient.from("admin_mail_history").insert({
+          sent_by_admin_id: user.id,
+          sent_by_admin_email: user.email,
+          recipient_user_id: recipient.id,
+          recipient_email: recipient.email,
+          recipient_name: recipient.full_name,
+          subject: replaceTemplate(subject, recipient),
+          title: subject,
+          subtitle: subtitle ? replaceTemplate(subtitle, recipient) : null,
+          body: replaceTemplate(emailBody, recipient),
+          is_html: isHtml,
+          status: "sent",
+        })
+      } catch (historyError: any) {
+        console.error("Failed to save mail history:", historyError?.message)
+      }
     } catch (mailError: any) {
       failed.push({ email: recipient.email, error: mailError?.message || "Failed to send" })
+
+      // Save failed mail history record
+      try {
+        await serviceClient.from("admin_mail_history").insert({
+          sent_by_admin_id: user.id,
+          sent_by_admin_email: user.email,
+          recipient_user_id: recipient.id,
+          recipient_email: recipient.email,
+          recipient_name: recipient.full_name,
+          subject: replaceTemplate(subject, recipient),
+          title: subject,
+          subtitle: subtitle ? replaceTemplate(subtitle, recipient) : null,
+          body: replaceTemplate(emailBody, recipient),
+          is_html: isHtml,
+          status: "failed",
+          error_message: mailError?.message || "Failed to send",
+        })
+      } catch (historyError: any) {
+        console.error("Failed to save failed mail history:", historyError?.message)
+      }
     }
 
     if (index < recipientList.length - 1) {

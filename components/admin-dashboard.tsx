@@ -31,6 +31,7 @@ import {
   Mail,
   Clock,
   TrendingUp,
+  ChevronRight,
 } from "lucide-react"
 import Link from "next/link"
 interface Resource {
@@ -143,6 +144,11 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [userFormMessage, setUserFormMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
   const [userDeleteMessage, setUserDeleteMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
   const [mailFormMessage, setMailFormMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
+  const [showMailPreview, setShowMailPreview] = useState(false)
+  const [sendingMailStatus, setSendingMailStatus] = useState<Array<{ email: string; status: "pending" | "sent" | "failed" }>>([])
+  const [pastMails, setPastMails] = useState<any[]>([])
+  const [loadingPastMails, setLoadingPastMails] = useState(false)
+  const [expandedMailId, setExpandedMailId] = useState<string | null>(null)
   const [mailForm, setMailForm] = useState({
     senderEmail: userEmail || "",
     appPassword: "",
@@ -150,6 +156,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     subtitle: "Learn along with us",
     body: "Hi {{name}},\n\nYou're invited to AIBuilder.\n\nAccess resources, learn along with us, and grow with the community.\n\nThanks,\nAIBuilder Team",
     htmlTemplate: "",
+    isHtml: false,
     intervalSeconds: 3,
   })
   const [sessionForm, setSessionForm] = useState({
@@ -246,6 +253,13 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         const data = await usersRes.json()
         setUsers(data || [])
       }
+    } else if (activeTab === "mail") {
+      const res = await fetch("/api/admin/users")
+      if (res.ok) {
+        const data = await res.json()
+        setUsers(data || [])
+      }
+      await fetchPastMails()
     } else {
       const res = await fetch("/api/admin/users")
       if (res.ok) {
@@ -254,6 +268,21 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       }
     }
     setLoading(false)
+  }
+
+  async function fetchPastMails() {
+    setLoadingPastMails(true)
+    try {
+      const res = await fetch("/api/past-mails")
+      if (res.ok) {
+        const data = await res.json()
+        setPastMails(data || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch past mails:", error)
+    } finally {
+      setLoadingPastMails(false)
+    }
   }
 
   async function handleAddWeekVideo(weekKey: string) {
@@ -634,6 +663,9 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
 
     setSendingMail(true)
     setMailFormMessage({ type: "info", text: "Sending emails..." })
+    setSendingMailStatus(filteredUsers
+      .filter(u => selectedMailRecipientIds.includes(u.id))
+      .map(u => ({ email: u.email, status: "pending" as const })))
 
     try {
       const res = await fetch("/api/admin/send-mail", {
@@ -651,15 +683,29 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         return
       }
 
+      // Update sending status for sent emails
+      setSendingMailStatus(prev =>
+        prev.map(item => ({
+          ...item,
+          status: data.sent?.some((s: any) => s.email === item.email) ? "sent" : 
+                  data.failed?.some((f: any) => f.email === item.email) ? "failed" : item.status
+        }))
+      )
+
       setMailFormMessage({
         type: "success",
         text: `Sent ${data.sentCount || 0} email(s). ${data.failedCount ? `${data.failedCount} failed.` : "All sent successfully."}`,
       })
+
+      // Clear form and refresh past mails
+      setSelectedMailRecipientIds([])
+      await fetchPastMails()
     } catch (error) {
       console.error("Failed to send mail:", error)
       setMailFormMessage({ type: "error", text: "Failed to send emails. Please try again." })
     } finally {
       setSendingMail(false)
+      setTimeout(() => setSendingMailStatus([]), 3000)
     }
   }
 
@@ -1522,6 +1568,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         {/* Send Mail Tab */}
         {activeTab === "mail" && (
           <div className="space-y-4">
+            {/* Send Mail Form */}
             <div className="bg-white/95 backdrop-blur rounded-2xl p-5 border border-white/10 shadow-lg">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
                 <div>
@@ -1544,6 +1591,32 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                   }`}
                 >
                   {mailFormMessage.text}
+                </div>
+              )}
+
+              {sendingMailStatus.length > 0 && (
+                <div className="mb-4 rounded-lg p-4 bg-blue-50 border border-blue-200">
+                  <p className="text-sm font-medium text-blue-900 mb-3">Sending to recipients...</p>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {sendingMailStatus.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm">
+                        {item.status === "sent" && (
+                          <span className="inline-block w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
+                            <span className="text-white text-xs">✓</span>
+                          </span>
+                        )}
+                        {item.status === "pending" && (
+                          <span className="inline-block w-4 h-4 rounded-full bg-blue-500 animate-pulse"></span>
+                        )}
+                        {item.status === "failed" && (
+                          <span className="inline-block w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
+                            <span className="text-white text-xs">✕</span>
+                          </span>
+                        )}
+                        <span className="text-blue-900">{item.email}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -1570,6 +1643,31 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                       />
                     </div>
                     <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Mail Style</label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setMailForm({ ...mailForm, isHtml: false })}
+                          className={`flex-1 px-3 py-2 rounded-lg font-medium text-sm transition-all ${
+                            !mailForm.isHtml
+                              ? "bg-[#492B8C] text-white"
+                              : "bg-[#F4F1FB] text-[#6B5B9E] border border-[#E8E3F3]"
+                          }`}
+                        >
+                          Plain Text
+                        </button>
+                        <button
+                          onClick={() => setMailForm({ ...mailForm, isHtml: true })}
+                          className={`flex-1 px-3 py-2 rounded-lg font-medium text-sm transition-all ${
+                            mailForm.isHtml
+                              ? "bg-[#492B8C] text-white"
+                              : "bg-[#F4F1FB] text-[#6B5B9E] border border-[#E8E3F3]"
+                          }`}
+                        >
+                          HTML
+                        </button>
+                      </div>
+                    </div>
+                    <div className="sm:col-span-2">
                       <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Title / Subject *</label>
                       <Input
                         value={mailForm.subject}
@@ -1588,29 +1686,24 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Body (plain text fallback)</label>
-                      <Textarea
-                        value={mailForm.body}
-                        onChange={(e) => setMailForm({ ...mailForm, body: e.target.value })}
-                        placeholder="Write your message..."
-                        className={`${mailFieldClassName} min-h-[180px]`}
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">HTML Template (optional)</label>
-                      <Textarea
-                        value={mailForm.htmlTemplate}
-                        onChange={(e) => setMailForm({ ...mailForm, htmlTemplate: e.target.value })}
-                        placeholder={`<div style="font-family: Arial, sans-serif; padding: 24px;">
-  <h1>AIBuilder Invite</h1>
-  <p>Hello {{name}},</p>
-  <p>Access resources, learn along with us.</p>
-</div>`}
-                        className={`${mailFieldClassName} min-h-[220px] font-mono text-sm`}
-                      />
-                      <p className="mt-2 text-xs text-[#6B5B9E]">
-                        Leave blank to use the default rich email layout. Variables work here too.
-                      </p>
+                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">
+                        {mailForm.isHtml ? "HTML Body *" : "Body *"}
+                      </label>
+                      {mailForm.isHtml ? (
+                        <Textarea
+                          value={mailForm.htmlTemplate}
+                          onChange={(e) => setMailForm({ ...mailForm, htmlTemplate: e.target.value })}
+                          placeholder={`<div style="font-family: Arial, sans-serif; padding: 24px;"><h1>AIBuilder Invite</h1><p>Hello {{name}},</p></div>`}
+                          className={`${mailFieldClassName} min-h-[180px] font-mono text-sm`}
+                        />
+                      ) : (
+                        <Textarea
+                          value={mailForm.body}
+                          onChange={(e) => setMailForm({ ...mailForm, body: e.target.value })}
+                          placeholder="Write your message..."
+                          className={`${mailFieldClassName} min-h-[180px]`}
+                        />
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Gap Between Emails (seconds)</label>
@@ -1632,11 +1725,19 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                       <p className="text-sm text-[#6B5B9E]">{selectedMailRecipientIds.length} selected</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" onClick={selectVisibleMailRecipients} className="border-[#E8E3F3] text-[#6B5B9E]">
-                        Select All Visible
+                      <Button variant="outline" onClick={selectVisibleMailRecipients} className="border-[#E8E3F3] text-[#6B5B9E] text-xs" size="sm">
+                        Select All
                       </Button>
-                      <Button variant="outline" onClick={clearMailRecipients} className="border-[#E8E3F3] text-[#6B5B9E]">
+                      <Button variant="outline" onClick={clearMailRecipients} className="border-[#E8E3F3] text-[#6B5B9E] text-xs" size="sm">
                         Clear
+                      </Button>
+                      <Button
+                        onClick={() => setShowMailPreview(true)}
+                        className="bg-[#00C8A7] hover:bg-[#009E87] text-white text-xs"
+                        size="sm"
+                      >
+                        <Eye className="w-3 h-3 mr-1" />
+                        Preview
                       </Button>
                     </div>
                   </div>
@@ -1699,8 +1800,174 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                 </div>
               </div>
             </div>
+
+            {/* Past Mails Section */}
+            <div className="bg-white/95 backdrop-blur rounded-2xl p-5 border border-white/10 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-[#1A0A3D]">Past Mails</h3>
+                  <p className="text-sm text-[#6B5B9E]">History of all sent emails</p>
+                </div>
+                <Button
+                  onClick={() => fetchPastMails()}
+                  variant="outline"
+                  className="border-[#E8E3F3] text-[#6B5B9E]"
+                  size="sm"
+                >
+                  Refresh
+                </Button>
+              </div>
+
+              {loadingPastMails ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-[#492B8C] mr-2" />
+                  <span className="text-[#6B5B9E]">Loading past mails...</span>
+                </div>
+              ) : pastMails.length === 0 ? (
+                <div className="p-4 rounded-xl bg-[#F4F1FB] text-[#6B5B9E] text-sm">
+                  No mails sent yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {pastMails.map((mail) => (
+                    <div
+                      key={mail.id}
+                      className="border border-[#E8E3F3] rounded-xl p-4 hover:bg-[#F4F1FB] transition-colors cursor-pointer"
+                      onClick={() => setExpandedMailId(expandedMailId === mail.id ? null : mail.id)}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-semibold text-[#1A0A3D] truncate">{mail.subject}</h4>
+                            <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${
+                              mail.is_html ? "bg-blue-100 text-blue-700" : "bg-[#F4F1FB] text-[#6B5B9E]"
+                            }`}>
+                              {mail.is_html ? "HTML" : "Plain"}
+                            </span>
+                          </div>
+                          <p className="text-sm text-[#6B5B9E] mb-2">
+                            By {mail.sent_by_admin_email} • {new Date(mail.sent_at).toLocaleDateString()} {new Date(mail.sent_at).toLocaleTimeString()}
+                          </p>
+                          <p className="text-sm text-[#1A0A3D]">
+                            Sent to <span className="font-semibold">{mail.recipient_count}</span> recipient{mail.recipient_count === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                        <ChevronRight className={`w-5 h-5 text-[#6B5B9E] flex-shrink-0 transition-transform ${
+                          expandedMailId === mail.id ? "rotate-90" : ""
+                        }`} />
+                      </div>
+
+                      {expandedMailId === mail.id && (
+                        <div className="mt-4 pt-4 border-t border-[#E8E3F3] space-y-3">
+                          <div>
+                            <p className="text-xs font-medium text-[#6B5B9E] mb-2">Recipients</p>
+                            <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                              {mail.recipients?.map((recipient: any, idx: number) => (
+                                <div key={idx} className="flex items-center gap-2 text-sm">
+                                  {recipient.status === "sent" && (
+                                    <span className="inline-block w-3 h-3 rounded-full bg-emerald-500"></span>
+                                  )}
+                                  {recipient.status === "failed" && (
+                                    <span className="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                                  )}
+                                  <span className="text-[#1A0A3D]">{recipient.name || recipient.email}</span>
+                                  <span className="text-[#6B5B9E] text-xs">({recipient.email})</span>
+                                  {recipient.error && (
+                                    <span className="text-red-600 text-xs ml-auto">{recipient.error}</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-[#6B5B9E] mb-2">Content</p>
+                            <div className="bg-[#F4F1FB] rounded-lg p-3 max-h-[200px] overflow-y-auto text-sm text-[#1A0A3D]">
+                              {mail.is_html ? (
+                                <div className="font-mono text-xs whitespace-pre-wrap break-words">{mail.body.substring(0, 500)}...</div>
+                              ) : (
+                                <p className="whitespace-pre-wrap">{mail.body}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
+
+        {/* Mail Preview Modal */}
+        {showMailPreview && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b border-[#E8E3F3] px-6 py-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-[#1A0A3D]">Mail Preview</h3>
+                <button onClick={() => setShowMailPreview(false)} className="text-[#6B5B9E] hover:text-[#1A0A3D]">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div>
+                  <p className="text-xs font-medium text-[#6B5B9E] mb-2">Subject</p>
+                  <p className="text-[#1A0A3D] font-medium">{mailForm.subject || "No subject"}</p>
+                </div>
+
+                {mailForm.subtitle && (
+                  <div>
+                    <p className="text-xs font-medium text-[#6B5B9E] mb-2">Subtitle</p>
+                    <p className="text-[#1A0A3D]">{mailForm.subtitle}</p>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-xs font-medium text-[#6B5B9E] mb-2">Content</p>
+                  <div className="bg-[#F4F1FB] rounded-lg p-4 border border-[#E8E3F3]">
+                    {mailForm.isHtml && mailForm.htmlTemplate ? (
+                      <div
+                        className="prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{
+                          __html: mailForm.htmlTemplate
+                            .replace(/\{\{name\}\}/gi, "John")
+                            .replace(/\{\{full_name\}\}/gi, "John Doe")
+                            .replace(/\{\{email\}\}/gi, "john@example.com")
+                            .replace(/\{\{tier\}\}/gi, "builder"),
+                        }}
+                      />
+                    ) : (
+                      <pre className="whitespace-pre-wrap text-sm text-[#1A0A3D] font-sans">
+                        {(mailForm.isHtml ? mailForm.htmlTemplate : mailForm.body)
+                          .replace(/\{\{name\}\}/gi, "John")
+                          .replace(/\{\{full_name\}\}/gi, "John Doe")
+                          .replace(/\{\{email\}\}/gi, "john@example.com")
+                          .replace(/\{\{tier\}\}/gi, "builder")}
+                      </pre>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-[#6B5B9E] mb-2">Sample Data Used</p>
+                  <div className="bg-[#F4F1FB] rounded-lg p-3 text-xs text-[#6B5B9E]">
+                    <p>Name: John</p>
+                    <p>Email: john@example.com</p>
+                    <p>Tier: builder</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="sticky bottom-0 bg-white border-t border-[#E8E3F3] px-6 py-4">
+                <Button onClick={() => setShowMailPreview(false)} className="w-full bg-[#492B8C] hover:bg-[#2D1A69] text-white">
+                  Close Preview
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      
 
         {/* Users Tab */}
         {activeTab === "users" && (
