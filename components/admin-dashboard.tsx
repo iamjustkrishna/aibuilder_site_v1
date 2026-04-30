@@ -1267,16 +1267,16 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                   }
 
                   return (
-                    <div 
-                      key={resource.id} 
-                      className={`bg-white/95 backdrop-blur rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 transition-all ${!resource.is_active ? "opacity-50" : ""}`}
+                    <div
+                      key={resource.id}
+                      className={`bg-white/95 backdrop-blur rounded-xl p-4 grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)_auto] gap-3 sm:gap-4 transition-all ${!resource.is_active ? "opacity-50" : ""}`}
                     >
-                      <div className={`p-2.5 rounded-xl ${tierData.color}/10 flex-shrink-0 self-start`}>
+                      <div className={`p-2.5 rounded-xl ${tierData.color}/10 w-fit`}>
                         <Icon className={`w-5 h-5 ${tierData.text}`} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <h4 className="font-medium text-[#1A0A3D] truncate">{resource.title}</h4>
+                          <h4 className="font-medium text-[#1A0A3D] break-words">{resource.title}</h4>
                           <span className={`px-2 py-0.5 rounded-full text-xs text-white ${tierData.color}`}>
                             {tierData.label}
                           </span>
@@ -1284,9 +1284,12 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                             {resource.type}
                           </span>
                         </div>
-                        <p className="text-sm text-[#6B5B9E] truncate">{resource.description}</p>
+                        {resource.description && (
+                          <p className="text-sm text-[#6B5B9E] line-clamp-2 break-words">{resource.description}</p>
+                        )}
+                        <p className="text-xs text-[#8A7CB5] mt-1 break-all truncate">{resource.url}</p>
                       </div>
-                      <div className="flex items-center gap-2 self-end sm:self-center">
+                      <div className="flex items-center justify-end gap-2 sm:self-start">
                         <button
                           onClick={() => handleToggleActive(resource.id, resource.is_active)}
                           className={`p-2 rounded-lg transition-colors ${resource.is_active ? "text-[#00C8A7] hover:bg-[#00C8A7]/10" : "text-[#6B5B9E] hover:bg-[#F4F1FB]"}`}

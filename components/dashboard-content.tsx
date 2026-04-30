@@ -69,6 +69,13 @@ interface UpcomingSession {
   audience_tiers: string[] | null
 }
 
+interface CohortSummary {
+  id: string
+  code: string
+  name: string
+  is_current: boolean
+}
+
 // Best AI Tools to use - compact list for dashboard
 const aiTools = [
   {
@@ -300,6 +307,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null)
   const [showMentorModal, setShowMentorModal] = useState(false)
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([])
+  const [currentCohort, setCurrentCohort] = useState<CohortSummary | null>(null)
   const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({})
 
   // Check if user is admin
@@ -351,6 +359,21 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
 
     fetchUpcomingSessions()
   }, [user.id, tier])
+
+  useEffect(() => {
+    async function fetchCohortContext() {
+      try {
+        const res = await fetch("/api/cohorts/current")
+        if (!res.ok) return
+        const data = await res.json()
+        setCurrentCohort(data.current_cohort || null)
+      } catch (error) {
+        console.error("Failed to fetch cohort context:", error)
+      }
+    }
+
+    fetchCohortContext()
+  }, [])
 
   function extractYouTubeId(url: string): string | null {
     const match = url.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/)
@@ -755,6 +778,11 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
             <PlayCircle className="w-5 h-5 inline-block mr-2 text-[#FF6B34]" />
             Learn AI - Curated Videos
           </h2>
+          {currentCohort && (
+            <p className="text-sm text-[#6B5B9E] mb-3">
+              Showing curated learning content for <span className="font-semibold text-[#492B8C]">{currentCohort.name}</span> ({currentCohort.code})
+            </p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {youtubeVideos.map((video, index) => (
               <div
