@@ -26,6 +26,7 @@ import {
   Calendar,
   Users,
   Check,
+  Share2,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -735,12 +736,36 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                       ))}
                     </div>
                   ) : null}
-                  <div className="mt-4">
-                    <Button asChild className="bg-[#492B8C] text-white hover:bg-[#2D1A69] rounded-full">
+                  <div className="mt-4 flex gap-2">
+                    <Button asChild className="bg-[#492B8C] text-white hover:bg-[#2D1A69] rounded-full flex-1">
                       <a href={session.meet_link} target="_blank" rel="noopener noreferrer">
                         Join Meet
                         <ExternalLink className="w-4 h-4 ml-2" />
                       </a>
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        const shareText = `📚 AI Learning Session
+
+🎯 ${session.title}
+${session.description ? `📝 ${session.description}` : ""}
+
+🎥 Join: ${session.meet_link}
+🕐 ${formatSessionTime(session.session_at)}
+
+Register on AIBuilder 🚀`
+                        
+                        if (navigator.share) {
+                          navigator.share({ title: session.title, text: shareText })
+                        } else {
+                          navigator.clipboard.writeText(shareText)
+                          alert("Session details copied to clipboard!")
+                        }
+                      }}
+                      className="bg-[#00C8A7] text-white hover:bg-[#00C8A7]/90 rounded-full"
+                      title="Share session"
+                    >
+                      <Share2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
