@@ -2,7 +2,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { extractYouTubeId } from "@/lib/learning"
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -11,6 +11,11 @@ export async function GET() {
   if (!user?.id) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
+
+  // Get week parameter - defaults to all weeks if not specified
+  const { searchParams } = new URL(request.url)
+  const weekParam = searchParams.get("week")
+  const weekNumber = weekParam ? parseInt(weekParam.replace("week-", "")) : null
 
   const serviceClient = createServiceClient()
 
@@ -26,7 +31,7 @@ export async function GET() {
 
   const cohortIds = (enrollments || []).map((entry) => entry.cohort_id)
   if (cohortIds.length === 0) {
-    return NextResponse.json({ cohorts: [], videos: [], leaderboard: [] })
+    return NextResponse.json([])
   }
 
   const nowIso = new Date().toISOString()
@@ -83,7 +88,7 @@ export async function GET() {
     }
   }
 
-  const visibleVideos = (videos || [])
+  let visibleVideos = (videos || [])
     .filter((video) => weekKeySet.has(`${video.cohort_id}:${video.week_number}`))
     .map((video) => {
       const p = progressByVideo.get(video.id)
@@ -104,10 +109,22 @@ export async function GET() {
       }
     })
 
+  // Filter by week number if specified
+  if (weekNumber !== null) {
+    visibleVideos = visibleVideos.filter((video) => video.week_number === weekNumber)
+  }
+
+  // If week parameter was provided, return just the array of videos
+  if (weekParam) {
+    return NextResponse.json(visibleVideos)
+  }
+
+  // Otherwise return the full structure for backward compatibility
   return NextResponse.json({
     cohorts: cohorts || [],
     weeks: weeks || [],
     videos: visibleVideos,
   })
 }
+
 

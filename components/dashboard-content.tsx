@@ -309,6 +309,9 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([])
   const [currentCohort, setCurrentCohort] = useState<CohortSummary | null>(null)
   const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({})
+  const [curatedVideos, setCuratedVideos] = useState<any[]>([])
+  const [activeWeek, setActiveWeek] = useState<string>("week-1")
+  const [loadingCuratedVideos, setLoadingCuratedVideos] = useState(true)
 
   // Check if user is admin
   useEffect(() => {
@@ -374,6 +377,27 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
 
     fetchCohortContext()
   }, [])
+
+  useEffect(() => {
+    async function fetchCuratedVideos() {
+      setLoadingCuratedVideos(true)
+      try {
+        const res = await fetch(`/api/learning/curated?week=${activeWeek}`)
+        if (!res.ok) {
+          console.error("Failed to fetch curated videos")
+          return
+        }
+        const data = await res.json()
+        setCuratedVideos(data || [])
+      } catch (error) {
+        console.error("Failed to fetch curated videos:", error)
+      } finally {
+        setLoadingCuratedVideos(false)
+      }
+    }
+
+    fetchCuratedVideos()
+  }, [activeWeek])
 
   function extractYouTubeId(url: string): string | null {
     const match = url.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/)
@@ -783,38 +807,76 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
               Showing curated learning content for <span className="font-semibold text-[#492B8C]">{currentCohort.name}</span> ({currentCohort.code})
             </p>
           )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {youtubeVideos.map((video, index) => (
-              <div
-                key={index}
-                className="group rounded-xl bg-white border border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-md transition-all overflow-hidden cursor-pointer"
-                onClick={() => {
-                  setSelectedVideoTitle(video.title)
-                  setSelectedVideo(video.videoId)
-                }}
+          
+          {/* Week Selector */}
+          <div className="mb-4 flex flex-wrap gap-2">
+            {cohortWeeks.map((week) => (
+              <button
+                key={week.key}
+                onClick={() => setActiveWeek(week.key)}
+                className={`px-4 py-2 rounded-full font-medium text-sm transition-colors ${
+                  activeWeek === week.key
+                    ? `${week.color.split(' ')[0]} text-white`
+                    : "bg-[#F4F1FB] text-[#6B5B9E] hover:bg-[#E8E3F3]"
+                }`}
               >
-                <div className="relative aspect-video bg-[#1A0A3D]">
-                  <Image
-                    src={`https://img.youtube.com/vi/${video.videoId}/maxresdefault.jpg`}
-                    alt={video.title}
-                    fill
-                    className="object-cover group-hover:opacity-80 transition-opacity"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-14 h-14 rounded-full bg-[#FF6B34] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                      <PlayCircle className="w-7 h-7 text-white" />
+                {week.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {loadingCuratedVideos ? (
+              <div className="col-span-full text-center py-8 text-[#6B5B9E]">
+                Loading videos...
+              </div>
+            ) : curatedVideos.length === 0 ? (
+              <div className="col-span-full text-center py-8">
+                <Video className="w-10 h-10 mx-auto mb-3 opacity-40 text-[#6B5B9E]" />
+                <p className="font-medium text-[#1A0A3D]">No videos yet for this week</p>
+                <p className="text-sm text-[#6B5B9E] mt-1">Videos will be added as the week progresses</p>
+              </div>
+            ) : (
+              curatedVideos.map((video) => {
+                const videoId = extractYouTubeId(video.youtube_url || video.url)
+                return (
+                  <div
+                    key={video.id}
+                    className="group rounded-xl bg-white border border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-md transition-all overflow-hidden cursor-pointer"
+                    onClick={() => {
+                      if (videoId) {
+                        setSelectedVideoTitle(video.title)
+                        setSelectedVideo(videoId)
+                      }
+                    }}
+                  >
+                    <div className="relative aspect-video bg-[#1A0A3D]">
+                      {videoId && (
+                        <Image
+                          src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
+                          alt={video.title}
+                          fill
+                          className="object-cover group-hover:opacity-80 transition-opacity"
+                        />
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-14 h-14 rounded-full bg-[#FF6B34] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                          <PlayCircle className="w-7 h-7 text-white" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-medium text-[#1A0A3D] mb-1 line-clamp-2 group-hover:text-[#492B8C] transition-colors">
+                        {video.title}
+                      </h3>
+                      {video.description && (
+                        <p className="text-sm text-[#6B5B9E] line-clamp-2">{video.description}</p>
+                      )}
                     </div>
                   </div>
-                </div>
-                <div className="p-4">
-                  <p className="text-xs text-[#FF6B34] font-medium mb-1">{video.channel}</p>
-                  <h3 className="font-medium text-[#1A0A3D] mb-1 line-clamp-2 group-hover:text-[#492B8C] transition-colors">
-                    {video.title}
-                  </h3>
-                  <p className="text-sm text-[#6B5B9E] line-clamp-2">{video.description}</p>
-                </div>
-              </div>
-            ))}
+                )
+              })
+            )}
           </div>
         </div>
 
