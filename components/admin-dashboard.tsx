@@ -756,6 +756,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         body: JSON.stringify({
           id: editingSessionId,
           ...sessionForm,
+          session_at: sessionForm.session_at + "Z",
         }),
       })
 
