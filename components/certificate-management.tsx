@@ -6,14 +6,27 @@ import {
   Cohort,
   CohortUser,
   CertificateStatus,
-  MOCK_COHORTS,
-  MOCK_USERS,
   generateMockStatuses,
   updateProgressStepSimulation,
   getStatusBadge,
   getStatusLabel,
   getTierColor,
 } from "@/lib/certificate-utils"
+
+interface CohortData {
+  id: string
+  code: string
+  name: string
+  is_current: boolean
+}
+
+interface UserData {
+  id: string
+  email: string
+  full_name: string
+  membership_tier: string
+  avatar_url?: string | null
+}
 
 export default function CertificateManagement() {
   // State Management
@@ -26,9 +39,44 @@ export default function CertificateManagement() {
   const [pollingActive, setPollingActive] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [pollingStep, setPollingStep] = useState(0)
+  const [cohorts, setCohorts] = useState<CohortData[]>([])
+  const [cohortUsers, setCohortUsers] = useState<UserData[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const currentCohort = MOCK_COHORTS.find((c) => c.id === selectedCohort)
-  const cohortUsers = MOCK_USERS.slice(0, currentCohort?.user_count || 0)
+  // Fetch cohorts and users on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        // Fetch cohorts
+        const cohortsRes = await fetch("/api/admin/cohorts")
+        if (cohortsRes.ok) {
+          const cohortData = await cohortsRes.json()
+          setCohorts(cohortData || [])
+          
+          // Try to find the current cohort, fallback to first if not found
+          const currentCohort = cohortData?.find((c: CohortData) => c.is_current) || cohortData?.[0]
+          if (currentCohort) {
+            setSelectedCohort(currentCohort.id)
+          }
+        }
+
+        // Fetch users (all users except admins - will be filtered by backend)
+        const usersRes = await fetch("/api/admin/users")
+        if (usersRes.ok) {
+          const userData = await usersRes.json()
+          setCohortUsers(userData || [])
+        }
+      } catch (error) {
+        console.error("Failed to fetch cohorts/users:", error)
+        setToastMessage("Failed to load cohorts and users")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   // Toast notification effect
   useEffect(() => {
@@ -169,7 +217,9 @@ export default function CertificateManagement() {
               onClick={() => setShowCohortDropdown(!showCohortDropdown)}
               className="w-full px-4 py-2 text-left bg-white border border-gray-300 rounded-lg hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 flex items-center justify-between"
             >
-              <span className="text-gray-900">{currentCohort?.name || "Select cohort"}</span>
+              <span className="text-gray-900">
+                {cohorts.find((c) => c.id === selectedCohort)?.name || "Select cohort"}
+              </span>
               <ChevronDown
                 className={`w-4 h-4 text-gray-600 transition-transform ${
                   showCohortDropdown ? "rotate-180" : ""
@@ -179,26 +229,34 @@ export default function CertificateManagement() {
 
             {showCohortDropdown && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-                {MOCK_COHORTS.map((cohort) => (
-                  <button
-                    key={cohort.id}
-                    onClick={() => {
-                      setSelectedCohort(cohort.id)
-                      setShowCohortDropdown(false)
-                      setSelectedUsers(new Set())
-                      setSelectAll(false)
-                      setCertificateStatuses([])
-                    }}
-                    className={`w-full px-4 py-3 text-left text-sm hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0 ${
-                      selectedCohort === cohort.id
-                        ? "bg-purple-50 text-purple-900 font-medium"
-                        : "text-gray-700"
-                    }`}
-                  >
-                    {cohort.name}
-                    <span className="text-gray-500 text-xs ml-2">({cohort.user_count} users)</span>
-                  </button>
-                ))}
+                {loading ? (
+                  <div className="px-4 py-3 text-sm text-gray-500">Loading cohorts...</div>
+                ) : cohorts.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-gray-500">No cohorts available</div>
+                ) : (
+                  cohorts.map((cohort) => (
+                    <button
+                      key={cohort.id}
+                      onClick={() => {
+                        setSelectedCohort(cohort.id)
+                        setShowCohortDropdown(false)
+                        setSelectedUsers(new Set())
+                        setSelectAll(false)
+                        setCertificateStatuses([])
+                      }}
+                      className={`w-full px-4 py-3 text-left text-sm hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0 ${
+                        selectedCohort === cohort.id
+                          ? "bg-purple-50 text-purple-900 font-medium"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      {cohort.name}
+                      {cohort.is_current && (
+                        <span className="text-purple-600 text-xs ml-2 font-semibold">(Current)</span>
+                      )}
+                    </button>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -210,32 +268,42 @@ export default function CertificateManagement() {
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Step 2: Select Users</h3>
           <p className="mt-1 text-sm text-gray-600">
-            {selectedUsers.size} of {cohortUsers.length} users selected
+            {loading ? "Loading users..." : `${selectedUsers.size} of ${cohortUsers.length} users selected`}
           </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectAll}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                      className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                    />
-                    <span className="text-sm font-medium text-gray-700">Select All</span>
-                  </label>
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Name</th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Email</th>
-                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Tier</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {cohortUsers.map((user) => (
+        {loading ? (
+          <div className="p-12 text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-gray-400 mx-auto mb-3" />
+            <p className="text-sm text-gray-500">Loading users...</p>
+          </div>
+        ) : cohortUsers.length === 0 ? (
+          <div className="p-12 text-center">
+            <p className="text-sm text-gray-500">No users available in this cohort</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectAll}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Select All</span>
+                    </label>
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Name</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Email</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Tier</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {cohortUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
                     <label className="flex items-center gap-3 cursor-pointer">
@@ -247,13 +315,21 @@ export default function CertificateManagement() {
                       />
                     </label>
                   </td>
-                  <td className="px-6 py-4">
+                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={user.avatar_url}
-                        alt={user.full_name}
-                        className="w-8 h-8 rounded-full"
-                      />
+                      {user.avatar_url ? (
+                        <img
+                          src={user.avatar_url}
+                          alt={user.full_name}
+                          className="w-8 h-8 rounded-full"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                          <span className="text-xs font-semibold text-gray-700">
+                            {user.full_name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
                       <span className="text-sm font-medium text-gray-900">{user.full_name}</span>
                     </div>
                   </td>
@@ -268,6 +344,7 @@ export default function CertificateManagement() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {/* Generation Button */}
