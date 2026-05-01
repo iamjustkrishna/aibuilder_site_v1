@@ -36,8 +36,10 @@ import {
   Star,
   CheckCircle2,
   Film,
+  Award,
 } from "lucide-react"
 import Link from "next/link"
+import CertificateManagement from "@/components/certificate-management"
 interface Resource {
   id: string
   title: string
@@ -138,7 +140,7 @@ const weekConfig = [
 ]
 
 export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
-  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "mail" | "sessions" | "activity" | "cohorts" | "curated-videos">("cohorts")
+  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "mail" | "sessions" | "activity" | "cohorts" | "curated-videos" | "certificates">("cohorts")
   const [resources, setResources] = useState<Resource[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [sessions, setSessions] = useState<SessionRecord[]>([])
@@ -1239,6 +1241,17 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
             >
               <Film className="w-4 h-4" />
               <span className="text-sm">Curated Videos</span>
+            </button>
+            <button
+              onClick={() => { setActiveTab("certificates"); setSearchQuery(""); }}
+              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeTab === "certificates"
+                  ? "bg-white text-[#1A0A3D] shadow-lg"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <Award className="w-4 h-4" />
+              <span className="text-sm">Certificates</span>
             </button>
           </div>
           
@@ -3205,6 +3218,11 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
               )}
             </div>
           </div>
+        )}
+
+        {/* Certificates Tab */}
+        {activeTab === "certificates" && (
+          <CertificateManagement />
         )}
       </div>
     </div>
