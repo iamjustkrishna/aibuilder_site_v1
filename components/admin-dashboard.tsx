@@ -32,6 +32,9 @@ import {
   Clock,
   TrendingUp,
   ChevronRight,
+  Layers,
+  Star,
+  CheckCircle2,
 } from "lucide-react"
 import Link from "next/link"
 interface Resource {
@@ -76,6 +79,41 @@ interface SessionRecord {
   is_active: boolean
 }
 
+interface Cohort {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  status: "active" | "archived" | "planning"
+  starts_at: string | null
+  ends_at: string | null
+  is_current: boolean
+  enrollment_count?: number
+  created_at: string
+}
+
+interface CohortWeek {
+  id: string
+  cohort_id: string
+  week_number: number
+  topic: string
+  unlock_at: string | null
+  close_at: string | null
+  created_at: string
+}
+
+interface CohortVideoConfig {
+  id: string
+  cohort_id: string
+  week_id: string
+  title: string
+  description: string | null
+  youtube_url: string
+  tier_required: "initial" | "foundational" | "builder" | "architect"
+  sort_order: number
+  created_at: string
+}
+
 const typeIcons = {
   video: Video,
   pdf: FileText,
@@ -99,10 +137,13 @@ const weekConfig = [
 ]
 
 export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
-  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "mail" | "sessions" | "activity">("weeks")
+  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "mail" | "sessions" | "activity" | "cohorts">("cohorts")
   const [resources, setResources] = useState<Resource[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [sessions, setSessions] = useState<SessionRecord[]>([])
+  const [cohorts, setCohorts] = useState<Cohort[]>([])
+  const [cohortWeeks, setCohortWeeks] = useState<CohortWeek[]>([])
+  const [cohortVideos, setCohortVideos] = useState<CohortVideoConfig[]>([])
   const [adminEmails, setAdminEmails] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -110,9 +151,20 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [showAddUserForm, setShowAddUserForm] = useState(false)
   const [showSessionForm, setShowSessionForm] = useState(false)
+  const [showCohortForm, setShowCohortForm] = useState(false)
+  const [selectedCohortId, setSelectedCohortId] = useState<string | null>(null)
+  const [editingCohortId, setEditingCohortId] = useState<string | null>(null)
   const [addingToWeek, setAddingToWeek] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [weekVideoForm, setWeekVideoForm] = useState({ title: "", description: "", url: "", tier_required: "foundational" as Resource["tier_required"] })
+  const [cohortForm, setCohortForm] = useState({
+    code: "",
+    name: "",
+    description: "",
+    status: "active" as "active" | "archived" | "planning",
+    starts_at: "",
+    ends_at: "",
+  })
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -238,6 +290,16 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         const data = await res.json()
         setResources(data)
       }
+    } else if (activeTab === "cohorts") {
+      const res = await fetch("/api/admin/cohorts")
+      if (res.ok) {
+        const data = await res.json()
+        setCohorts(data || [])
+        if (data.length > 0) {
+          setSelectedCohortId(data[0].id)
+          await fetchCohortDetails(data[0].id)
+        }
+      }
     } else if (activeTab === "sessions") {
       const [sessionsRes, usersRes] = await Promise.all([
         fetch("/api/admin/sessions"),
@@ -270,6 +332,27 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     setLoading(false)
   }
 
+  async function fetchCohortDetails(cohortId: string) {
+    try {
+      const [weeksRes, videosRes] = await Promise.all([
+        fetch(`/api/admin/cohorts?cohort_id=${cohortId}&resource=weeks`),
+        fetch(`/api/admin/cohorts?cohort_id=${cohortId}&resource=videos`),
+      ])
+      
+      if (weeksRes.ok) {
+        const data = await weeksRes.json()
+        setCohortWeeks(data || [])
+      }
+      
+      if (videosRes.ok) {
+        const data = await videosRes.json()
+        setCohortVideos(data || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch cohort details:", error)
+    }
+  }
+
   async function fetchPastMails() {
     setLoadingPastMails(true)
     try {
@@ -284,6 +367,148 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       setLoadingPastMails(false)
     }
   }
+
+  async function handleCreateCohort() {
+    if (!cohortForm.code.trim() || !cohortForm.name.trim()) {
+      alert("Code and Name are required")
+      return
+    }
+    try {
+      const res = await fetch("/api/admin/cohorts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cohortForm),
+      })
+      if (res.ok) {
+        const newCohort = await res.json()
+        setCohorts([...cohorts, newCohort])
+        setSelectedCohortId(newCohort.id)
+        await fetchCohortDetails(newCohort.id)
+        setCohortForm({ code: "", name: "", description: "", status: "active", starts_at: "", ends_at: "" })
+        setShowCohortForm(false)
+      } else {
+        alert("Failed to create cohort")
+      }
+    } catch (error) {
+      console.error("Failed to create cohort:", error)
+      alert("Error creating cohort")
+    }
+  }
+
+  async function handleSetCurrentCohort(cohortId: string) {
+    try {
+      const res = await fetch(`/api/admin/cohorts?action=set-current`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cohort_id: cohortId }),
+      })
+      if (res.ok) {
+        setCohorts(cohorts.map(c => ({ ...c, is_current: c.id === cohortId })))
+      } else {
+        alert("Failed to set current cohort")
+      }
+    } catch (error) {
+      console.error("Failed to set current cohort:", error)
+      alert("Error setting current cohort")
+    }
+  }
+
+  async function handleDeleteCohort(cohortId: string) {
+    if (!confirm("Are you sure you want to delete this cohort? This action cannot be undone.")) return
+    try {
+      const res = await fetch(`/api/admin/cohorts`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cohort_id: cohortId }),
+      })
+      if (res.ok) {
+        setCohorts(cohorts.filter(c => c.id !== cohortId))
+        if (selectedCohortId === cohortId) {
+          setSelectedCohortId(null)
+          setCohortWeeks([])
+          setCohortVideos([])
+        }
+      } else {
+        alert("Failed to delete cohort")
+      }
+    } catch (error) {
+      console.error("Failed to delete cohort:", error)
+      alert("Error deleting cohort")
+    }
+  }
+
+  async function handleAddCohortVideo(weekId: string) {
+    if (!weekVideoForm.title.trim() || !weekVideoForm.url.trim()) {
+      alert("Title and URL are required")
+      return
+    }
+    try {
+      const res = await fetch(`/api/admin/cohorts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resource: "video",
+          cohort_id: selectedCohortId,
+          week_id: weekId,
+          title: weekVideoForm.title,
+          description: weekVideoForm.description,
+          youtube_url: weekVideoForm.url,
+          tier_required: weekVideoForm.tier_required,
+          sort_order: cohortVideos.filter(v => v.week_id === weekId).length,
+        }),
+      })
+      if (res.ok) {
+        const newVideo = await res.json()
+        setCohortVideos([...cohortVideos, newVideo])
+        setAddingToWeek(null)
+        setWeekVideoForm({ title: "", description: "", url: "", tier_required: "foundational" })
+      } else {
+        alert("Failed to add video")
+      }
+    } catch (error) {
+      console.error("Failed to add video:", error)
+      alert("Error adding video")
+    }
+  }
+
+  async function handleDeleteCohortVideo(videoId: string) {
+    if (!confirm("Delete this video?")) return
+    try {
+      const res = await fetch(`/api/admin/cohorts`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ video_id: videoId }),
+      })
+      if (res.ok) {
+        setCohortVideos(cohortVideos.filter(v => v.id !== videoId))
+      } else {
+        alert("Failed to delete video")
+      }
+    } catch (error) {
+      console.error("Failed to delete video:", error)
+      alert("Error deleting video")
+    }
+  }
+
+  async function handleUnlockWeek(weekId: string) {
+    try {
+      const res = await fetch(`/api/admin/cohorts`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ week_id: weekId, action: "unlock" }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setCohortWeeks(cohortWeeks.map(w => w.id === weekId ? updated : w))
+      } else {
+        alert("Failed to unlock week")
+      }
+    } catch (error) {
+      console.error("Failed to unlock week:", error)
+      alert("Error unlocking week")
+    }
+  }
+
 
   async function handleAddWeekVideo(weekKey: string) {
     const week = weekConfig.find(w => w.key === weekKey)!
@@ -792,6 +1017,18 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex gap-1 p-1 bg-white/10 rounded-xl backdrop-blur-sm overflow-x-auto">
             <button
+              onClick={() => { setActiveTab("cohorts"); setSearchQuery(""); }}
+              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeTab === "cohorts"
+                  ? "bg-white text-[#1A0A3D] shadow-lg"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span className="text-sm">Cohorts</span>
+              <span className="px-1.5 py-0.5 rounded-full text-xs bg-[#492B8C] text-white">{cohorts.length}</span>
+            </button>
+            <button
               onClick={() => { setActiveTab("weeks"); setSearchQuery(""); }}
               className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
                 activeTab === "weeks"
@@ -862,7 +1099,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
             </button>
           </div>
           
-          {activeTab !== "weeks" && (
+          {activeTab !== "weeks" && activeTab !== "cohorts" && (
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
             <input
@@ -876,138 +1113,331 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
           )}
         </div>
 
-        {/* Cohort Weeks Tab */}
-        {activeTab === "weeks" && (
+        {/* Cohorts Tab */}
+        {activeTab === "cohorts" && (
           <div className="space-y-4">
-            {weekConfig.map((week) => {
-              const weekVideos = resources.filter(r => r.category === week.key && r.type === "video")
-              const isAddingThis = addingToWeek === week.key
-              return (
-                <div key={week.key} className="bg-white/10 backdrop-blur rounded-2xl overflow-hidden">
-                  {/* Week header */}
-                  <div className={`bg-gradient-to-r ${week.color} px-5 py-4 flex items-center justify-between`}>
-                    <div>
-                      <p className="text-white/70 text-xs uppercase tracking-wider font-medium">{week.label}</p>
-                      <h3 className="text-white font-bold text-lg">{week.topic}</h3>
-                      <p className="text-white/60 text-xs mt-0.5">{weekVideos.length} video{weekVideos.length !== 1 ? "s" : ""} &middot; Requires {week.tier}</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setAddingToWeek(isAddingThis ? null : week.key)
-                        setWeekVideoForm({ title: "", description: "", url: "", tier_required: week.tier as Resource["tier_required"] })
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-sm font-medium transition-colors"
-                    >
-                      {isAddingThis ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                      {isAddingThis ? "Cancel" : "Add Video"}
-                    </button>
-                  </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-white">Cohorts</h3>
+                <p className="text-sm text-white/60">Manage learning cohorts and their curriculum.</p>
+              </div>
+              <Button
+                onClick={() => {
+                  setShowCohortForm(!showCohortForm)
+                  if (showCohortForm) {
+                    setCohortForm({ code: "", name: "", description: "", status: "active", starts_at: "", ends_at: "" })
+                  }
+                }}
+                className="bg-[#492B8C] hover:bg-[#3D2174] text-white rounded-full"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                {showCohortForm ? "Close Form" : "Create Cohort"}
+              </Button>
+            </div>
 
-                  {/* Add video form */}
-                  {isAddingThis && (
-                    <div className="px-5 py-4 bg-white/5 border-b border-white/10 space-y-3">
-                      <p className="text-white/70 text-sm font-medium">Add YouTube video to {week.label}</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <input
-                          placeholder="Video title"
-                          value={weekVideoForm.title}
-                          onChange={e => setWeekVideoForm(p => ({ ...p, title: e.target.value }))}
-                          className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/40 text-sm"
-                        />
-                        <input
-                          placeholder="YouTube URL (e.g. https://youtu.be/abc123)"
-                          value={weekVideoForm.url}
-                          onChange={e => setWeekVideoForm(p => ({ ...p, url: e.target.value }))}
-                          className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/40 text-sm"
-                        />
-                        <input
-                          placeholder="Description (optional)"
-                          value={weekVideoForm.description}
-                          onChange={e => setWeekVideoForm(p => ({ ...p, description: e.target.value }))}
-                          className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/40 text-sm sm:col-span-2"
-                        />
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <select
-                            value={weekVideoForm.tier_required}
-                            onChange={e => setWeekVideoForm(p => ({ ...p, tier_required: e.target.value as Resource["tier_required"] }))}
-                            className="appearance-none pl-3 pr-8 py-2 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:border-white/40"
-                          >
-                            <option value="initial" className="text-[#1A0A3D]">Explorer</option>
-                            <option value="foundational" className="text-[#1A0A3D]">Foundational</option>
-                            <option value="builder" className="text-[#1A0A3D]">Builder</option>
-                            <option value="architect" className="text-[#1A0A3D]">Architect</option>
-                          </select>
-                          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60 pointer-events-none" />
+            {showCohortForm && (
+              <div className="bg-white/95 backdrop-blur rounded-2xl p-5 shadow-xl">
+                <h4 className="font-bold text-[#1A0A3D] mb-4">Create New Cohort</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Code *</label>
+                    <Input
+                      value={cohortForm.code}
+                      onChange={(e) => setCohortForm({ ...cohortForm, code: e.target.value })}
+                      placeholder="e.g. COHORT-0"
+                      className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Name *</label>
+                    <Input
+                      value={cohortForm.name}
+                      onChange={(e) => setCohortForm({ ...cohortForm, name: e.target.value })}
+                      placeholder="Cohort name"
+                      className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Description</label>
+                    <Textarea
+                      value={cohortForm.description}
+                      onChange={(e) => setCohortForm({ ...cohortForm, description: e.target.value })}
+                      placeholder="Optional description"
+                      className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C] resize-none h-24"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Status</label>
+                    <select
+                      value={cohortForm.status}
+                      onChange={(e) => setCohortForm({ ...cohortForm, status: e.target.value as "active" | "archived" | "planning" })}
+                      className="w-full px-3 py-2 bg-white border border-[#E8E3F3] rounded-lg text-[#1A0A3D] focus:outline-none focus:border-[#492B8C]"
+                    >
+                      <option value="planning">Planning</option>
+                      <option value="active">Active</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Starts At</label>
+                    <Input
+                      type="datetime-local"
+                      value={cohortForm.starts_at}
+                      onChange={(e) => setCohortForm({ ...cohortForm, starts_at: e.target.value })}
+                      className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Ends At</label>
+                    <Input
+                      type="datetime-local"
+                      value={cohortForm.ends_at}
+                      onChange={(e) => setCohortForm({ ...cohortForm, ends_at: e.target.value })}
+                      className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <Button size="sm" onClick={handleCreateCohort} className="bg-[#00C8A7] hover:bg-[#00C8A7]/90">
+                    <Plus className="w-4 h-4 mr-1" /> Create
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { setShowCohortForm(false); setCohortForm({ code: "", name: "", description: "", status: "active", starts_at: "", ends_at: "" }); }} className="border-[#E8E3F3]">
+                    <X className="w-4 h-4 mr-1" /> Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {loading ? (
+              <div className="text-center py-12 text-white/60">Loading cohorts...</div>
+            ) : cohorts.length === 0 ? (
+              <div className="text-center py-12 bg-white/5 rounded-2xl border border-white/10">
+                <Layers className="w-12 h-12 mx-auto text-white/30 mb-3" />
+                <p className="text-white/60">No cohorts yet. Create one to get started.</p>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {cohorts.map((cohort) => (
+                  <div key={cohort.id} className="bg-white/95 backdrop-blur rounded-2xl p-4 sm:p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-2">
+                          <h4 className="font-semibold text-[#1A0A3D] text-lg">{cohort.name}</h4>
+                          <span className="px-2 py-1 rounded-full text-xs font-medium text-white bg-[#492B8C]">
+                            {cohort.code}
+                          </span>
+                          {cohort.is_current && (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium text-white bg-[#00C8A7] flex items-center gap-1">
+                              <Star className="w-3 h-3" /> Current
+                            </span>
+                          )}
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${
+                            cohort.status === "active" ? "bg-[#FF6B34]" : cohort.status === "planning" ? "bg-[#FFD13F] text-[#1A0A3D]" : "bg-gray-500"
+                          }`}>
+                            {cohort.status.charAt(0).toUpperCase() + cohort.status.slice(1)}
+                          </span>
                         </div>
+                        {cohort.description && (
+                          <p className="text-sm text-[#6B5B9E] mb-2">{cohort.description}</p>
+                        )}
+                        <p className="text-xs text-[#8A7CB5]">
+                          {cohort.enrollment_count || 0} enrolled {cohort.starts_at ? ` • Starts: ${new Date(cohort.starts_at).toLocaleDateString()}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {!cohort.is_current && (
+                          <button
+                            onClick={() => handleSetCurrentCohort(cohort.id)}
+                            className="px-3 py-1.5 rounded-lg bg-[#00C8A7]/10 text-[#00C8A7] hover:bg-[#00C8A7]/20 text-sm font-medium transition-colors"
+                            title="Set as current"
+                          >
+                            <Star className="w-4 h-4 inline mr-1" /> Set Current
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleAddWeekVideo(week.key)}
-                          disabled={!weekVideoForm.title || !weekVideoForm.url}
-                          className="px-5 py-2 rounded-xl bg-[#FF6B34] text-white font-medium text-sm hover:bg-[#E84C1E] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          onClick={() => {
+                            setSelectedCohortId(cohort.id)
+                            setActiveTab("weeks")
+                          }}
+                          className="p-2 hover:bg-[#F4F1FB] rounded-lg text-[#492B8C] transition-colors"
+                          title="Manage weeks & videos"
                         >
-                          Add Video
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCohort(cohort.id)}
+                          className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
-                  )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-                  {/* Videos list */}
-                  <div className="p-4 space-y-2">
-                    {weekVideos.length === 0 ? (
-                      <p className="text-white/40 text-sm text-center py-4">No videos yet. Click "Add Video" to get started.</p>
-                    ) : (
-                      weekVideos.map((video) => {
-                        const videoId = extractYouTubeId(video.url)
-                        return (
-                          <div key={video.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group">
-                            <div className="relative flex-shrink-0 w-20 aspect-video rounded-lg overflow-hidden bg-black/30">
-                              {videoId && (
-                                <img
-                                  src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
-                                  alt={video.title}
-                                  className="w-full h-full object-cover opacity-80"
-                                />
-                              )}
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <Play className="w-4 h-4 text-white drop-shadow" />
-                              </div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-white font-medium text-sm truncate">{video.title}</p>
-                              {video.description && <p className="text-white/50 text-xs truncate mt-0.5">{video.description}</p>}
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className={`px-1.5 py-0.5 rounded text-xs text-white ${tierConfig[video.tier_required as keyof typeof tierConfig]?.color || "bg-gray-500"}`}>
-                                  {tierConfig[video.tier_required as keyof typeof tierConfig]?.label}
-                                </span>
-                                <a href={video.url} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition-colors">
-                                  <LinkIcon className="w-3 h-3" />
-                                </a>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Cohort Weeks Tab */}
+        {activeTab === "weeks" && (
+          <div className="space-y-4">
+            {!selectedCohortId ? (
+              <div className="text-center py-12 bg-white/5 rounded-2xl border border-white/10">
+                <Calendar className="w-12 h-12 mx-auto text-white/30 mb-3" />
+                <p className="text-white/60 mb-3">Select a cohort from the Cohorts tab to manage its weeks and videos.</p>
+                <button
+                  onClick={() => setActiveTab("cohorts")}
+                  className="px-4 py-2 rounded-lg bg-[#492B8C] text-white text-sm font-medium hover:bg-[#3D2174] transition-colors"
+                >
+                  Go to Cohorts
+                </button>
+              </div>
+            ) : (
+              <>
+                {cohortWeeks.length === 0 ? (
+                  <div className="text-center py-12 bg-white/5 rounded-2xl border border-white/10">
+                    <Calendar className="w-12 h-12 mx-auto text-white/30 mb-3" />
+                    <p className="text-white/60">No weeks created for this cohort yet.</p>
+                  </div>
+                ) : (
+                  cohortWeeks.map((week) => {
+                    const weekVideos = cohortVideos.filter(v => v.week_id === week.id)
+                    const isAddingThis = addingToWeek === week.id
+                    return (
+                      <div key={week.id} className="bg-white/10 backdrop-blur rounded-2xl overflow-hidden">
+                        {/* Week header */}
+                        <div className="bg-gradient-to-r from-[#492B8C] to-[#2D1A69] px-5 py-4 flex items-center justify-between">
+                          <div>
+                            <p className="text-white/70 text-xs uppercase tracking-wider font-medium">Week {week.week_number}</p>
+                            <h3 className="text-white font-bold text-lg">{week.topic || `Week ${week.week_number}`}</h3>
+                            <p className="text-white/60 text-xs mt-0.5">{weekVideos.length} video{weekVideos.length !== 1 ? "s" : ""} {week.unlock_at ? "• Unlocked" : "• Locked"}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!week.unlock_at && (
                               <button
-                                onClick={() => handleToggleActive(video.id, video.is_active)}
-                                className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
-                                title={video.is_active ? "Hide" : "Show"}
+                                onClick={() => handleUnlockWeek(week.id)}
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#00C8A7]/20 hover:bg-[#00C8A7]/30 text-[#00C8A7] text-sm font-medium transition-colors"
+                                title="Unlock week"
                               >
-                                {video.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                <CheckCircle2 className="w-4 h-4" /> Unlock
                               </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setAddingToWeek(isAddingThis ? null : week.id)
+                                setWeekVideoForm({ title: "", description: "", url: "", tier_required: "foundational" })
+                              }}
+                              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-sm font-medium transition-colors"
+                            >
+                              {isAddingThis ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                              {isAddingThis ? "Cancel" : "Add Video"}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Add video form */}
+                        {isAddingThis && (
+                          <div className="px-5 py-4 bg-white/5 border-b border-white/10 space-y-3">
+                            <p className="text-white/70 text-sm font-medium">Add YouTube video to Week {week.week_number}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <input
+                                placeholder="Video title"
+                                value={weekVideoForm.title}
+                                onChange={e => setWeekVideoForm(p => ({ ...p, title: e.target.value }))}
+                                className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/40 text-sm"
+                              />
+                              <input
+                                placeholder="YouTube URL (e.g. https://youtu.be/abc123)"
+                                value={weekVideoForm.url}
+                                onChange={e => setWeekVideoForm(p => ({ ...p, url: e.target.value }))}
+                                className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/40 text-sm"
+                              />
+                              <input
+                                placeholder="Description (optional)"
+                                value={weekVideoForm.description}
+                                onChange={e => setWeekVideoForm(p => ({ ...p, description: e.target.value }))}
+                                className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/40 text-sm sm:col-span-2"
+                              />
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="relative">
+                                <select
+                                  value={weekVideoForm.tier_required}
+                                  onChange={e => setWeekVideoForm(p => ({ ...p, tier_required: e.target.value as Resource["tier_required"] }))}
+                                  className="appearance-none pl-3 pr-8 py-2 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:border-white/40"
+                                >
+                                  <option value="initial" className="text-[#1A0A3D]">Explorer</option>
+                                  <option value="foundational" className="text-[#1A0A3D]">Foundational</option>
+                                  <option value="builder" className="text-[#1A0A3D]">Builder</option>
+                                  <option value="architect" className="text-[#1A0A3D]">Architect</option>
+                                </select>
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60 pointer-events-none" />
+                              </div>
                               <button
-                                onClick={() => handleDeleteResource(video.id)}
-                                className="p-1.5 rounded-lg hover:bg-red-500/20 text-white/60 hover:text-red-400 transition-colors"
+                                onClick={() => handleAddCohortVideo(week.id)}
+                                disabled={!weekVideoForm.title || !weekVideoForm.url}
+                                className="px-5 py-2 rounded-xl bg-[#FF6B34] text-white font-medium text-sm hover:bg-[#E84C1E] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                Add Video
                               </button>
                             </div>
                           </div>
-                        )
-                      })
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+                        )}
+
+                        {/* Videos list */}
+                        <div className="p-4 space-y-2">
+                          {weekVideos.length === 0 ? (
+                            <p className="text-white/40 text-sm text-center py-4">No videos yet. Click "Add Video" to get started.</p>
+                          ) : (
+                            weekVideos.map((video) => {
+                              const videoId = extractYouTubeId(video.youtube_url)
+                              return (
+                                <div key={video.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group">
+                                  <div className="relative flex-shrink-0 w-20 aspect-video rounded-lg overflow-hidden bg-black/30">
+                                    {videoId && (
+                                      <img
+                                        src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
+                                        alt={video.title}
+                                        className="w-full h-full object-cover opacity-80"
+                                      />
+                                    )}
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <Play className="w-4 h-4 text-white drop-shadow" />
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-white font-medium text-sm truncate">{video.title}</p>
+                                    {video.description && <p className="text-white/50 text-xs truncate mt-0.5">{video.description}</p>}
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className={`px-1.5 py-0.5 rounded text-xs text-white ${tierConfig[video.tier_required as keyof typeof tierConfig]?.color || "bg-gray-500"}`}>
+                                        {tierConfig[video.tier_required as keyof typeof tierConfig]?.label}
+                                      </span>
+                                      <a href={video.youtube_url} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition-colors">
+                                        <LinkIcon className="w-3 h-3" />
+                                      </a>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={() => handleDeleteCohortVideo(video.id)}
+                                      className="p-1.5 rounded-lg hover:bg-red-500/20 text-white/60 hover:text-red-400 transition-colors"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )
+                            })
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </>
+            )}
           </div>
         )}
 
