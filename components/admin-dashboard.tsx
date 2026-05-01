@@ -1283,19 +1283,151 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         {/* Cohort Weeks Tab */}
         {activeTab === "weeks" && (
           <div className="space-y-4">
-            {!selectedCohortId ? (
-              <div className="text-center py-12 bg-white/5 rounded-2xl border border-white/10">
-                <Calendar className="w-12 h-12 mx-auto text-white/30 mb-3" />
-                <p className="text-white/60 mb-3">Select a cohort from the Cohorts tab to manage its weeks and videos.</p>
-                <button
-                  onClick={() => setActiveTab("cohorts")}
-                  className="px-4 py-2 rounded-lg bg-[#492B8C] text-white text-sm font-medium hover:bg-[#3D2174] transition-colors"
-                >
-                  Go to Cohorts
-                </button>
+            {/* Show Legacy Weeks for Cohort 0 (Always visible) */}
+            <div>
+              <div className="mb-4 p-4 bg-white/10 rounded-lg border border-white/20">
+                <p className="text-white/70 text-sm"><strong>Cohort 0 (Legacy)</strong> - Current live cohort. Videos below are synced across all users by tier requirements.</p>
               </div>
-            ) : (
-              <>
+              
+              {weekConfig.map((week) => {
+                const weekVideos = resources.filter(r => r.category === week.key && r.type === "video")
+                const isAddingThis = addingToWeek === week.key
+                return (
+                  <div key={week.key} className="bg-white/10 backdrop-blur rounded-2xl overflow-hidden">
+                    {/* Week header */}
+                    <div className={`bg-gradient-to-r ${week.color} px-5 py-4 flex items-center justify-between`}>
+                      <div>
+                        <p className="text-white/70 text-xs uppercase tracking-wider font-medium">{week.label}</p>
+                        <h3 className="text-white font-bold text-lg">{week.topic}</h3>
+                        <p className="text-white/60 text-xs mt-0.5">{weekVideos.length} video{weekVideos.length !== 1 ? "s" : ""} &middot; Requires {week.tier}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setAddingToWeek(isAddingThis ? null : week.key)
+                          setWeekVideoForm({ title: "", description: "", url: "", tier_required: week.tier as Resource["tier_required"] })
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white text-sm font-medium transition-colors"
+                      >
+                        {isAddingThis ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                        {isAddingThis ? "Cancel" : "Add Video"}
+                      </button>
+                    </div>
+
+                    {/* Add video form */}
+                    {isAddingThis && (
+                      <div className="px-5 py-4 bg-white/5 border-b border-white/10 space-y-3">
+                        <p className="text-white/70 text-sm font-medium">Add YouTube video to {week.label}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <input
+                            placeholder="Video title"
+                            value={weekVideoForm.title}
+                            onChange={e => setWeekVideoForm(p => ({ ...p, title: e.target.value }))}
+                            className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/40 text-sm"
+                          />
+                          <input
+                            placeholder="YouTube URL (e.g. https://youtu.be/abc123)"
+                            value={weekVideoForm.url}
+                            onChange={e => setWeekVideoForm(p => ({ ...p, url: e.target.value }))}
+                            className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/40 text-sm"
+                          />
+                          <input
+                            placeholder="Description (optional)"
+                            value={weekVideoForm.description}
+                            onChange={e => setWeekVideoForm(p => ({ ...p, description: e.target.value }))}
+                            className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/40 text-sm sm:col-span-2"
+                          />
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <select
+                              value={weekVideoForm.tier_required}
+                              onChange={e => setWeekVideoForm(p => ({ ...p, tier_required: e.target.value as Resource["tier_required"] }))}
+                              className="appearance-none pl-3 pr-8 py-2 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:border-white/40"
+                            >
+                              <option value="initial" className="text-[#1A0A3D]">Explorer</option>
+                              <option value="foundational" className="text-[#1A0A3D]">Foundational</option>
+                              <option value="builder" className="text-[#1A0A3D]">Builder</option>
+                              <option value="architect" className="text-[#1A0A3D]">Architect</option>
+                            </select>
+                            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60 pointer-events-none" />
+                          </div>
+                          <button
+                            onClick={() => handleAddWeekVideo(week.key)}
+                            disabled={!weekVideoForm.title || !weekVideoForm.url}
+                            className="px-5 py-2 rounded-xl bg-[#FF6B34] text-white font-medium text-sm hover:bg-[#E84C1E] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Add Video
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Videos list */}
+                    <div className="p-4 space-y-2">
+                      {weekVideos.length === 0 ? (
+                        <p className="text-white/40 text-sm text-center py-4">No videos yet. Click "Add Video" to get started.</p>
+                      ) : (
+                        weekVideos.map((video) => {
+                          const videoId = extractYouTubeId(video.url)
+                          return (
+                            <div key={video.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group">
+                              <div className="relative flex-shrink-0 w-20 aspect-video rounded-lg overflow-hidden bg-black/30">
+                                {videoId && (
+                                  <img
+                                    src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
+                                    alt={video.title}
+                                    className="w-full h-full object-cover opacity-80"
+                                  />
+                                )}
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <Play className="w-4 h-4 text-white drop-shadow" />
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white font-medium text-sm truncate">{video.title}</p>
+                                {video.description && <p className="text-white/50 text-xs truncate mt-0.5">{video.description}</p>}
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className={`px-1.5 py-0.5 rounded text-xs text-white ${tierConfig[video.tier_required as keyof typeof tierConfig]?.color || "bg-gray-500"}`}>
+                                    {tierConfig[video.tier_required as keyof typeof tierConfig]?.label}
+                                  </span>
+                                  <a href={video.url} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition-colors">
+                                    <LinkIcon className="w-3 h-3" />
+                                  </a>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => handleToggleActive(video.id, video.is_active)}
+                                  className="p-1.5 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+                                  title={video.is_active ? "Hide" : "Show"}
+                                >
+                                  {video.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteResource(video.id)}
+                                  className="p-1.5 rounded-lg hover:bg-red-500/20 text-white/60 hover:text-red-400 transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Show New Cohort Weeks when a cohort is selected */}
+            {selectedCohortId && (
+              <div>
+                <div className="my-6 border-t border-white/20" />
+                <div className="mb-4 p-4 bg-white/10 rounded-lg border border-white/20">
+                  <p className="text-white/70 text-sm"><strong>Cohort {cohorts.find(c => c.id === selectedCohortId)?.code}</strong> - Manage custom weeks and videos for this cohort.</p>
+                </div>
+
                 {cohortWeeks.length === 0 ? (
                   <div className="text-center py-12 bg-white/5 rounded-2xl border border-white/10">
                     <Calendar className="w-12 h-12 mx-auto text-white/30 mb-3" />
@@ -1348,6 +1480,98 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                                 onChange={e => setWeekVideoForm(p => ({ ...p, title: e.target.value }))}
                                 className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/40 text-sm"
                               />
+                              <input
+                                placeholder="YouTube URL (e.g. https://youtu.be/abc123)"
+                                value={weekVideoForm.url}
+                                onChange={e => setWeekVideoForm(p => ({ ...p, url: e.target.value }))}
+                                className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/40 text-sm"
+                              />
+                              <input
+                                placeholder="Description (optional)"
+                                value={weekVideoForm.description}
+                                onChange={e => setWeekVideoForm(p => ({ ...p, description: e.target.value }))}
+                                className="px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:border-white/40 text-sm sm:col-span-2"
+                              />
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="relative">
+                                <select
+                                  value={weekVideoForm.tier_required}
+                                  onChange={e => setWeekVideoForm(p => ({ ...p, tier_required: e.target.value as Resource["tier_required"] }))}
+                                  className="appearance-none pl-3 pr-8 py-2 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:border-white/40"
+                                >
+                                  <option value="initial" className="text-[#1A0A3D]">Explorer</option>
+                                  <option value="foundational" className="text-[#1A0A3D]">Foundational</option>
+                                  <option value="builder" className="text-[#1A0A3D]">Builder</option>
+                                  <option value="architect" className="text-[#1A0A3D]">Architect</option>
+                                </select>
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/60 pointer-events-none" />
+                              </div>
+                              <button
+                                onClick={() => handleAddCohortVideo(week.id)}
+                                disabled={!weekVideoForm.title || !weekVideoForm.url}
+                                className="px-5 py-2 rounded-xl bg-[#FF6B34] text-white font-medium text-sm hover:bg-[#E84C1E] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              >
+                                Add Video
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Videos list */}
+                        <div className="p-4 space-y-2">
+                          {weekVideos.length === 0 ? (
+                            <p className="text-white/40 text-sm text-center py-4">No videos yet. Click "Add Video" to get started.</p>
+                          ) : (
+                            weekVideos.map((video) => {
+                              const videoId = extractYouTubeId(video.youtube_url)
+                              return (
+                                <div key={video.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group">
+                                  <div className="relative flex-shrink-0 w-20 aspect-video rounded-lg overflow-hidden bg-black/30">
+                                    {videoId && (
+                                      <img
+                                        src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
+                                        alt={video.title}
+                                        className="w-full h-full object-cover opacity-80"
+                                      />
+                                    )}
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <Play className="w-4 h-4 text-white drop-shadow" />
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-white font-medium text-sm truncate">{video.title}</p>
+                                    {video.description && <p className="text-white/50 text-xs truncate mt-0.5">{video.description}</p>}
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className={`px-1.5 py-0.5 rounded text-xs text-white ${tierConfig[video.tier_required as keyof typeof tierConfig]?.color || "bg-gray-500"}`}>
+                                        {tierConfig[video.tier_required as keyof typeof tierConfig]?.label}
+                                      </span>
+                                      <a href={video.youtube_url} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition-colors">
+                                        <LinkIcon className="w-3 h-3" />
+                                      </a>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={() => handleDeleteCohortVideo(video.id)}
+                                      className="p-1.5 rounded-lg hover:bg-red-500/20 text-white/60 hover:text-red-400 transition-colors"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )
+                            })
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            )}
+          </div>
+        )}
                               <input
                                 placeholder="YouTube URL (e.g. https://youtu.be/abc123)"
                                 value={weekVideoForm.url}
