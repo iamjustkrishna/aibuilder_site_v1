@@ -35,6 +35,7 @@ import {
   Layers,
   Star,
   CheckCircle2,
+  Film,
 } from "lucide-react"
 import Link from "next/link"
 interface Resource {
@@ -137,7 +138,7 @@ const weekConfig = [
 ]
 
 export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
-  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "mail" | "sessions" | "activity" | "cohorts">("cohorts")
+  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "mail" | "sessions" | "activity" | "cohorts" | "curated-videos">("cohorts")
   const [resources, setResources] = useState<Resource[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [sessions, setSessions] = useState<SessionRecord[]>([])
@@ -221,6 +222,19 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     selected_user_ids: [] as string[],
     is_active: true,
   })
+  const [curatedVideos, setCuratedVideos] = useState<CohortVideoConfig[]>([])
+  const [selectedCuratedWeek, setSelectedCuratedWeek] = useState<string>("week-1")
+  const [githubJsonUrl, setGithubJsonUrl] = useState<string>("")
+  const [showCuratedVideoForm, setShowCuratedVideoForm] = useState(false)
+  const [curatedVideoForm, setCuratedVideoForm] = useState({
+    title: "",
+    description: "",
+    youtube_url: "",
+    tier_required: "foundational" as Resource["tier_required"],
+  })
+  const [loadingCuratedVideos, setLoadingCuratedVideos] = useState(false)
+  const [syncingFromGithub, setSyncingFromGithub] = useState(false)
+  const [curatedVideoMessage, setCuratedVideoMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
   const mailFieldClassName = "border-[#E8E3F3] bg-white text-[#1A0A3D] placeholder:text-[#6B5B9E] focus:border-[#492B8C] focus:ring-[#492B8C]"
   const sessionFieldClassName = "border-[#E8E3F3] bg-white text-[#1A0A3D] placeholder:text-[#6B5B9E] focus:border-[#492B8C] focus:ring-[#492B8C]"
   const supabase = createClient()
@@ -300,6 +314,8 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
           await fetchCohortDetails(data[0].id)
         }
       }
+    } else if (activeTab === "curated-videos") {
+      await fetchCuratedVideos(selectedCuratedWeek)
     } else if (activeTab === "sessions") {
       const [sessionsRes, usersRes] = await Promise.all([
         fetch("/api/admin/sessions"),
@@ -984,6 +1000,109 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     window.location.href = "/"
   }
 
+  async function fetchCuratedVideos(weekKey: string) {
+    setLoadingCuratedVideos(true)
+    try {
+      const weekNum = parseInt(weekKey.replace("week-", ""))
+      const res = await fetch(`/api/learning/curated?week=${weekNum}`)
+      if (res.ok) {
+        const data = await res.json()
+        setCuratedVideos(data || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch curated videos:", error)
+      setCuratedVideoMessage({ type: "error", text: "Failed to fetch videos" })
+    } finally {
+      setLoadingCuratedVideos(false)
+    }
+  }
+
+  async function handleAddCuratedVideo() {
+    setCuratedVideoMessage(null)
+    if (!curatedVideoForm.title || !curatedVideoForm.youtube_url) {
+      setCuratedVideoMessage({ type: "error", text: "Title and YouTube URL are required" })
+      return
+    }
+    
+    try {
+      const weekNum = parseInt(selectedCuratedWeek.replace("week-", ""))
+      const res = await fetch("/api/learning/curated", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          week_number: weekNum,
+          ...curatedVideoForm,
+        }),
+      })
+      
+      if (res.ok) {
+        setCuratedVideoMessage({ type: "success", text: "Video added successfully" })
+        setCuratedVideoForm({ title: "", description: "", youtube_url: "", tier_required: "foundational" })
+        await fetchCuratedVideos(selectedCuratedWeek)
+        setShowCuratedVideoForm(false)
+      } else {
+        const data = await res.json()
+        setCuratedVideoMessage({ type: "error", text: data.error || "Failed to add video" })
+      }
+    } catch (error) {
+      console.error("Failed to add curated video:", error)
+      setCuratedVideoMessage({ type: "error", text: "Failed to add video" })
+    }
+  }
+
+  async function handleDeleteCuratedVideo(videoId: string) {
+    try {
+      const res = await fetch(`/api/learning/curated?id=${videoId}`, {
+        method: "DELETE",
+      })
+      
+      if (res.ok) {
+        setCuratedVideoMessage({ type: "success", text: "Video deleted successfully" })
+        await fetchCuratedVideos(selectedCuratedWeek)
+      } else {
+        const data = await res.json()
+        setCuratedVideoMessage({ type: "error", text: data.error || "Failed to delete video" })
+      }
+    } catch (error) {
+      console.error("Failed to delete curated video:", error)
+      setCuratedVideoMessage({ type: "error", text: "Failed to delete video" })
+    }
+  }
+
+  async function handleSyncFromGithub() {
+    setCuratedVideoMessage(null)
+    if (!githubJsonUrl.trim()) {
+      setCuratedVideoMessage({ type: "error", text: "GitHub JSON URL is required" })
+      return
+    }
+    
+    setSyncingFromGithub(true)
+    try {
+      const res = await fetch("/api/learning/curated", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "sync-github",
+          github_json_url: githubJsonUrl,
+        }),
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        setCuratedVideoMessage({ type: "success", text: `Synced ${data.synced_count || 0} videos from GitHub` })
+        await fetchCuratedVideos(selectedCuratedWeek)
+      } else {
+        const data = await res.json()
+        setCuratedVideoMessage({ type: "error", text: data.error || "Failed to sync from GitHub" })
+      }
+    } catch (error) {
+      console.error("Failed to sync from GitHub:", error)
+      setCuratedVideoMessage({ type: "error", text: "Failed to sync from GitHub" })
+    } finally {
+      setSyncingFromGithub(false)
+    }
+  }
+
   const filteredResources = resources.filter(r => 
     r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     r.description?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -1109,6 +1228,17 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
             >
               <TrendingUp className="w-4 h-4" />
               <span className="text-sm">Activity</span>
+            </button>
+            <button
+              onClick={() => { setActiveTab("curated-videos"); setSearchQuery(""); }}
+              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeTab === "curated-videos"
+                  ? "bg-white text-[#1A0A3D] shadow-lg"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <Film className="w-4 h-4" />
+              <span className="text-sm">Curated Videos</span>
             </button>
           </div>
           
@@ -2861,6 +2991,216 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                         })}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Curated Videos Tab */}
+        {activeTab === "curated-videos" && (
+          <div className="space-y-4">
+            <div className="bg-white/95 backdrop-blur rounded-2xl p-5 border border-white/10 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-[#1A0A3D]">Learn AI - Curated Videos</h3>
+                  <p className="text-sm text-[#6B5B9E]">Manage videos for each week of learning</p>
+                </div>
+                <Button
+                  onClick={() => setShowCuratedVideoForm(!showCuratedVideoForm)}
+                  className="bg-[#492B8C] hover:bg-[#3D2174] text-white rounded-full"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {showCuratedVideoForm ? "Close" : "Add Video"}
+                </Button>
+              </div>
+
+              {/* Week Selector */}
+              <div className="flex gap-2 mb-4 pb-4 border-b border-[#E8E3F3]">
+                {weekConfig.map((week) => (
+                  <button
+                    key={week.key}
+                    onClick={() => setSelectedCuratedWeek(week.key)}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
+                      selectedCuratedWeek === week.key
+                        ? `bg-gradient-to-r ${week.color} text-white`
+                        : "bg-[#F4F1FB] text-[#6B5B9E] hover:bg-[#E8E3F3]"
+                    }`}
+                  >
+                    {week.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Add Video Form */}
+              {showCuratedVideoForm && (
+                <div className="bg-[#F4F1FB] rounded-xl p-4 mb-4 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input
+                      type="text"
+                      placeholder="Video title"
+                      value={curatedVideoForm.title}
+                      onChange={(e) => setCuratedVideoForm({ ...curatedVideoForm, title: e.target.value })}
+                      className="px-3 py-2 rounded-lg border border-[#E8E3F3] bg-white text-[#1A0A3D] placeholder-[#6B5B9E] focus:outline-none focus:border-[#492B8C]"
+                    />
+                    <input
+                      type="text"
+                      placeholder="YouTube URL"
+                      value={curatedVideoForm.youtube_url}
+                      onChange={(e) => setCuratedVideoForm({ ...curatedVideoForm, youtube_url: e.target.value })}
+                      className="px-3 py-2 rounded-lg border border-[#E8E3F3] bg-white text-[#1A0A3D] placeholder-[#6B5B9E] focus:outline-none focus:border-[#492B8C]"
+                    />
+                  </div>
+                  <textarea
+                    placeholder="Description (optional)"
+                    value={curatedVideoForm.description}
+                    onChange={(e) => setCuratedVideoForm({ ...curatedVideoForm, description: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-[#E8E3F3] bg-white text-[#1A0A3D] placeholder-[#6B5B9E] focus:outline-none focus:border-[#492B8C] text-sm"
+                    rows={3}
+                  />
+                  <div className="relative">
+                    <select
+                      value={curatedVideoForm.tier_required}
+                      onChange={(e) => setCuratedVideoForm({ ...curatedVideoForm, tier_required: e.target.value as Resource["tier_required"] })}
+                      className="w-full appearance-none pl-3 pr-8 py-2 bg-white border border-[#E8E3F3] rounded-lg text-[#1A0A3D] text-sm focus:outline-none focus:border-[#492B8C]"
+                    >
+                      <option value="initial">Explorer</option>
+                      <option value="foundational">Foundational</option>
+                      <option value="builder">Builder</option>
+                      <option value="architect">Architect</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B5B9E] pointer-events-none" />
+                  </div>
+                  {curatedVideoMessage && (
+                    <div
+                      className={`rounded-lg px-3 py-2 text-sm ${
+                        curatedVideoMessage.type === "error"
+                          ? "bg-red-50 text-red-700 border border-red-200"
+                          : curatedVideoMessage.type === "success"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : "bg-blue-50 text-blue-700 border border-blue-200"
+                      }`}
+                    >
+                      {curatedVideoMessage.text}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleAddCuratedVideo}
+                      className="bg-[#492B8C] hover:bg-[#3D2174] text-white"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Video
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setShowCuratedVideoForm(false)
+                        setCuratedVideoMessage(null)
+                      }}
+                      variant="outline"
+                      className="border-[#E8E3F3] text-[#6B5B9E]"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Sync from GitHub */}
+              <div className="bg-[#F4F1FB] rounded-xl p-4 mb-6 space-y-3">
+                <h4 className="font-semibold text-[#1A0A3D] text-sm">Sync from GitHub</h4>
+                <p className="text-xs text-[#6B5B9E]">Automatically sync videos from a GitHub JSON file. Set up a GitHub Actions workflow to update the JSON file daily.</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="https://raw.githubusercontent.com/your-repo/videos.json"
+                    value={githubJsonUrl}
+                    onChange={(e) => setGithubJsonUrl(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-lg border border-[#E8E3F3] bg-white text-[#1A0A3D] placeholder-[#6B5B9E] focus:outline-none focus:border-[#492B8C] text-sm"
+                  />
+                  <Button
+                    onClick={handleSyncFromGithub}
+                    disabled={syncingFromGithub}
+                    className="bg-[#00C8A7] hover:bg-[#00C8A7]/90 text-white"
+                  >
+                    {syncingFromGithub ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sync"}
+                  </Button>
+                </div>
+                {curatedVideoMessage && (
+                  <div
+                    className={`rounded-lg px-3 py-2 text-sm ${
+                      curatedVideoMessage.type === "error"
+                        ? "bg-red-50 text-red-700 border border-red-200"
+                        : curatedVideoMessage.type === "success"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-blue-50 text-blue-700 border border-blue-200"
+                    }`}
+                  >
+                    {curatedVideoMessage.text}
+                  </div>
+                )}
+              </div>
+
+              {/* Videos List */}
+              {loadingCuratedVideos ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-[#492B8C] mr-2" />
+                  <span className="text-[#6B5B9E]">Loading videos...</span>
+                </div>
+              ) : curatedVideos.length === 0 ? (
+                <div className="text-center py-8 bg-[#F4F1FB] rounded-xl">
+                  <Film className="w-12 h-12 mx-auto text-[#6B5B9E]/40 mb-2" />
+                  <p className="text-[#6B5B9E]">No videos added for {weekConfig.find(w => w.key === selectedCuratedWeek)?.label}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {curatedVideos.map((video) => {
+                    const videoId = video.youtube_url.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]+)/)?.[1]
+                    return (
+                      <div
+                        key={video.id}
+                        className="flex gap-4 p-4 rounded-xl bg-[#F4F1FB] hover:bg-[#E8E3F3] transition-colors items-start group"
+                      >
+                        {videoId && (
+                          <div className="relative flex-shrink-0 w-24 aspect-video rounded-lg overflow-hidden bg-black/30">
+                            <img
+                              src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
+                              alt={video.title}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <Play className="w-4 h-4 text-white drop-shadow" />
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-[#1A0A3D] truncate">{video.title}</h4>
+                          {video.description && (
+                            <p className="text-sm text-[#6B5B9E] line-clamp-2 mt-1">{video.description}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className={`px-2 py-0.5 rounded text-xs text-white font-medium ${tierConfig[video.tier_required as keyof typeof tierConfig]?.color || "bg-gray-500"}`}>
+                              {tierConfig[video.tier_required as keyof typeof tierConfig]?.label}
+                            </span>
+                            <a
+                              href={video.youtube_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#492B8C] hover:text-[#2D1A69] transition-colors"
+                            >
+                              <LinkIcon className="w-4 h-4" />
+                            </a>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteCuratedVideo(video.id)}
+                          className="p-2 rounded-lg hover:bg-red-50 text-[#6B5B9E] hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>

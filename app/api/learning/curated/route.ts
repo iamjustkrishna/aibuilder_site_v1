@@ -1,6 +1,7 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { extractYouTubeId } from "@/lib/learning"
+import { isAdminEmail } from "@/lib/admin"
 
 export async function GET(request: Request) {
   const supabase = await createClient()
@@ -127,4 +128,242 @@ export async function GET(request: Request) {
   })
 }
 
+export async function POST(request: Request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user?.email) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+    }
+
+    const isAdmin = await isAdminEmail(user.email)
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const { action, title, description, youtube_url, tier_required, week_number, github_json_url } = body
+
+    // Handle GitHub sync action
+    if (action === "sync-github" || github_json_url) {
+      if (!github_json_url) {
+        return NextResponse.json(
+          { error: "GitHub JSON URL is required for sync action" },
+          { status: 400 }
+        )
+      }
+
+      try {
+        // Fetch JSON from GitHub
+        const response = await fetch(github_json_url)
+        if (!response.ok) {
+          return NextResponse.json(
+            { error: "Failed to fetch GitHub JSON file" },
+            { status: 400 }
+          )
+        }
+
+        const githubData = await response.json()
+        let syncedCount = 0
+
+        // Assuming the JSON has a videos array with week structure
+        const serviceClient = createServiceClient()
+        const { data: currentCohort } = await serviceClient
+          .from("cohorts")
+          .select("id")
+          .eq("is_current", true)
+          .limit(1)
+          .single()
+
+        if (!currentCohort) {
+          return NextResponse.json(
+            { error: "No current cohort found" },
+            { status: 404 }
+          )
+        }
+
+        // Handle different JSON structures
+        if (Array.isArray(githubData)) {
+          // Direct array of videos
+          for (const video of githubData) {
+            if (video.title && video.youtube_url && video.week_number) {
+              const { data: lastVideo } = await serviceClient
+                .from("cohort_video_configs")
+                .select("sort_order")
+                .eq("cohort_id", currentCohort.id)
+                .eq("week_number", video.week_number)
+                .order("sort_order", { ascending: false })
+                .limit(1)
+                .single()
+
+              const nextSortOrder = (lastVideo?.sort_order || 0) + 1
+
+              await serviceClient
+                .from("cohort_video_configs")
+                .insert({
+                  cohort_id: currentCohort.id,
+                  week_number: video.week_number,
+                  title: video.title,
+                  description: video.description || null,
+                  youtube_url: video.youtube_url,
+                  tier_required: video.tier_required || "foundational",
+                  sort_order: nextSortOrder,
+                })
+
+              syncedCount++
+            }
+          }
+        } else if (githubData.videos && Array.isArray(githubData.videos)) {
+          // Nested videos array
+          for (const video of githubData.videos) {
+            if (video.title && video.youtube_url && video.week_number) {
+              const { data: lastVideo } = await serviceClient
+                .from("cohort_video_configs")
+                .select("sort_order")
+                .eq("cohort_id", currentCohort.id)
+                .eq("week_number", video.week_number)
+                .order("sort_order", { ascending: false })
+                .limit(1)
+                .single()
+
+              const nextSortOrder = (lastVideo?.sort_order || 0) + 1
+
+              await serviceClient
+                .from("cohort_video_configs")
+                .insert({
+                  cohort_id: currentCohort.id,
+                  week_number: video.week_number,
+                  title: video.title,
+                  description: video.description || null,
+                  youtube_url: video.youtube_url,
+                  tier_required: video.tier_required || "foundational",
+                  sort_order: nextSortOrder,
+                })
+
+              syncedCount++
+            }
+          }
+        }
+
+        return NextResponse.json({ synced_count: syncedCount })
+      } catch (error) {
+        console.error("GitHub sync error:", error)
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : "Failed to sync from GitHub" },
+          { status: 500 }
+        )
+      }
+    }
+
+    // Handle add video action (default)
+    if (!title || !youtube_url || !week_number) {
+      return NextResponse.json(
+        { error: "Title, YouTube URL, and week number are required" },
+        { status: 400 }
+      )
+    }
+
+    const serviceClient = createServiceClient()
+
+    // Get current cohort
+    const { data: currentCohort, error: cohortError } = await serviceClient
+      .from("cohorts")
+      .select("id")
+      .eq("is_current", true)
+      .limit(1)
+      .single()
+
+    if (cohortError || !currentCohort) {
+      return NextResponse.json(
+        { error: "No current cohort found" },
+        { status: 404 }
+      )
+    }
+
+    // Get the highest sort_order for this week to auto-increment
+    const { data: lastVideo } = await serviceClient
+      .from("cohort_video_configs")
+      .select("sort_order")
+      .eq("cohort_id", currentCohort.id)
+      .eq("week_number", week_number)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .single()
+
+    const nextSortOrder = (lastVideo?.sort_order || 0) + 1
+
+    // Create new video
+    const { data: newVideo, error: insertError } = await serviceClient
+      .from("cohort_video_configs")
+      .insert({
+        cohort_id: currentCohort.id,
+        week_number,
+        title,
+        description: description || null,
+        youtube_url,
+        tier_required: tier_required || "foundational",
+        sort_order: nextSortOrder,
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      throw new Error(insertError.message)
+    }
+
+    return NextResponse.json(newVideo, { status: 201 })
+  } catch (error) {
+    console.error("POST curated videos error:", error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to create video" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user?.email) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+    }
+
+    const isAdmin = await isAdminEmail(user.email)
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const videoId = searchParams.get("id")
+
+    if (!videoId) {
+      return NextResponse.json(
+        { error: "Video ID is required" },
+        { status: 400 }
+      )
+    }
+
+    const serviceClient = createServiceClient()
+
+    const { error: deleteError } = await serviceClient
+      .from("cohort_video_configs")
+      .delete()
+      .eq("id", videoId)
+
+    if (deleteError) {
+      throw new Error(deleteError.message)
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("DELETE curated videos error:", error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to delete video" },
+      { status: 500 }
+    )
+  }
+}
 

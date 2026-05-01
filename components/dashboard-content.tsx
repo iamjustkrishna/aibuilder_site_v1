@@ -810,19 +810,21 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
           
           {/* Week Selector */}
           <div className="mb-4 flex flex-wrap gap-2">
-            {cohortWeeks.map((week) => (
-              <button
-                key={week.key}
-                onClick={() => setActiveWeek(week.key)}
-                className={`px-4 py-2 rounded-full font-medium text-sm transition-colors ${
-                  activeWeek === week.key
-                    ? `${week.color.split(' ')[0]} text-white`
-                    : "bg-[#F4F1FB] text-[#6B5B9E] hover:bg-[#E8E3F3]"
-                }`}
-              >
-                {week.label}
-              </button>
-            ))}
+            {cohortWeeks.map((week) => {
+              const isActive = activeWeek === week.key
+              const bgColorClass = isActive ? week.color : "bg-[#F4F1FB]"
+              return (
+                <button
+                  key={week.key}
+                  onClick={() => setActiveWeek(week.key)}
+                  className={`px-4 py-2 rounded-full font-medium text-sm transition-colors ${bgColorClass} ${
+                    isActive ? "text-white" : "text-[#6B5B9E] hover:bg-[#E8E3F3]"
+                  }`}
+                >
+                  {week.label}
+                </button>
+              )
+            })}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
