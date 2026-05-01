@@ -750,13 +750,17 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     setSessionFormMessage({ type: "info", text: editingSessionId ? "Updating session..." : "Saving session..." })
 
     try {
+      // Convert local datetime to UTC ISO string
+      const localDate = new Date(sessionForm.session_at)
+      const utcIsoString = localDate.toISOString()
+
       const res = await fetch("/api/admin/sessions", {
         method: editingSessionId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: editingSessionId,
           ...sessionForm,
-          session_at: sessionForm.session_at + "Z",
+          session_at: utcIsoString,
         }),
       })
 
@@ -787,11 +791,19 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
 
   function startEditSession(session: SessionRecord) {
     setEditingSessionId(session.id)
+    const sessionDate = new Date(session.session_at)
+    const year = sessionDate.getFullYear()
+    const month = String(sessionDate.getMonth() + 1).padStart(2, '0')
+    const day = String(sessionDate.getDate()).padStart(2, '0')
+    const hours = String(sessionDate.getHours()).padStart(2, '0')
+    const minutes = String(sessionDate.getMinutes()).padStart(2, '0')
+    const localDatetimeString = `${year}-${month}-${day}T${hours}:${minutes}`
+    
     setSessionForm({
       title: session.title,
       description: session.description || "",
       meet_link: session.meet_link,
-      session_at: session.session_at.slice(0, 16),
+      session_at: localDatetimeString,
       visibility_scope: session.visibility_scope,
       audience_tiers: session.audience_tiers || [],
       selected_user_ids: session.selected_user_ids || [],
