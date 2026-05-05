@@ -38,7 +38,7 @@ export function Hero() {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#F4F1FB] border border-[#E8E3F3] mb-8"
         >
           <span className="w-2 h-2 rounded-full bg-[#FF6B34] pulse-glow" />
-          <span className="text-sm text-[#492B8C]">Season 01 | Limited Seats</span>
+          <span className="text-sm text-[#492B8C]">Season 0 | Join Season 1, Register Now</span>
         </motion.div>
 
         {/* Headline with text mask animation */}

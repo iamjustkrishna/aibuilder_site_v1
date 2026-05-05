@@ -42,7 +42,7 @@ export function Footer() {
             {/* Season Badge */}
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#492B8C]/50 border border-[#492B8C]">
               <span className="w-2 h-2 rounded-full bg-[#FF6B34] pulse-glow" />
-              <span className="text-xs text-[#C3AFFF]">Season 01 Open</span>
+              <span className="text-xs text-[#C3AFFF]">Season 0 | Join Season 1</span>
             </div>
           </div>
 

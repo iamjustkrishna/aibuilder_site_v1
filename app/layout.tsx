@@ -25,7 +25,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "AI Builder Cohort | Season 01 - Build AI, Launch It, Keep It All",
+  title: "AI Builder Cohort | Season 0 Complete - Join Season 1 | Build AI, Launch It, Keep It All",
   description: "A 4-week cohort where you go from zero to shipping real AI apps and agents, then publish them on our marketplace and keep 100% of your earnings.",
   generator: 'v0.app'
 }
