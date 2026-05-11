@@ -4,6 +4,7 @@ import { Manrope, DM_Sans, Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Chatbot } from "@/components/chatbot"
 import { ActivityTracker } from "@/components/activity-tracker"
+import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
 const manrope = Manrope({
@@ -42,6 +43,7 @@ export default function RootLayout({
         {children}
         <ActivityTracker />
         <Chatbot />
+        <Toaster position="top-center" richColors closeButton />
         <Analytics />
       </body>
     </html>

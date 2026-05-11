@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react"
 import { motion } from "framer-motion"
+import { useRouter } from "next/navigation"
 import { CheckCircle2, Loader2, Mail, Phone, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -53,10 +54,11 @@ const AVAILABILITY_OPTIONS = [
 ] as const
 
 export function CohortRegistrationForm() {
+  const router = useRouter()
   const [currentCohort, setCurrentCohort] = useState<CurrentCohort | null>(null)
   const [loadingCohort, setLoadingCohort] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null)
+  const [message, setMessage] = useState<{ type: "error"; text: string } | null>(null)
   const [form, setForm] = useState<FormState>({
     full_name: "",
     phone_number: "",
@@ -72,9 +74,9 @@ export function CohortRegistrationForm() {
   useEffect(() => {
     async function loadCurrentCohort() {
       try {
-        const res = await fetch("/api/public/cohorts/current")
+        const res = await fetch("/api/public/cohorts/next")
         const data = await res.json()
-        setCurrentCohort(data.current_cohort || null)
+        setCurrentCohort(data.next_cohort || null)
       } catch (error) {
         console.error("Failed to load current cohort:", error)
         setCurrentCohort(null)
@@ -110,21 +112,7 @@ export function CohortRegistrationForm() {
         return
       }
 
-      setMessage({
-        type: "success",
-        text: `Your registration for ${data.cohort?.name || "the current cohort"} has been received.`,
-      })
-      setForm({
-        full_name: "",
-        phone_number: "",
-        email: "",
-        project_description: "",
-        experience_level: "beginner",
-        daily_time_commitment_hours: "",
-        preferred_timing_ist: "8:00 PM - 9:00 PM",
-        preferred_timing_other: "",
-        availability: "weekdays",
-      })
+      router.push(`/register/success?cohort=${encodeURIComponent(data.cohort?.name || "Cohort 1")}`)
     } catch (error) {
       console.error("Failed to submit cohort registration:", error)
       setMessage({ type: "error", text: "Something went wrong while submitting the form." })
@@ -150,7 +138,7 @@ export function CohortRegistrationForm() {
           <div className="inline-flex items-center gap-2 rounded-full border border-[#E8E3F3] bg-white px-4 py-2 shadow-sm">
             <Sparkles className="h-4 w-4 text-[#FF6B34]" />
             <span className="text-sm font-medium text-[#492B8C]">
-              {loadingCohort ? "Loading current cohort..." : currentCohort ? `Register for ${currentCohort.name}` : "Registration closed"}
+              {loadingCohort ? "Loading next cohort..." : currentCohort ? "Cohort 1 is open for registration" : "Registration closed"}
             </span>
           </div>
 
@@ -162,22 +150,22 @@ export function CohortRegistrationForm() {
               Register for the next cohort
             </h1>
             <p className="max-w-2xl text-lg sm:text-xl leading-relaxed text-[#6B5B9E]">
-              Submit your details on the website and we will save your registration directly in the backend for admin review.
+              Join Cohort 1 and build alongside a focused community of creators shipping real AI products together.
             </p>
           </div>
 
           <div className="grid gap-3 rounded-3xl border border-[#E8E3F3] bg-white/85 p-6 shadow-[0_24px_80px_rgba(26,10,61,0.08)] backdrop-blur">
             <div className="flex items-center gap-3 text-sm text-[#6B5B9E]">
               <Phone className="h-4 w-4 text-[#492B8C]" />
-              <span>Admin can review every registration field from the dashboard.</span>
+              <span>Build with real guidance, accountability, and momentum.</span>
             </div>
             <div className="flex items-center gap-3 text-sm text-[#6B5B9E]">
               <Mail className="h-4 w-4 text-[#492B8C]" />
-              <span>No external Google Form required.</span>
+              <span>Join a community of builders shipping actual AI products.</span>
             </div>
             <div className="flex items-center gap-3 text-sm text-[#6B5B9E]">
               <CheckCircle2 className="h-4 w-4 text-[#00C8A7]" />
-              <span>Submissions are linked to the currently live cohort.</span>
+              <span>Tell us what you want to build and we will guide you into the next cohort.</span>
             </div>
           </div>
         </motion.div>
@@ -191,17 +179,17 @@ export function CohortRegistrationForm() {
         >
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-[#1A0A3D]">Cohort Registration</h2>
+              <h2 className="text-2xl font-bold text-[#1A0A3D]">Cohort 1 Registration</h2>
               <p className="mt-1 text-sm text-[#6B5B9E]">
                 {loadingCohort
-                  ? "Checking the active cohort..."
+                  ? "Checking the next cohort..."
                   : currentCohort
-                    ? `${currentCohort.code} is currently open for registrations.`
-                    : "No cohort is currently open."}
+                    ? "Cohort 1 is currently open for registration."
+                    : "No upcoming cohort is currently open."}
               </p>
             </div>
             <div className="rounded-full bg-[#F4F1FB] px-3 py-1 text-xs font-medium text-[#492B8C]">
-              Live cohort
+              Next cohort
             </div>
           </div>
 
@@ -213,7 +201,7 @@ export function CohortRegistrationForm() {
                 value={form.full_name}
                 onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                 placeholder="Your full name"
-                className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                className="border-[#D7CCE9] bg-white text-[#1A0A3D] placeholder:text-[#8B7BB3] shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20"
               />
             </div>
 
@@ -225,7 +213,7 @@ export function CohortRegistrationForm() {
                 value={form.phone_number}
                 onChange={(e) => setForm({ ...form, phone_number: e.target.value })}
                 placeholder="+91..."
-                className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                className="border-[#D7CCE9] bg-white text-[#1A0A3D] placeholder:text-[#8B7BB3] shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20"
               />
             </div>
             <div>
@@ -236,7 +224,7 @@ export function CohortRegistrationForm() {
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="you@example.com"
-                className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                className="border-[#D7CCE9] bg-white text-[#1A0A3D] placeholder:text-[#8B7BB3] shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20"
               />
             </div>
 
@@ -249,7 +237,7 @@ export function CohortRegistrationForm() {
                 value={form.project_description}
                 onChange={(e) => setForm({ ...form, project_description: e.target.value })}
                 placeholder="Describe the product idea you want to build"
-                className="min-h-28 border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C] resize-none"
+                className="min-h-28 border-[#D7CCE9] bg-white text-[#1A0A3D] placeholder:text-[#8B7BB3] shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20 resize-none"
               />
             </div>
 
@@ -263,8 +251,8 @@ export function CohortRegistrationForm() {
                     onClick={() => setForm({ ...form, experience_level: option.value })}
                     className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
                       form.experience_level === option.value
-                        ? "border-[#492B8C] bg-[#F4F1FB]"
-                        : "border-[#E8E3F3] bg-white hover:border-[#492B8C]/40"
+                        ? "border-[#492B8C] bg-[#F4F1FB] text-[#1A0A3D]"
+                        : "border-[#D7CCE9] bg-white text-[#1A0A3D] hover:border-[#492B8C]/40"
                     }`}
                   >
                     <div className="text-sm font-semibold text-[#1A0A3D]">{option.title}</div>
@@ -286,7 +274,7 @@ export function CohortRegistrationForm() {
                 value={form.daily_time_commitment_hours}
                 onChange={(e) => setForm({ ...form, daily_time_commitment_hours: e.target.value })}
                 placeholder="2"
-                className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                className="border-[#D7CCE9] bg-white text-[#1A0A3D] placeholder:text-[#8B7BB3] shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20"
               />
             </div>
 
@@ -302,8 +290,8 @@ export function CohortRegistrationForm() {
                     onClick={() => setForm({ ...form, preferred_timing_ist: option })}
                     className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
                       form.preferred_timing_ist === option
-                        ? "border-[#492B8C] bg-[#F4F1FB]"
-                        : "border-[#E8E3F3] bg-white hover:border-[#492B8C]/40"
+                        ? "border-[#492B8C] bg-[#F4F1FB] text-[#1A0A3D]"
+                        : "border-[#D7CCE9] bg-white text-[#1A0A3D] hover:border-[#492B8C]/40"
                     }`}
                   >
                     <div className="text-sm font-semibold text-[#1A0A3D]">{option}</div>
@@ -318,7 +306,7 @@ export function CohortRegistrationForm() {
                     value={form.preferred_timing_other}
                     onChange={(e) => setForm({ ...form, preferred_timing_other: e.target.value })}
                     placeholder="Tell us your preferred time"
-                    className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
+                    className="border-[#D7CCE9] bg-white text-[#1A0A3D] placeholder:text-[#8B7BB3] shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20"
                   />
                 </div>
               )}
@@ -334,8 +322,8 @@ export function CohortRegistrationForm() {
                     onClick={() => setForm({ ...form, availability: option.value })}
                     className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
                       form.availability === option.value
-                        ? "border-[#492B8C] bg-[#F4F1FB]"
-                        : "border-[#E8E3F3] bg-white hover:border-[#492B8C]/40"
+                        ? "border-[#492B8C] bg-[#F4F1FB] text-[#1A0A3D]"
+                        : "border-[#D7CCE9] bg-white text-[#1A0A3D] hover:border-[#492B8C]/40"
                     }`}
                   >
                     <div className="text-sm font-semibold text-[#1A0A3D]">{option.label}</div>
@@ -348,9 +336,9 @@ export function CohortRegistrationForm() {
           {message && (
             <div
               className={`mt-5 rounded-2xl border px-4 py-3 text-sm ${
-                message.type === "success"
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : "border-red-200 bg-red-50 text-red-700"
+                message.type === "error"
+                  ? "border-red-200 bg-red-50 text-red-700"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700"
               }`}
             >
               {message.text}
@@ -367,7 +355,7 @@ export function CohortRegistrationForm() {
               {submitting ? "Submitting..." : "Register for Cohort 1"}
             </Button>
             <p className="text-xs text-[#6B5B9E]">
-              By registering, your information will be stored in the cohort backend for admin review.
+              Seats are limited for the upcoming cohort, so register early.
             </p>
           </div>
         </motion.form>

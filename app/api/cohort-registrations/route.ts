@@ -56,22 +56,37 @@ export async function POST(request: Request) {
 
   const serviceClient = createServiceClient()
 
-  const { data: currentCohort, error: cohortError } = await serviceClient
+  const { data: cohorts, error: cohortError } = await serviceClient
     .from("cohorts")
-    .select("id, code, name")
-    .eq("is_current", true)
-    .maybeSingle()
+    .select("id, code, name, is_current, created_at")
+    .order("created_at", { ascending: true })
 
   if (cohortError) {
     return NextResponse.json({ error: cohortError.message }, { status: 500 })
   }
 
-  if (!currentCohort) {
-    return NextResponse.json({ error: "No active cohort is currently open for registration" }, { status: 409 })
+  const extractCohortNumber = (code: string | null | undefined) => {
+    const match = typeof code === "string" ? code.match(/(\d+)\s*$/) : null
+    return match ? Number(match[1]) : Number.POSITIVE_INFINITY
+  }
+
+  const orderedCohorts = (cohorts || []).slice().sort((a, b) => {
+    const aNumber = extractCohortNumber(a.code)
+    const bNumber = extractCohortNumber(b.code)
+    if (aNumber !== bNumber) return aNumber - bNumber
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  })
+
+  const currentCohort = orderedCohorts.find((cohort) => cohort.is_current)
+  const currentNumber = extractCohortNumber(currentCohort?.code)
+  const nextCohort = orderedCohorts.find((cohort) => extractCohortNumber(cohort.code) > currentNumber)
+
+  if (!nextCohort) {
+    return NextResponse.json({ error: "No upcoming cohort is currently open for registration" }, { status: 409 })
   }
 
   const payload = {
-    cohort_id: currentCohort.id,
+    cohort_id: nextCohort.id,
     full_name: fullName,
     phone_number: phoneNumber,
     email,
@@ -96,6 +111,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     registration,
-    cohort: currentCohort,
+    cohort: nextCohort,
   })
 }
