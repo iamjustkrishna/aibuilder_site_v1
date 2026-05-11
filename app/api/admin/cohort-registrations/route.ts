@@ -61,3 +61,29 @@ export async function GET() {
 
   return NextResponse.json(result)
 }
+
+export async function DELETE(request: Request) {
+  const { authorized, error } = await checkAdminAccess()
+  if (!authorized) {
+    return NextResponse.json({ error }, { status: 401 })
+  }
+
+  const body = await request.json()
+  const registrationId = typeof body.registration_id === "string" ? body.registration_id.trim() : ""
+
+  if (!registrationId) {
+    return NextResponse.json({ error: "registration_id is required" }, { status: 400 })
+  }
+
+  const serviceClient = createServiceClient()
+  const { error: deleteError } = await serviceClient
+    .from("cohort_registrations")
+    .delete()
+    .eq("id", registrationId)
+
+  if (deleteError) {
+    return NextResponse.json({ error: deleteError.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
+}

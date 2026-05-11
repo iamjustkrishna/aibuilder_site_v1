@@ -27,6 +27,7 @@ import {
   Calendar,
   Play,
   Link as LinkIcon,
+  Download,
   Loader2,
   Mail,
   Clock,
@@ -218,6 +219,8 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   })
   const [userFormMessage, setUserFormMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
   const [userDeleteMessage, setUserDeleteMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
+  const [registrationMessage, setRegistrationMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
+  const [deletingRegistrationId, setDeletingRegistrationId] = useState<string | null>(null)
   const [mailFormMessage, setMailFormMessage] = useState<{ type: "error" | "success" | "info"; text: string } | null>(null)
   const [showMailPreview, setShowMailPreview] = useState(false)
   const [sendingMailStatus, setSendingMailStatus] = useState<Array<{ email: string; status: "pending" | "sent" | "failed" }>>([])
@@ -1149,6 +1152,128 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     (registration.cohort_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
     (registration.cohort_code || "").toLowerCase().includes(searchQuery.toLowerCase())
   )
+  const groupedRegistrations = buildCohortGroups(filteredRegistrations)
+
+  function getCohortSortValue(code: string | null | undefined) {
+    const match = typeof code === "string" ? code.match(/(\d+)\s*$/) : null
+    return match ? Number(match[1]) : Number.POSITIVE_INFINITY
+  }
+
+  function buildCohortGroups(items: CohortRegistration[]) {
+    const groups = new Map<string, CohortRegistration[]>()
+
+    for (const registration of items) {
+      const key = registration.cohort_code || "Unknown"
+      const current = groups.get(key) || []
+      current.push(registration)
+      groups.set(key, current)
+    }
+
+    return Array.from(groups.entries())
+      .map(([key, values]) => ({
+        key,
+        label: values[0]?.cohort_name ? `${key} - ${values[0].cohort_name}` : key,
+        registrations: values.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+      }))
+      .sort((a, b) => getCohortSortValue(a.key) - getCohortSortValue(b.key))
+  }
+
+  function escapeHtml(value: string) {
+    return value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;")
+  }
+
+  function downloadRegistrationsAsExcel(registrationRows: CohortRegistration[], fileName: string) {
+    const headers = [
+      "Cohort Code",
+      "Cohort Name",
+      "Full Name",
+      "Phone Number",
+      "Email",
+      "Project Description",
+      "Experience Level",
+      "Daily Time Commitment Hours",
+      "Preferred Timing IST",
+      "Preferred Timing Other",
+      "Availability",
+      "Created At",
+    ]
+
+    const rows = registrationRows
+      .map((registration) => [
+        registration.cohort_code || "",
+        registration.cohort_name || "",
+        registration.full_name,
+        registration.phone_number,
+        registration.email,
+        registration.project_description,
+        registration.experience_level,
+        String(registration.daily_time_commitment_hours),
+        registration.preferred_timing_ist,
+        registration.preferred_timing_other || "",
+        registration.availability,
+        registration.created_at,
+      ])
+
+    const tableRows = [
+      `<tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>`,
+      ...rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`),
+    ].join("")
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+</head>
+<body>
+<table border="1">${tableRows}</table>
+</body>
+</html>`
+
+    const blob = new Blob([html], { type: "application/vnd.ms-excel" })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement("a")
+    anchor.href = url
+    anchor.download = fileName
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  async function handleDeleteRegistration(registrationId: string) {
+    if (!confirm("Delete this registration? This cannot be undone.")) return
+
+    setDeletingRegistrationId(registrationId)
+    setRegistrationMessage(null)
+
+    try {
+      const res = await fetch("/api/admin/cohort-registrations", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ registration_id: registrationId }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setRegistrationMessage({ type: "error", text: data.error || "Failed to delete registration." })
+        return
+      }
+
+      setRegistrations((current) => current.filter((registration) => registration.id !== registrationId))
+      setRegistrationMessage({ type: "success", text: "Registration deleted." })
+    } catch (error) {
+      console.error("Failed to delete registration:", error)
+      setRegistrationMessage({ type: "error", text: "Failed to delete registration." })
+    } finally {
+      setDeletingRegistrationId(null)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A0A3D] via-[#2D1A69] to-[#492B8C]">
@@ -2962,12 +3087,38 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-[#1A0A3D]">Cohort Registrations</h3>
-                  <p className="text-sm text-[#6B5B9E]">Public form submissions captured from the website.</p>
+                  <p className="text-sm text-[#6B5B9E]">Public form submissions grouped by cohort and ready for export.</p>
                 </div>
-                <div className="rounded-full bg-[#F4F1FB] px-3 py-1 text-xs font-medium text-[#492B8C]">
-                  {registrations.length} total
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-[#F4F1FB] px-3 py-1 text-xs font-medium text-[#492B8C]">
+                    {registrations.length} total
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => downloadRegistrationsAsExcel(filteredRegistrations, "all-cohort-registrations.xls")}
+                    className="border-[#D7CCE9] text-[#1A0A3D] hover:bg-[#F4F1FB]"
+                    disabled={filteredRegistrations.length === 0}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Export All
+                  </Button>
                 </div>
               </div>
+
+              {registrationMessage && (
+                <div
+                  className={`mb-4 rounded-lg px-3 py-2 text-sm ${
+                    registrationMessage.type === "error"
+                      ? "bg-red-50 text-red-700 border border-red-200"
+                      : registrationMessage.type === "success"
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : "bg-blue-50 text-blue-700 border border-blue-200"
+                  }`}
+                >
+                  {registrationMessage.text}
+                </div>
+              )}
 
               {loading ? (
                 <div className="text-center py-12 text-[#6B5B9E]">Loading registrations...</div>
@@ -2977,40 +3128,73 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                   <p className="text-[#6B5B9E]">{searchQuery ? "No matching registrations" : "No registrations yet"}</p>
                 </div>
               ) : (
-                <div className="grid gap-4">
-                  {filteredRegistrations.map((registration) => (
-                    <div key={registration.id} className="rounded-2xl border border-[#E8E3F3] bg-white p-4 shadow-sm">
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="text-lg font-semibold text-[#1A0A3D]">{registration.full_name}</h4>
-                            {registration.cohort_is_current && (
-                              <span className="rounded-full bg-[#00C8A7]/10 px-2.5 py-1 text-xs font-medium text-[#00C8A7]">
-                                Current cohort
-                              </span>
-                            )}
-                            <span className="rounded-full bg-[#F4F1FB] px-2.5 py-1 text-xs font-medium text-[#492B8C]">
-                              {registration.cohort_code || "Cohort"} {registration.cohort_name ? `- ${registration.cohort_name}` : ""}
-                            </span>
-                          </div>
-                          <div className="mt-2 grid gap-1 text-sm text-[#6B5B9E] sm:grid-cols-2">
-                            <div><span className="font-medium text-[#1A0A3D]">Email:</span> {registration.email}</div>
-                            <div><span className="font-medium text-[#1A0A3D]">Phone:</span> {registration.phone_number}</div>
-                            <div><span className="font-medium text-[#1A0A3D]">Experience:</span> {registration.experience_level.charAt(0).toUpperCase() + registration.experience_level.slice(1)}</div>
-                            <div><span className="font-medium text-[#1A0A3D]">Hours/day:</span> {registration.daily_time_commitment_hours}</div>
-                            <div><span className="font-medium text-[#1A0A3D]">Preferred timing:</span> {registration.preferred_timing_ist}{registration.preferred_timing_other ? ` (${registration.preferred_timing_other})` : ""}</div>
-                            <div><span className="font-medium text-[#1A0A3D]">Availability:</span> {registration.availability === "weekdays" ? "Weekdays" : registration.availability === "weekends" ? "Only Weekends" : "Both Weekdays and Weekends"}</div>
-                            <div className="sm:col-span-2"><span className="font-medium text-[#1A0A3D]">Submitted:</span> {new Date(registration.created_at).toLocaleString()}</div>
-                          </div>
+                <div className="space-y-5">
+                  {groupedRegistrations.map((group) => (
+                    <div key={group.key} className="rounded-3xl border border-[#E8E3F3] bg-[#FCFBFF] p-4 sm:p-5">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <div>
+                          <h4 className="text-lg font-semibold text-[#1A0A3D]">{group.label}</h4>
+                          <p className="text-sm text-[#6B5B9E]">{group.registrations.length} registration{group.registrations.length === 1 ? "" : "s"}</p>
                         </div>
-                        <div className="lg:w-[34%]">
-                          <div className="rounded-2xl bg-[#F9F7FF] p-4">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-[#6B5B9E]">Project idea</p>
-                            <p className="mt-2 text-sm leading-relaxed text-[#1A0A3D] whitespace-pre-wrap">
-                              {registration.project_description}
-                            </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => downloadRegistrationsAsExcel(group.registrations, `${group.key}-registrations.xls`)}
+                          className="border-[#D7CCE9] text-[#1A0A3D] hover:bg-[#F4F1FB]"
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Export Cohort
+                        </Button>
+                      </div>
+
+                      <div className="grid gap-4">
+                        {group.registrations.map((registration) => (
+                          <div key={registration.id} className="rounded-2xl border border-[#E8E3F3] bg-white p-4 shadow-sm">
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h5 className="text-lg font-semibold text-[#1A0A3D]">{registration.full_name}</h5>
+                                  {registration.cohort_is_current && (
+                                    <span className="rounded-full bg-[#00C8A7]/10 px-2.5 py-1 text-xs font-medium text-[#00C8A7]">
+                                      Current cohort
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="mt-2 grid gap-1 text-sm text-[#6B5B9E] sm:grid-cols-2">
+                                  <div><span className="font-medium text-[#1A0A3D]">Email:</span> {registration.email}</div>
+                                  <div><span className="font-medium text-[#1A0A3D]">Phone:</span> {registration.phone_number}</div>
+                                  <div><span className="font-medium text-[#1A0A3D]">Experience:</span> {registration.experience_level.charAt(0).toUpperCase() + registration.experience_level.slice(1)}</div>
+                                  <div><span className="font-medium text-[#1A0A3D]">Hours/day:</span> {registration.daily_time_commitment_hours}</div>
+                                  <div><span className="font-medium text-[#1A0A3D]">Preferred timing:</span> {registration.preferred_timing_ist}{registration.preferred_timing_other ? ` (${registration.preferred_timing_other})` : ""}</div>
+                                  <div><span className="font-medium text-[#1A0A3D]">Availability:</span> {registration.availability === "weekdays" ? "Weekdays" : registration.availability === "weekends" ? "Only Weekends" : "Both Weekdays and Weekends"}</div>
+                                  <div className="sm:col-span-2"><span className="font-medium text-[#1A0A3D]">Submitted:</span> {new Date(registration.created_at).toLocaleString()}</div>
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-3 lg:w-[34%]">
+                                <div className="rounded-2xl bg-[#F9F7FF] p-4">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-[#6B5B9E]">Project idea</p>
+                                  <p className="mt-2 text-sm leading-relaxed text-[#1A0A3D] whitespace-pre-wrap">
+                                    {registration.project_description}
+                                  </p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => handleDeleteRegistration(registration.id)}
+                                  disabled={deletingRegistrationId === registration.id}
+                                  className="border-red-200 text-red-700 hover:bg-red-50"
+                                >
+                                  {deletingRegistrationId === registration.id ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                  )}
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   ))}
