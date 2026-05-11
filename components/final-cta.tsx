@@ -39,8 +39,8 @@ export function FinalCTA() {
             asChild
             className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full px-8 h-14 text-base font-medium shadow-lg shadow-[#FF6B34]/20"
           >
-            <a href="https://docs.google.com/forms/d/e/1FAIpQLSelAKQrkxz97RxCo7B8K-xNOAe3-wXhtmnxyW6qx-WNA_82ZA/viewform?usp=header" target="_blank" rel="noopener noreferrer">
-              Express Interest
+            <a href="/register">
+              Register for Cohort 1
               <ArrowRight className="ml-2 w-5 h-5" />
             </a>
           </Button>

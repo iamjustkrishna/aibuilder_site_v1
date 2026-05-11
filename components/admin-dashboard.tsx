@@ -117,6 +117,25 @@ interface CohortVideoConfig {
   created_at: string
 }
 
+interface CohortRegistration {
+  id: string
+  cohort_id: string
+  cohort_code: string | null
+  cohort_name: string | null
+  cohort_is_current: boolean
+  full_name: string
+  phone_number: string
+  email: string
+  project_description: string
+  experience_level: "beginner" | "intermediate" | "advanced"
+  daily_time_commitment_hours: number | string
+  preferred_timing_ist: string
+  preferred_timing_other: string | null
+  availability: "weekdays" | "weekends" | "both"
+  created_at: string
+  updated_at: string
+}
+
 const typeIcons = {
   video: Video,
   pdf: FileText,
@@ -140,11 +159,12 @@ const weekConfig = [
 ]
 
 export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
-  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "mail" | "sessions" | "activity" | "cohorts" | "curated-videos" | "certificates">("cohorts")
+  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "registrations" | "mail" | "sessions" | "activity" | "cohorts" | "curated-videos" | "certificates">("cohorts")
   const [resources, setResources] = useState<Resource[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [cohorts, setCohorts] = useState<Cohort[]>([])
+  const [registrations, setRegistrations] = useState<CohortRegistration[]>([])
   const [cohortWeeks, setCohortWeeks] = useState<CohortWeek[]>([])
   const [cohortVideos, setCohortVideos] = useState<CohortVideoConfig[]>([])
   const [adminEmails, setAdminEmails] = useState<string[]>([])
@@ -315,6 +335,12 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
           setSelectedCohortId(data[0].id)
           await fetchCohortDetails(data[0].id)
         }
+      }
+    } else if (activeTab === "registrations") {
+      const res = await fetch("/api/admin/cohort-registrations")
+      if (res.ok) {
+        const data = await res.json()
+        setRegistrations(data || [])
       }
     } else if (activeTab === "curated-videos") {
       await fetchCuratedVideos(selectedCuratedWeek)
@@ -1115,6 +1141,15 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     u.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  const filteredRegistrations = registrations.filter((registration) =>
+    registration.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    registration.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    registration.phone_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    registration.project_description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (registration.cohort_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (registration.cohort_code || "").toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A0A3D] via-[#2D1A69] to-[#492B8C]">
       {/* Header */}
@@ -1196,6 +1231,18 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
               <Users className="w-4 h-4" />
               <span className="text-sm">Users</span>
               <span className="px-1.5 py-0.5 rounded-full text-xs bg-[#00C8A7] text-white">{users.length}</span>
+            </button>
+            <button
+              onClick={() => { setActiveTab("registrations"); setSearchQuery(""); }}
+              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeTab === "registrations"
+                  ? "bg-white text-[#1A0A3D] shadow-lg"
+                  : "text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span className="text-sm">Registrations</span>
+              <span className="px-1.5 py-0.5 rounded-full text-xs bg-[#FF6B34] text-white">{registrations.length}</span>
             </button>
             <button
               onClick={() => { setActiveTab("sessions"); setSearchQuery(""); }}
@@ -2905,6 +2952,71 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Registrations Tab */}
+        {activeTab === "registrations" && (
+          <div className="space-y-4">
+            <div className="bg-white/95 backdrop-blur rounded-2xl p-5 border border-white/10 shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-[#1A0A3D]">Cohort Registrations</h3>
+                  <p className="text-sm text-[#6B5B9E]">Public form submissions captured from the website.</p>
+                </div>
+                <div className="rounded-full bg-[#F4F1FB] px-3 py-1 text-xs font-medium text-[#492B8C]">
+                  {registrations.length} total
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="text-center py-12 text-[#6B5B9E]">Loading registrations...</div>
+              ) : filteredRegistrations.length === 0 ? (
+                <div className="text-center py-12 bg-[#F4F1FB] rounded-2xl">
+                  <FileText className="w-12 h-12 mx-auto text-[#6B5B9E]/30 mb-3" />
+                  <p className="text-[#6B5B9E]">{searchQuery ? "No matching registrations" : "No registrations yet"}</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {filteredRegistrations.map((registration) => (
+                    <div key={registration.id} className="rounded-2xl border border-[#E8E3F3] bg-white p-4 shadow-sm">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="text-lg font-semibold text-[#1A0A3D]">{registration.full_name}</h4>
+                            {registration.cohort_is_current && (
+                              <span className="rounded-full bg-[#00C8A7]/10 px-2.5 py-1 text-xs font-medium text-[#00C8A7]">
+                                Current cohort
+                              </span>
+                            )}
+                            <span className="rounded-full bg-[#F4F1FB] px-2.5 py-1 text-xs font-medium text-[#492B8C]">
+                              {registration.cohort_code || "Cohort"} {registration.cohort_name ? `- ${registration.cohort_name}` : ""}
+                            </span>
+                          </div>
+                          <div className="mt-2 grid gap-1 text-sm text-[#6B5B9E] sm:grid-cols-2">
+                            <div><span className="font-medium text-[#1A0A3D]">Email:</span> {registration.email}</div>
+                            <div><span className="font-medium text-[#1A0A3D]">Phone:</span> {registration.phone_number}</div>
+                            <div><span className="font-medium text-[#1A0A3D]">Experience:</span> {registration.experience_level.charAt(0).toUpperCase() + registration.experience_level.slice(1)}</div>
+                            <div><span className="font-medium text-[#1A0A3D]">Hours/day:</span> {registration.daily_time_commitment_hours}</div>
+                            <div><span className="font-medium text-[#1A0A3D]">Preferred timing:</span> {registration.preferred_timing_ist}{registration.preferred_timing_other ? ` (${registration.preferred_timing_other})` : ""}</div>
+                            <div><span className="font-medium text-[#1A0A3D]">Availability:</span> {registration.availability === "weekdays" ? "Weekdays" : registration.availability === "weekends" ? "Only Weekends" : "Both Weekdays and Weekends"}</div>
+                            <div className="sm:col-span-2"><span className="font-medium text-[#1A0A3D]">Submitted:</span> {new Date(registration.created_at).toLocaleString()}</div>
+                          </div>
+                        </div>
+                        <div className="lg:w-[34%]">
+                          <div className="rounded-2xl bg-[#F9F7FF] p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#6B5B9E]">Project idea</p>
+                            <p className="mt-2 text-sm leading-relaxed text-[#1A0A3D] whitespace-pre-wrap">
+                              {registration.project_description}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
