@@ -201,7 +201,7 @@ export function CohortRegistrationForm() {
                 value={form.full_name}
                 onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                 placeholder="Your full name"
-                className="border-[#D7CCE9] bg-white text-[#1A0A3D] placeholder:text-[#8B7BB3] shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20"
+                className="border-[#D7CCE9] !bg-white !text-black placeholder:!text-gray-500 shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20"
               />
             </div>
 
@@ -213,7 +213,7 @@ export function CohortRegistrationForm() {
                 value={form.phone_number}
                 onChange={(e) => setForm({ ...form, phone_number: e.target.value })}
                 placeholder="+91..."
-                className="border-[#D7CCE9] bg-white text-[#1A0A3D] placeholder:text-[#8B7BB3] shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20"
+                className="border-[#D7CCE9] !bg-white !text-black placeholder:!text-gray-500 shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20"
               />
             </div>
             <div>
@@ -224,7 +224,7 @@ export function CohortRegistrationForm() {
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="you@example.com"
-                className="border-[#D7CCE9] bg-white text-[#1A0A3D] placeholder:text-[#8B7BB3] shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20"
+                className="border-[#D7CCE9] !bg-white !text-black placeholder:!text-gray-500 shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20"
               />
             </div>
 
@@ -237,7 +237,7 @@ export function CohortRegistrationForm() {
                 value={form.project_description}
                 onChange={(e) => setForm({ ...form, project_description: e.target.value })}
                 placeholder="Describe the product idea you want to build"
-                className="min-h-28 border-[#D7CCE9] bg-white text-[#1A0A3D] placeholder:text-[#8B7BB3] shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20 resize-none"
+                className="min-h-28 border-[#D7CCE9] !bg-white !text-black placeholder:!text-gray-500 shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20 resize-none"
               />
             </div>
 
@@ -251,11 +251,11 @@ export function CohortRegistrationForm() {
                     onClick={() => setForm({ ...form, experience_level: option.value })}
                     className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
                       form.experience_level === option.value
-                        ? "border-[#492B8C] bg-[#F4F1FB] text-[#1A0A3D]"
-                        : "border-[#D7CCE9] bg-white text-[#1A0A3D] hover:border-[#492B8C]/40"
+                        ? "border-[#492B8C] bg-[#F4F1FB] text-black"
+                        : "border-[#D7CCE9] !bg-white text-black hover:border-[#492B8C]/40"
                     }`}
                   >
-                    <div className="text-sm font-semibold text-[#1A0A3D]">{option.title}</div>
+                    <div className="text-sm font-semibold text-black">{option.title}</div>
                     <div className="text-xs text-[#6B5B9E]">{option.description}</div>
                   </button>
                 ))}
@@ -290,11 +290,11 @@ export function CohortRegistrationForm() {
                     onClick={() => setForm({ ...form, preferred_timing_ist: option })}
                     className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
                       form.preferred_timing_ist === option
-                        ? "border-[#492B8C] bg-[#F4F1FB] text-[#1A0A3D]"
-                        : "border-[#D7CCE9] bg-white text-[#1A0A3D] hover:border-[#492B8C]/40"
+                        ? "border-[#492B8C] bg-[#F4F1FB] text-black"
+                        : "border-[#D7CCE9] !bg-white text-black hover:border-[#492B8C]/40"
                     }`}
                   >
-                    <div className="text-sm font-semibold text-[#1A0A3D]">{option}</div>
+                    <div className="text-sm font-semibold text-black">{option}</div>
                   </button>
                 ))}
               </div>
@@ -306,7 +306,7 @@ export function CohortRegistrationForm() {
                     value={form.preferred_timing_other}
                     onChange={(e) => setForm({ ...form, preferred_timing_other: e.target.value })}
                     placeholder="Tell us your preferred time"
-                    className="border-[#D7CCE9] bg-white text-[#1A0A3D] placeholder:text-[#8B7BB3] shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20"
+                    className="border-[#D7CCE9] !bg-white !text-black placeholder:!text-gray-500 shadow-sm focus:border-[#492B8C] focus:ring-[#492B8C]/20"
                   />
                 </div>
               )}
@@ -322,11 +322,11 @@ export function CohortRegistrationForm() {
                     onClick={() => setForm({ ...form, availability: option.value })}
                     className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
                       form.availability === option.value
-                        ? "border-[#492B8C] bg-[#F4F1FB] text-[#1A0A3D]"
-                        : "border-[#D7CCE9] bg-white text-[#1A0A3D] hover:border-[#492B8C]/40"
+                        ? "border-[#492B8C] bg-[#F4F1FB] text-black"
+                        : "border-[#D7CCE9] !bg-white text-black hover:border-[#492B8C]/40"
                     }`}
                   >
-                    <div className="text-sm font-semibold text-[#1A0A3D]">{option.label}</div>
+                    <div className="text-sm font-semibold text-black">{option.label}</div>
                   </button>
                 ))}
               </div>
