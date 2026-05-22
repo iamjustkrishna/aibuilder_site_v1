@@ -94,9 +94,13 @@ export async function GET(request: Request) {
     .map((video) => {
       const p = progressByVideo.get(video.id)
       const a = latestAttemptByVideo.get(video.id)
-      const videoId = video.video_url ? extractYouTubeId(video.video_url) : null
+      const resolvedVideoUrl = video.video_url || video.youtube_url || video.url || null
+      const resolvedVideoTitle = video.video_title || video.title || "Untitled video"
+      const videoId = resolvedVideoUrl ? extractYouTubeId(resolvedVideoUrl) : null
       return {
         ...video,
+        video_title: resolvedVideoTitle,
+        video_url: resolvedVideoUrl,
         youtube_video_id: videoId,
         progress: p
           ? {
@@ -204,9 +208,9 @@ export async function POST(request: Request) {
                 .insert({
                   cohort_id: currentCohort.id,
                   week_number: video.week_number,
-                  title: video.title,
+                  video_title: video.title,
                   description: video.description || null,
-                  youtube_url: video.youtube_url,
+                  video_url: video.youtube_url,
                   tier_required: video.tier_required || "foundational",
                   sort_order: nextSortOrder,
                 })
@@ -299,9 +303,9 @@ export async function POST(request: Request) {
       .insert({
         cohort_id: currentCohort.id,
         week_number,
-        title,
+        video_title: title,
         description: description || null,
-        youtube_url,
+        video_url: youtube_url,
         tier_required: tier_required || "foundational",
         sort_order: nextSortOrder,
       })
@@ -366,4 +370,3 @@ export async function DELETE(request: Request) {
     )
   }
 }
-
