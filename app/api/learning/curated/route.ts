@@ -80,7 +80,6 @@ export async function GET(request: Request) {
     )
   }
 
-  const weekKeySet = new Set((weeks || []).map((week) => `${week.cohort_id}:${week.week_number}`))
   const progressByVideo = new Map((progress || []).map((row) => [row.cohort_video_config_id, row]))
   const latestAttemptByVideo = new Map<string, { score_percent: number; attempted_at: string }>()
   for (const row of attempts || []) {
@@ -89,9 +88,7 @@ export async function GET(request: Request) {
     }
   }
 
-  let visibleVideos = (videos || [])
-    .filter((video) => weekKeySet.has(`${video.cohort_id}:${video.week_number}`))
-    .map((video) => {
+  let visibleVideos = (videos || []).map((video) => {
       const p = progressByVideo.get(video.id)
       const a = latestAttemptByVideo.get(video.id)
       const resolvedVideoUrl = video.video_url || video.youtube_url || video.url || null
@@ -99,6 +96,9 @@ export async function GET(request: Request) {
       const videoId = resolvedVideoUrl ? extractYouTubeId(resolvedVideoUrl) : null
       return {
         ...video,
+        title: resolvedVideoTitle,
+        url: resolvedVideoUrl,
+        youtube_url: resolvedVideoUrl,
         video_title: resolvedVideoTitle,
         video_url: resolvedVideoUrl,
         youtube_video_id: videoId,
@@ -151,31 +151,11 @@ export async function POST(request: Request) {
 
     // Handle GitHub sync action
     if (action === "sync-github" || github_json_url) {
-      if (!github_json_url) {
-        return NextResponse.json(
-          { error: "GitHub JSON URL is required for sync action" },
-          { status: 400 }
-        )
-      }
-
       try {
-        // Fetch JSON from GitHub
-        const response = await fetch(github_json_url)
-        if (!response.ok) {
-          return NextResponse.json(
-            { error: "Failed to fetch GitHub JSON file" },
-            { status: 400 }
-          )
-        }
-
-        const githubData = await response.json()
-        let syncedCount = 0
-
-        // Assuming the JSON has a videos array with week structure
         const serviceClient = createServiceClient()
         const { data: currentCohort } = await serviceClient
           .from("cohorts")
-          .select("id")
+          .select("id, curated_videos_source_url")
           .eq("is_current", true)
           .limit(1)
           .single()
@@ -186,6 +166,26 @@ export async function POST(request: Request) {
             { status: 404 }
           )
         }
+
+        const effectiveGithubJsonUrl = github_json_url || currentCohort.curated_videos_source_url
+        if (!effectiveGithubJsonUrl) {
+          return NextResponse.json(
+            { error: "GitHub JSON URL is required for sync action" },
+            { status: 400 }
+          )
+        }
+
+        // Fetch JSON from GitHub
+        const response = await fetch(effectiveGithubJsonUrl)
+        if (!response.ok) {
+          return NextResponse.json(
+            { error: "Failed to fetch GitHub JSON file" },
+            { status: 400 }
+          )
+        }
+
+        const githubData = await response.json()
+        let syncedCount = 0
 
         // Handle different JSON structures
         if (Array.isArray(githubData)) {
@@ -262,7 +262,16 @@ export async function POST(request: Request) {
           }
         }
 
-        return NextResponse.json({ synced_count: syncedCount })
+        await serviceClient
+          .from("cohorts")
+          .update({
+            curated_videos_source_url: effectiveGithubJsonUrl,
+            curated_videos_synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", currentCohort.id)
+
+        return NextResponse.json({ synced_count: syncedCount, source_url: effectiveGithubJsonUrl })
       } catch (error) {
         console.error("GitHub sync error:", error)
         return NextResponse.json(

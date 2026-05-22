@@ -92,6 +92,7 @@ interface Cohort {
   starts_at: string | null
   ends_at: string | null
   is_current: boolean
+  curated_videos_source_url?: string | null
   enrollment_count?: number
   created_at: string
 }
@@ -393,7 +394,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         const data = await weeksRes.json()
         setCohortWeeks(data || [])
       }
-      
+
       if (videosRes.ok) {
         const data = await videosRes.json()
         const normalizedVideos = (data || []).map((video: CohortVideoConfig) => ({
@@ -410,6 +411,13 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       console.error("Failed to fetch cohort details:", error)
     }
   }
+
+  useEffect(() => {
+    const selected = cohorts.find((cohort) => cohort.id === selectedCohortId)
+    if (selected?.curated_videos_source_url) {
+      setGithubJsonUrl(selected.curated_videos_source_url)
+    }
+  }, [selectedCohortId, cohorts])
 
   async function fetchPastMails() {
     setLoadingPastMails(true)
@@ -1116,7 +1124,8 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
 
   async function handleSyncFromGithub() {
     setCuratedVideoMessage(null)
-    if (!githubJsonUrl.trim()) {
+    const sourceUrl = githubJsonUrl.trim()
+    if (!sourceUrl) {
       setCuratedVideoMessage({ type: "error", text: "GitHub JSON URL is required" })
       return
     }
@@ -1128,7 +1137,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "sync-github",
-          github_json_url: githubJsonUrl,
+          github_json_url: sourceUrl,
         }),
       })
       

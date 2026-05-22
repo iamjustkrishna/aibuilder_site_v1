@@ -312,6 +312,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false)
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([])
   const [currentCohort, setCurrentCohort] = useState<CohortSummary | null>(null)
+  const [isCurrentCohortParticipant, setIsCurrentCohortParticipant] = useState(false)
   const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({})
   const [curatedVideos, setCuratedVideos] = useState<any[]>([])
   const [activeWeek, setActiveWeek] = useState<string>("week-1")
@@ -374,6 +375,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
         if (!res.ok) return
         const data = await res.json()
         setCurrentCohort(data.current_cohort || null)
+        setIsCurrentCohortParticipant(Boolean(data.current_cohort && Array.isArray(data.enrolled_cohorts) && data.enrolled_cohorts.some((cohort: CohortSummary) => cohort.id === data.current_cohort.id)))
       } catch (error) {
         console.error("Failed to fetch cohort context:", error)
       }
@@ -392,7 +394,12 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
           return
         }
         const data = await res.json()
-        setCuratedVideos(data || [])
+        setCuratedVideos((data || []).map((video: any) => ({
+          ...video,
+          title: video.title || video.video_title || "Untitled video",
+          youtube_url: video.youtube_url || video.video_url || video.url || "",
+          url: video.url || video.video_url || video.youtube_url || "",
+        })))
       } catch (error) {
         console.error("Failed to fetch curated videos:", error)
       } finally {
@@ -542,7 +549,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
 
         {/* Quick Actions */}
         <div className="mb-8 flex flex-wrap gap-3">
-          {currentCohort && (
+          {currentCohort && isCurrentCohortParticipant && (
             <Button
               type="button"
               onClick={() => setShowLeaderboardModal(true)}
@@ -912,14 +919,15 @@ Register on AIBuilder 🚀`
               </div>
             ) : (
               curatedVideos.map((video) => {
-                const videoId = extractYouTubeId(video.youtube_url || video.url)
+                const videoUrl = video.youtube_url || video.video_url || video.url || ""
+                const videoId = extractYouTubeId(videoUrl)
                 return (
                   <div
                     key={video.id}
                     className="group rounded-xl bg-white border border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-md transition-all overflow-hidden cursor-pointer"
                     onClick={() => {
                       if (videoId) {
-                        setSelectedVideoTitle(video.title)
+                        setSelectedVideoTitle(video.title || video.video_title || "Untitled video")
                         setSelectedVideo(videoId)
                       }
                     }}
@@ -928,7 +936,7 @@ Register on AIBuilder 🚀`
                       {videoId && (
                         <Image
                           src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
-                          alt={video.title}
+                          alt={video.title || video.video_title || "Video"}
                           fill
                           className="object-cover group-hover:opacity-80 transition-opacity"
                         />
@@ -941,7 +949,7 @@ Register on AIBuilder 🚀`
                     </div>
                     <div className="p-4">
                       <h3 className="font-medium text-[#1A0A3D] mb-1 line-clamp-2 group-hover:text-[#492B8C] transition-colors">
-                        {video.title}
+                        {video.title || video.video_title || "Untitled video"}
                       </h3>
                       {video.description && (
                         <p className="text-sm text-[#6B5B9E] line-clamp-2">{video.description}</p>
