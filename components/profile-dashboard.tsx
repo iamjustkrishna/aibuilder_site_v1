@@ -1,24 +1,28 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { createClient } from "@/lib/supabase/client"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 import {
   ArrowLeft,
   BookOpen,
   Calendar,
   ExternalLink,
-  FileText,
   Github,
   Globe,
   Linkedin,
+  Loader2,
   Sparkles,
   UserCircle2,
   Award,
   Layers3,
   Plus,
+  X,
 } from "lucide-react"
 
 type TabKey = "overview" | "projects" | "certificates"
@@ -35,6 +39,23 @@ export interface ProfileProject {
   status: "draft" | "published" | "archived"
   featured: boolean
   created_at: string
+}
+
+type ProjectFormState = {
+  title: string
+  description: string
+  project_url: string
+  repo_url: string
+  demo_url: string
+  technologies: string
+  featured: boolean
+}
+
+type ProfileDraftState = {
+  slug: string
+  headline: string
+  bio: string
+  is_public: boolean
 }
 
 export interface ProfileCertificate {
@@ -56,7 +77,6 @@ export interface ProfileViewModel {
   slug?: string | null
   headline?: string | null
   bio?: string | null
-  location?: string | null
   website_url?: string | null
   github_url?: string | null
   linkedin_url?: string | null
@@ -67,6 +87,7 @@ interface ProfileDashboardProps {
   profile: ProfileViewModel
   projects: ProfileProject[]
   certificates: ProfileCertificate[]
+  currentCohortId?: string | null
 }
 
 const tabs: { key: TabKey; label: string; icon: typeof UserCircle2 }[] = [
@@ -75,25 +96,182 @@ const tabs: { key: TabKey; label: string; icon: typeof UserCircle2 }[] = [
   { key: "certificates", label: "Certificates", icon: Award },
 ]
 
-export function ProfileDashboard({ profile, projects, certificates }: ProfileDashboardProps) {
+export function ProfileDashboard({ profile, projects, certificates, currentCohortId = null }: ProfileDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("overview")
+  const [currentProfile, setCurrentProfile] = useState(profile)
+  const [projectList, setProjectList] = useState(projects)
+  const [certificateList, setCertificateList] = useState(certificates)
+  const [showProjectForm, setShowProjectForm] = useState(false)
+  const [showProfileForm, setShowProfileForm] = useState(false)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isSavingProject, setIsSavingProject] = useState(false)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [profileDraft, setProfileDraft] = useState<ProfileDraftState>({
+    slug: profile.slug || slugify(profile.full_name),
+    headline: profile.headline || "",
+    bio: profile.bio || "",
+    is_public: profile.is_public ?? true,
+  })
+  const [projectDraft, setProjectDraft] = useState<ProjectFormState>({
+    title: "",
+    description: "",
+    project_url: "",
+    repo_url: "",
+    demo_url: "",
+    technologies: "",
+    featured: false,
+  })
+
+  useEffect(() => {
+    setCurrentProfile(profile)
+  }, [profile])
+
+  useEffect(() => {
+    setProjectList(projects)
+  }, [projects])
+
+  useEffect(() => {
+    setCertificateList(certificates)
+  }, [certificates])
+
+  useEffect(() => {
+    if (!statusMessage) return
+    const timer = setTimeout(() => setStatusMessage(null), 3000)
+    return () => clearTimeout(timer)
+  }, [statusMessage])
 
   const initials = useMemo(() => {
-    const source = profile.full_name || profile.email || "U"
+    const source = currentProfile.full_name || currentProfile.email || "U"
     return source
       .split(" ")
       .map((part) => part[0])
       .join("")
       .slice(0, 2)
       .toUpperCase()
-  }, [profile.full_name, profile.email])
+  }, [currentProfile.full_name, currentProfile.email])
+
+  function slugify(value: string) {
+    return value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+  }
+
+  const normalizeProject = (project: ProjectFormState) => ({
+    title: project.title.trim(),
+    description: project.description.trim() || null,
+    project_url: project.project_url.trim() || null,
+    repo_url: project.repo_url.trim() || null,
+    demo_url: project.demo_url.trim() || null,
+    technologies: project.technologies
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+    featured: project.featured,
+    status: "draft" as const,
+  })
+
+  async function handleSaveProfile() {
+    setIsSavingProfile(true)
+    setStatusMessage(null)
+    const supabase = createClient()
+
+    const { error } = await supabase.from("user_profiles").upsert({
+      user_id: currentProfile.id,
+      slug: slugify(profileDraft.slug || currentProfile.full_name),
+      headline: profileDraft.headline.trim() || null,
+      bio: profileDraft.bio.trim() || null,
+      is_public: profileDraft.is_public,
+    })
+
+    setIsSavingProfile(false)
+
+    if (error) {
+      setStatusMessage(error.message)
+      return
+    }
+
+    setCurrentProfile((current) => ({
+      ...current,
+      slug: slugify(profileDraft.slug || current.full_name),
+      headline: profileDraft.headline.trim() || null,
+      bio: profileDraft.bio.trim() || null,
+      is_public: profileDraft.is_public,
+    }))
+    setProfileDraft((current) => ({
+      ...current,
+      slug: slugify(profileDraft.slug || currentProfile.full_name),
+    }))
+    setStatusMessage("Profile updated")
+  }
+
+  async function handleCreateProject() {
+    if (!projectDraft.title.trim()) {
+      setStatusMessage("Project title is required")
+      return
+    }
+
+    setIsSavingProject(true)
+    setStatusMessage(null)
+    const supabase = createClient()
+
+    const { data, error } = await supabase
+      .from("user_projects")
+      .insert({
+        user_id: currentProfile.id,
+        cohort_id: currentCohortId,
+        ...normalizeProject(projectDraft),
+      })
+      .select("id, title, description, project_url, repo_url, demo_url, thumbnail_url, technologies, status, featured, created_at")
+      .single()
+
+    setIsSavingProject(false)
+
+    if (error) {
+      setStatusMessage(error.message)
+      return
+    }
+
+    if (data) {
+      setProjectList((current) => [
+        {
+          id: data.id,
+          title: data.title,
+          description: data.description,
+          project_url: data.project_url,
+          repo_url: data.repo_url,
+          demo_url: data.demo_url,
+          thumbnail_url: data.thumbnail_url,
+          technologies: data.technologies || [],
+          status: data.status,
+          featured: data.featured,
+          created_at: data.created_at,
+        },
+        ...current,
+      ])
+    }
+
+    setProjectDraft({
+      title: "",
+      description: "",
+      project_url: "",
+      repo_url: "",
+      demo_url: "",
+      technologies: "",
+      featured: false,
+    })
+    setShowProjectForm(false)
+    setStatusMessage("Project added")
+  }
 
   const tierLabel = {
     initial: "Explorer",
     foundational: "Foundational",
     builder: "Builder",
     architect: "Architect",
-  }[profile.membership_tier]
+  }[currentProfile.membership_tier]
 
   return (
     <div className="min-h-screen bg-[#F4F1FB]">
@@ -117,16 +295,16 @@ export function ProfileDashboard({ profile, projects, certificates }: ProfileDas
           <div className="p-6 sm:p-8 border-b border-[#E8E3F3] bg-gradient-to-br from-white to-[#F4F1FB]">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="flex items-start gap-4">
-                {profile.avatar_url ? (
+                {currentProfile.avatar_url ? (
                   <Image
-                    src={profile.avatar_url}
-                    alt={profile.full_name}
+                    src={currentProfile.avatar_url}
+                    alt={currentProfile.full_name}
                     width={84}
                     height={84}
                     className="rounded-2xl ring-4 ring-white shadow-sm"
                   />
                 ) : (
-                  <div className="w-21 h-21 rounded-2xl bg-[#492B8C] text-white flex items-center justify-center text-2xl font-bold shadow-sm">
+                  <div className="w-20 h-20 rounded-2xl bg-[#492B8C] text-white flex items-center justify-center text-2xl font-bold shadow-sm">
                     {initials}
                   </div>
                 )}
@@ -134,12 +312,12 @@ export function ProfileDashboard({ profile, projects, certificates }: ProfileDas
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <h1 className="text-2xl sm:text-3xl font-bold text-[#1A0A3D]" style={{ fontFamily: "var(--font-cal-sans)" }}>
-                      {profile.full_name}
+                      {currentProfile.full_name}
                     </h1>
                     <Badge className="rounded-full bg-[#492B8C] text-white hover:bg-[#492B8C]">
                       {tierLabel}
                     </Badge>
-                    {profile.is_public ? (
+                    {currentProfile.is_public ? (
                       <Badge variant="outline" className="rounded-full border-[#00C8A7] text-[#00C8A7]">
                         Public profile
                       </Badge>
@@ -149,9 +327,9 @@ export function ProfileDashboard({ profile, projects, certificates }: ProfileDas
                       </Badge>
                     )}
                   </div>
-                  <p className="text-[#6B5B9E] mb-3">{profile.email}</p>
+                  <p className="text-[#6B5B9E] mb-3">{currentProfile.email}</p>
                   <p className="text-[#1A0A3D] max-w-2xl leading-relaxed">
-                    {profile.headline || profile.bio || "This is your AI Builder profile space. Add your project work, credentials, and certificates here."}
+                    {currentProfile.headline || currentProfile.bio || "This is your AI Builder profile space. Add your project work, credentials, and certificates here."}
                   </p>
                 </div>
               </div>
@@ -159,43 +337,39 @@ export function ProfileDashboard({ profile, projects, certificates }: ProfileDas
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                 <div className="p-3 rounded-2xl bg-[#F4F1FB]">
                   <p className="text-[#6B5B9E] text-xs">Projects</p>
-                  <p className="font-semibold text-[#1A0A3D]">{projects.length}</p>
+                  <p className="font-semibold text-[#1A0A3D]">{projectList.length}</p>
                 </div>
                 <div className="p-3 rounded-2xl bg-[#F4F1FB]">
                   <p className="text-[#6B5B9E] text-xs">Certificates</p>
-                  <p className="font-semibold text-[#1A0A3D]">{certificates.length}</p>
-                </div>
-                <div className="p-3 rounded-2xl bg-[#F4F1FB]">
-                  <p className="text-[#6B5B9E] text-xs">Location</p>
-                  <p className="font-semibold text-[#1A0A3D]">{profile.location || "—"}</p>
+                  <p className="font-semibold text-[#1A0A3D]">{certificateList.length}</p>
                 </div>
                 <div className="p-3 rounded-2xl bg-[#F4F1FB]">
                   <p className="text-[#6B5B9E] text-xs">Member since</p>
-                  <p className="font-semibold text-[#1A0A3D]">{new Date(profile.created_at).toLocaleDateString()}</p>
+                  <p className="font-semibold text-[#1A0A3D]">{new Date(currentProfile.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-2 mt-6">
-              {profile.website_url && (
+              {currentProfile.website_url && (
                 <Button asChild variant="outline" size="sm" className="rounded-full border-[#E8E3F3]">
-                  <a href={profile.website_url} target="_blank" rel="noopener noreferrer">
+                  <a href={currentProfile.website_url} target="_blank" rel="noopener noreferrer">
                     <Globe className="w-4 h-4 mr-2" />
                     Website
                   </a>
                 </Button>
               )}
-              {profile.github_url && (
+              {currentProfile.github_url && (
                 <Button asChild variant="outline" size="sm" className="rounded-full border-[#E8E3F3]">
-                  <a href={profile.github_url} target="_blank" rel="noopener noreferrer">
+                  <a href={currentProfile.github_url} target="_blank" rel="noopener noreferrer">
                     <Github className="w-4 h-4 mr-2" />
                     GitHub
                   </a>
                 </Button>
               )}
-              {profile.linkedin_url && (
+              {currentProfile.linkedin_url && (
                 <Button asChild variant="outline" size="sm" className="rounded-full border-[#E8E3F3]">
-                  <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer">
+                  <a href={currentProfile.linkedin_url} target="_blank" rel="noopener noreferrer">
                     <Linkedin className="w-4 h-4 mr-2" />
                     LinkedIn
                   </a>
@@ -226,6 +400,12 @@ export function ProfileDashboard({ profile, projects, certificates }: ProfileDas
               })}
             </div>
 
+            {statusMessage && (
+              <div className="mb-4 rounded-2xl border border-[#E8E3F3] bg-[#F4F1FB] px-4 py-3 text-sm text-[#1A0A3D]">
+                {statusMessage}
+              </div>
+            )}
+
             {activeTab === "overview" && (
               <div className="grid lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-4">
@@ -235,7 +415,7 @@ export function ProfileDashboard({ profile, projects, certificates }: ProfileDas
                       <h2 className="font-semibold text-[#1A0A3D]">About</h2>
                     </div>
                     <p className="text-sm text-[#6B5B9E] leading-relaxed">
-                      {profile.bio || "Add a short bio, what you are building, and your AI Builder goals. This section will be public when you share your profile."}
+                      {currentProfile.bio || "Add a short bio, what you are building, and your AI Builder goals. This section will be public when you share your profile."}
                     </p>
                   </div>
 
@@ -247,15 +427,15 @@ export function ProfileDashboard({ profile, projects, certificates }: ProfileDas
                     <div className="grid sm:grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-[#6B5B9E] text-xs mb-1">Slug</p>
-                        <p className="text-[#1A0A3D] font-medium">{profile.slug || "Not set yet"}</p>
+                        <p className="text-[#1A0A3D] font-medium">{currentProfile.slug || "Not set yet"}</p>
                       </div>
                       <div>
                         <p className="text-[#6B5B9E] text-xs mb-1">Visibility</p>
-                        <p className="text-[#1A0A3D] font-medium">{profile.is_public ? "Public" : "Private"}</p>
+                        <p className="text-[#1A0A3D] font-medium">{currentProfile.is_public ? "Public" : "Private"}</p>
                       </div>
                       <div>
                         <p className="text-[#6B5B9E] text-xs mb-1">Email</p>
-                        <p className="text-[#1A0A3D] font-medium">{profile.email}</p>
+                        <p className="text-[#1A0A3D] font-medium">{currentProfile.email}</p>
                       </div>
                       <div>
                         <p className="text-[#6B5B9E] text-xs mb-1">Membership</p>
@@ -263,13 +443,87 @@ export function ProfileDashboard({ profile, projects, certificates }: ProfileDas
                       </div>
                     </div>
                   </div>
+
+                  <div className="p-5 rounded-2xl border border-[#E8E3F3] bg-white">
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                      <div>
+                        <h2 className="font-semibold text-[#1A0A3D]">Edit profile</h2>
+                        <p className="text-sm text-[#6B5B9E]">Update your about section and profile slug.</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowProfileForm((current) => !current)}
+                        className="rounded-full"
+                      >
+                        {showProfileForm ? "Close" : "Edit"}
+                      </Button>
+                    </div>
+
+                    {showProfileForm && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-[#1A0A3D] mb-2">Slug</label>
+                          <Input
+                            value={profileDraft.slug}
+                            onChange={(e) => setProfileDraft((current) => ({ ...current, slug: e.target.value }))}
+                            placeholder="your-name"
+                          />
+                          <p className="text-xs text-[#6B5B9E] mt-2">Auto-generated from your name, but you can change it.</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-[#1A0A3D] mb-2">Headline</label>
+                          <Input
+                            value={profileDraft.headline}
+                            onChange={(e) => setProfileDraft((current) => ({ ...current, headline: e.target.value }))}
+                            placeholder="What are you building?"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-[#1A0A3D] mb-2">About</label>
+                          <Textarea
+                            value={profileDraft.bio}
+                            onChange={(e) => setProfileDraft((current) => ({ ...current, bio: e.target.value }))}
+                            placeholder="Tell people about your cohort journey..."
+                            className="min-h-28"
+                          />
+                        </div>
+                        <label className="flex items-center gap-3 text-sm text-[#1A0A3D]">
+                          <input
+                            type="checkbox"
+                            checked={profileDraft.is_public}
+                            onChange={(e) => setProfileDraft((current) => ({ ...current, is_public: e.target.checked }))}
+                            className="w-4 h-4 rounded border-[#E8E3F3] text-[#492B8C] focus:ring-[#492B8C]"
+                          />
+                          Make profile public
+                        </label>
+                        <Button
+                          onClick={handleSaveProfile}
+                          disabled={isSavingProfile}
+                          className="rounded-full bg-[#492B8C] text-white hover:bg-[#2D1A69]"
+                        >
+                          {isSavingProfile ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            "Save profile"
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-4">
                   <div className="p-5 rounded-2xl border border-[#E8E3F3] bg-[#F4F1FB]">
                     <h3 className="font-semibold text-[#1A0A3D] mb-2">Quick actions</h3>
                     <p className="text-sm text-[#6B5B9E] mb-4">Show off what you built in the cohort.</p>
-                    <Button className="w-full rounded-full bg-[#492B8C] text-white hover:bg-[#2D1A69]">
+                    <Button
+                      className="w-full rounded-full bg-[#492B8C] text-white hover:bg-[#2D1A69]"
+                      onClick={() => setShowProjectForm(true)}
+                    >
                       <Plus className="w-4 h-4 mr-2" />
                       Add project
                     </Button>
@@ -280,14 +534,23 @@ export function ProfileDashboard({ profile, projects, certificates }: ProfileDas
 
             {activeTab === "projects" && (
               <div className="space-y-4">
-                {projects.length === 0 ? (
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => setShowProjectForm(true)}
+                    className="rounded-full bg-[#492B8C] text-white hover:bg-[#2D1A69]"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add project
+                  </Button>
+                </div>
+                {projectList.length === 0 ? (
                   <div className="p-8 rounded-2xl border border-dashed border-[#E8E3F3] bg-[#F4F1FB] text-center">
                     <Layers3 className="w-10 h-10 mx-auto text-[#6B5B9E] mb-3" />
                     <p className="font-semibold text-[#1A0A3D] mb-1">No projects added yet</p>
                     <p className="text-sm text-[#6B5B9E]">Add your cohort builds, demos, links, and descriptions here.</p>
                   </div>
                 ) : (
-                  projects.map((project) => (
+                  projectList.map((project) => (
                     <div key={project.id} className="p-5 rounded-2xl border border-[#E8E3F3] bg-white">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                         <div className="space-y-2">
@@ -345,14 +608,14 @@ export function ProfileDashboard({ profile, projects, certificates }: ProfileDas
 
             {activeTab === "certificates" && (
               <div className="space-y-4">
-                {certificates.length === 0 ? (
+                {certificateList.length === 0 ? (
                   <div className="p-8 rounded-2xl border border-dashed border-[#E8E3F3] bg-[#F4F1FB] text-center">
                     <Award className="w-10 h-10 mx-auto text-[#6B5B9E] mb-3" />
                     <p className="font-semibold text-[#1A0A3D] mb-1">Certificates will show here</p>
                     <p className="text-sm text-[#6B5B9E]">Once certificates are generated and visible, they will appear in this section.</p>
                   </div>
                 ) : (
-                  certificates.map((certificate) => (
+                  certificateList.map((certificate) => (
                     <div key={certificate.id} className="p-5 rounded-2xl border border-[#E8E3F3] bg-white flex items-center justify-between gap-4">
                       <div>
                         <h3 className="font-semibold text-[#1A0A3D]">{certificate.title}</h3>
@@ -375,6 +638,112 @@ export function ProfileDashboard({ profile, projects, certificates }: ProfileDas
             )}
           </div>
         </section>
+
+        {showProjectForm && (
+          <div className="fixed inset-0 z-50 bg-black/60 px-4 py-6 flex items-center justify-center">
+            <div className="w-full max-w-2xl rounded-3xl bg-white shadow-2xl overflow-hidden">
+              <div className="p-5 border-b border-[#E8E3F3] flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-[#1A0A3D]">Add project</h2>
+                  <p className="text-sm text-[#6B5B9E]">Save your cohort work and share it on your profile.</p>
+                </div>
+                <button
+                  onClick={() => setShowProjectForm(false)}
+                  className="w-9 h-9 rounded-full bg-[#F4F1FB] flex items-center justify-center text-[#6B5B9E] hover:text-[#1A0A3D]"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 grid gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#1A0A3D] mb-2">Project name</label>
+                  <Input
+                    value={projectDraft.title}
+                    onChange={(e) => setProjectDraft((current) => ({ ...current, title: e.target.value }))}
+                    placeholder="My AI product"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#1A0A3D] mb-2">Description</label>
+                  <Textarea
+                    value={projectDraft.description}
+                    onChange={(e) => setProjectDraft((current) => ({ ...current, description: e.target.value }))}
+                    placeholder="What does it do?"
+                    className="min-h-24"
+                  />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-2">Project link</label>
+                    <Input
+                      value={projectDraft.project_url}
+                      onChange={(e) => setProjectDraft((current) => ({ ...current, project_url: e.target.value }))}
+                      placeholder="https://..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-2">Repository link</label>
+                    <Input
+                      value={projectDraft.repo_url}
+                      onChange={(e) => setProjectDraft((current) => ({ ...current, repo_url: e.target.value }))}
+                      placeholder="https://github.com/..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-2">Demo video link</label>
+                    <Input
+                      value={projectDraft.demo_url}
+                      onChange={(e) => setProjectDraft((current) => ({ ...current, demo_url: e.target.value }))}
+                      placeholder="https://youtube.com/..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-2">Technologies</label>
+                    <Input
+                      value={projectDraft.technologies}
+                      onChange={(e) => setProjectDraft((current) => ({ ...current, technologies: e.target.value }))}
+                      placeholder="Next.js, Supabase, OpenAI"
+                    />
+                  </div>
+                </div>
+                <label className="flex items-center gap-3 text-sm text-[#1A0A3D]">
+                  <input
+                    type="checkbox"
+                    checked={projectDraft.featured}
+                    onChange={(e) => setProjectDraft((current) => ({ ...current, featured: e.target.checked }))}
+                    className="w-4 h-4 rounded border-[#E8E3F3] text-[#492B8C] focus:ring-[#492B8C]"
+                  />
+                  Feature this project on my profile
+                </label>
+              </div>
+
+              <div className="p-5 border-t border-[#E8E3F3] flex items-center justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowProjectForm(false)}
+                  className="rounded-full"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreateProject}
+                  disabled={isSavingProject}
+                  className="rounded-full bg-[#492B8C] text-white hover:bg-[#2D1A69]"
+                >
+                  {isSavingProject ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save project"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
