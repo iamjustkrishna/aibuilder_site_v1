@@ -147,7 +147,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { action, title, description, youtube_url, tier_required, week_number, github_json_url } = body
+    const { action, title, video_title, description, youtube_url, video_url, week_number, github_json_url } = body
 
     // Handle GitHub sync action
     if (action === "sync-github" || github_json_url) {
@@ -191,12 +191,16 @@ export async function POST(request: Request) {
         if (Array.isArray(githubData)) {
           // Direct array of videos
           for (const video of githubData) {
-            if (video.title && video.youtube_url && video.week_number) {
+            const videoTitle = typeof video.video_title === "string" ? video.video_title.trim() : typeof video.title === "string" ? video.title.trim() : ""
+            const videoUrl = typeof video.video_url === "string" ? video.video_url.trim() : typeof video.youtube_url === "string" ? video.youtube_url.trim() : ""
+            const weekNumber = Number(video.week_number)
+
+            if (videoTitle && videoUrl && Number.isFinite(weekNumber) && weekNumber > 0) {
               const { data: lastVideo } = await serviceClient
                 .from("cohort_video_configs")
                 .select("sort_order")
                 .eq("cohort_id", currentCohort.id)
-                .eq("week_number", video.week_number)
+                .eq("week_number", weekNumber)
                 .order("sort_order", { ascending: false })
                 .limit(1)
                 .single()
@@ -207,12 +211,14 @@ export async function POST(request: Request) {
                 .from("cohort_video_configs")
                 .insert({
                   cohort_id: currentCohort.id,
-                  week_number: video.week_number,
-                  video_title: video.title,
+                  week_number: weekNumber,
+                  video_title: videoTitle,
                   description: video.description || null,
-                  video_url: video.youtube_url,
-                  tier_required: video.tier_required || "foundational",
+                  video_url: videoUrl,
                   sort_order: nextSortOrder,
+                  question_count: Number.isFinite(Number(video.question_count)) ? Number(video.question_count) : 3,
+                  auto_generate_quiz: video.auto_generate_quiz !== false,
+                  is_active: video.is_active !== false,
                 })
 
               syncedCount++
@@ -221,12 +227,16 @@ export async function POST(request: Request) {
         } else if (githubData.videos && Array.isArray(githubData.videos)) {
           // Nested videos array
           for (const video of githubData.videos) {
-            if (video.title && video.youtube_url && video.week_number) {
+            const videoTitle = typeof video.video_title === "string" ? video.video_title.trim() : typeof video.title === "string" ? video.title.trim() : ""
+            const videoUrl = typeof video.video_url === "string" ? video.video_url.trim() : typeof video.youtube_url === "string" ? video.youtube_url.trim() : ""
+            const weekNumber = Number(video.week_number)
+
+            if (videoTitle && videoUrl && Number.isFinite(weekNumber) && weekNumber > 0) {
               const { data: lastVideo } = await serviceClient
                 .from("cohort_video_configs")
                 .select("sort_order")
                 .eq("cohort_id", currentCohort.id)
-                .eq("week_number", video.week_number)
+                .eq("week_number", weekNumber)
                 .order("sort_order", { ascending: false })
                 .limit(1)
                 .single()
@@ -237,12 +247,14 @@ export async function POST(request: Request) {
                 .from("cohort_video_configs")
                 .insert({
                   cohort_id: currentCohort.id,
-                  week_number: video.week_number,
-                  title: video.title,
+                  week_number: weekNumber,
+                  video_title: videoTitle,
                   description: video.description || null,
-                  youtube_url: video.youtube_url,
-                  tier_required: video.tier_required || "foundational",
+                  video_url: videoUrl,
                   sort_order: nextSortOrder,
+                  question_count: Number.isFinite(Number(video.question_count)) ? Number(video.question_count) : 3,
+                  auto_generate_quiz: video.auto_generate_quiz !== false,
+                  is_active: video.is_active !== false,
                 })
 
               syncedCount++
@@ -261,9 +273,13 @@ export async function POST(request: Request) {
     }
 
     // Handle add video action (default)
-    if (!title || !youtube_url || !week_number) {
+    const resolvedTitle = typeof title === "string" ? title.trim() : typeof video_title === "string" ? video_title.trim() : ""
+    const resolvedUrl = typeof youtube_url === "string" ? youtube_url.trim() : typeof video_url === "string" ? video_url.trim() : ""
+    const resolvedWeekNumber = Number(week_number)
+
+    if (!resolvedTitle || !resolvedUrl || !Number.isFinite(resolvedWeekNumber) || resolvedWeekNumber <= 0) {
       return NextResponse.json(
-        { error: "Title, YouTube URL, and week number are required" },
+        { error: "Title/video_title, YouTube URL/video_url, and week number are required" },
         { status: 400 }
       )
     }
@@ -290,7 +306,7 @@ export async function POST(request: Request) {
       .from("cohort_video_configs")
       .select("sort_order")
       .eq("cohort_id", currentCohort.id)
-      .eq("week_number", week_number)
+      .eq("week_number", resolvedWeekNumber)
       .order("sort_order", { ascending: false })
       .limit(1)
       .single()
@@ -302,12 +318,14 @@ export async function POST(request: Request) {
       .from("cohort_video_configs")
       .insert({
         cohort_id: currentCohort.id,
-        week_number,
-        video_title: title,
+        week_number: resolvedWeekNumber,
+        video_title: resolvedTitle,
         description: description || null,
-        video_url: youtube_url,
-        tier_required: tier_required || "foundational",
+        video_url: resolvedUrl,
         sort_order: nextSortOrder,
+        question_count: 3,
+        auto_generate_quiz: true,
+        is_active: true,
       })
       .select()
       .single()

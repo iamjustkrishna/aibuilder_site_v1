@@ -131,30 +131,57 @@ export async function POST(request: Request) {
   const body = await request.json()
 
   // Check if this is a video creation request
-  if (body.resource === "video" || body.youtube_url) {
+  if (body.resource === "video" || body.youtube_url || body.video_url) {
     const cohortId = typeof body.cohort_id === "string" ? body.cohort_id.trim() : ""
     const weekId = typeof body.week_id === "string" ? body.week_id.trim() : ""
-    const title = typeof body.title === "string" ? body.title.trim() : ""
-    const youtubeUrl = typeof body.youtube_url === "string" ? body.youtube_url.trim() : ""
+    const weekNumberRaw = body.week_number !== undefined ? Number(body.week_number) : null
+    const title = typeof body.title === "string" ? body.title.trim() : typeof body.video_title === "string" ? body.video_title.trim() : ""
+    const youtubeUrl = typeof body.youtube_url === "string" ? body.youtube_url.trim() : typeof body.video_url === "string" ? body.video_url.trim() : ""
     const description = typeof body.description === "string" ? body.description.trim() : ""
-    const tierRequired = body.tier_required || "foundational"
     const sortOrder = Number(body.sort_order || 0)
+    const questionCount = body.question_count !== undefined ? Number(body.question_count) : 3
+    const autoGenerateQuiz = body.auto_generate_quiz !== false
+    const isActive = body.is_active !== false
 
-    if (!cohortId || !weekId || !title || !youtubeUrl) {
-      return NextResponse.json({ error: "cohort_id, week_id, title, and youtube_url are required" }, { status: 400 })
+    if (!cohortId || (!weekId && (!weekNumberRaw || Number.isNaN(weekNumberRaw))) || !title) {
+      return NextResponse.json(
+        { error: "cohort_id, week_id or week_number, and title/video_title are required" },
+        { status: 400 },
+      )
     }
 
     const serviceClient = createServiceClient()
+    let weekNumber = weekNumberRaw
+
+    if (!weekNumber && weekId) {
+      const { data: cohortWeek, error: cohortWeekError } = await serviceClient
+        .from("cohort_weeks")
+        .select("week_number")
+        .eq("id", weekId)
+        .eq("cohort_id", cohortId)
+        .single()
+
+      if (cohortWeekError || !cohortWeek) {
+        return NextResponse.json({ error: "Week not found for this cohort" }, { status: 404 })
+      }
+
+      weekNumber = cohortWeek.week_number
+    }
+
     const { data: video, error: videoError } = await serviceClient
       .from("cohort_video_configs")
       .insert({
         cohort_id: cohortId,
-        week_id: weekId,
-        title,
+        week_number: weekNumber,
+        video_title: title,
         description: description || null,
-        youtube_url: youtubeUrl,
-        tier_required: tierRequired,
+        video_url: youtubeUrl || null,
         sort_order: sortOrder,
+        question_count: questionCount,
+        auto_generate_quiz: autoGenerateQuiz,
+        is_active: isActive,
+        resource_id: body.resource_id || null,
+        updated_at: new Date().toISOString(),
       })
       .select()
       .single()
@@ -293,7 +320,7 @@ export async function PATCH(request: Request) {
   const body = await request.json()
   const cohortId = typeof body.cohort_id === "string" ? body.cohort_id.trim() : ""
   const action = typeof body.action === "string" ? body.action.trim() : ""
-  const userIds = Array.isArray(body.user_ids) ? body.user_ids.filter((id) => typeof id === "string") : []
+  const userIds = Array.isArray(body.user_ids) ? body.user_ids.filter((id: unknown): id is string => typeof id === "string") : []
   const enrollmentStatus = (typeof body.enrollment_status === "string" ? body.enrollment_status.toLowerCase() : "active") as EnrollmentStatus
 
   if (action === "set-current") {
@@ -334,7 +361,7 @@ export async function PATCH(request: Request) {
   }
 
   const serviceClient = createServiceClient()
-  const rows = userIds.map((userId) => ({
+  const rows = userIds.map((userId: string) => ({
     cohort_id: cohortId,
     user_id: userId,
     enrollment_status: enrollmentStatus,

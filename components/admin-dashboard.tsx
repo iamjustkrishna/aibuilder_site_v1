@@ -109,10 +109,13 @@ interface CohortWeek {
 interface CohortVideoConfig {
   id: string
   cohort_id: string
-  week_id: string
-  title: string
+  week_id?: string
+  week_number?: number
+  title?: string
+  video_title?: string
   description: string | null
-  youtube_url: string
+  youtube_url?: string
+  video_url?: string
   tier_required: "initial" | "foundational" | "builder" | "architect"
   sort_order: number
   created_at: string
@@ -393,7 +396,15 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       
       if (videosRes.ok) {
         const data = await videosRes.json()
-        setCohortVideos(data || [])
+        const normalizedVideos = (data || []).map((video: CohortVideoConfig) => ({
+          ...video,
+          title: video.title || video.video_title || "Untitled video",
+          video_title: video.video_title || video.title || "Untitled video",
+          youtube_url: video.youtube_url || video.video_url || "",
+          video_url: video.video_url || video.youtube_url || "",
+          tier_required: video.tier_required || "foundational",
+        }))
+        setCohortVideos(normalizedVideos)
       }
     } catch (error) {
       console.error("Failed to fetch cohort details:", error)
@@ -490,6 +501,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       return
     }
     try {
+      const week = cohortWeeks.find(w => w.id === weekId)
       const res = await fetch(`/api/admin/cohorts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -497,11 +509,13 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
           resource: "video",
           cohort_id: selectedCohortId,
           week_id: weekId,
+          week_number: week?.week_number,
           title: weekVideoForm.title,
           description: weekVideoForm.description,
           youtube_url: weekVideoForm.url,
-          tier_required: weekVideoForm.tier_required,
-          sort_order: cohortVideos.filter(v => v.week_id === weekId).length,
+          video_title: weekVideoForm.title,
+          video_url: weekVideoForm.url,
+          sort_order: cohortVideos.filter(v => (v.week_id === weekId) || (v.week_number === week?.week_number)).length,
         }),
       })
       if (res.ok) {
@@ -1763,7 +1777,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                   </div>
                 ) : (
                   cohortWeeks.map((week) => {
-                    const weekVideos = cohortVideos.filter(v => v.week_id === week.id)
+                    const weekVideos = cohortVideos.filter(v => v.week_id === week.id || v.week_number === week.week_number)
                     const isAddingThis = addingToWeek === week.id
                     return (
                       <div key={week.id} className="bg-white/10 backdrop-blur rounded-2xl overflow-hidden">
@@ -1852,7 +1866,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                             <p className="text-white/40 text-sm text-center py-4">No videos yet. Click "Add Video" to get started.</p>
                           ) : (
                             weekVideos.map((video) => {
-                              const videoId = extractYouTubeId(video.youtube_url)
+                              const videoId = extractYouTubeId(video.youtube_url || video.video_url || "")
                               return (
                                 <div key={video.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group">
                                   <div className="relative flex-shrink-0 w-20 aspect-video rounded-lg overflow-hidden bg-black/30">
@@ -1868,13 +1882,13 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                                     </div>
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-white font-medium text-sm truncate">{video.title}</p>
+                                    <p className="text-white font-medium text-sm truncate">{video.title || video.video_title}</p>
                                     {video.description && <p className="text-white/50 text-xs truncate mt-0.5">{video.description}</p>}
                                     <div className="flex items-center gap-2 mt-1">
                                       <span className={`px-1.5 py-0.5 rounded text-xs text-white ${tierConfig[video.tier_required as keyof typeof tierConfig]?.color || "bg-gray-500"}`}>
                                         {tierConfig[video.tier_required as keyof typeof tierConfig]?.label}
                                       </span>
-                                      <a href={video.youtube_url} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition-colors">
+                                      <a href={video.youtube_url || video.video_url || "#"} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-white/70 transition-colors">
                                         <LinkIcon className="w-3 h-3" />
                                       </a>
                                     </div>
@@ -3464,7 +3478,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
               ) : (
                 <div className="space-y-2">
                   {curatedVideos.map((video) => {
-                    const videoId = video.youtube_url.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]+)/)?.[1]
+                    const videoId = (video.youtube_url || video.video_url || "").match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([a-zA-Z0-9_-]+)/)?.[1]
                     return (
                       <div
                         key={video.id}
