@@ -475,27 +475,34 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
               </a>
             </Button>
 
-            <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard/profile"
+              className="group flex items-center gap-3 rounded-2xl px-3 py-2 transition-all duration-200 hover:bg-[#F4F1FB] hover:shadow-sm hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-[#492B8C]/20"
+              aria-label="Open profile"
+            >
               {profile?.avatar_url ? (
                 <Image
                   src={profile.avatar_url}
                   alt={profile.full_name || "User"}
                   width={36}
                   height={36}
-                  className="rounded-full"
+                  className="rounded-full ring-2 ring-transparent group-hover:ring-[#492B8C]/15 transition-all"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-[#F4F1FB] flex items-center justify-center">
+                <div className="w-9 h-9 rounded-full bg-[#F4F1FB] flex items-center justify-center ring-2 ring-transparent group-hover:ring-[#492B8C]/15 transition-all">
                   <span className="text-sm font-medium text-[#492B8C]">
                     {(profile?.full_name || user.email || "U").charAt(0).toUpperCase()}
                   </span>
                 </div>
               )}
               <div className="hidden sm:block">
-                <p className="text-sm font-medium text-[#1A0A3D]">{profile?.full_name || "User"}</p>
+                <p className="text-sm font-medium text-[#1A0A3D] group-hover:text-[#492B8C] transition-colors">
+                  {profile?.full_name || "User"}
+                </p>
                 <p className="text-xs text-[#6B5B9E]">{user.email}</p>
               </div>
-            </div>
+              <ChevronRight className="hidden sm:block w-4 h-4 text-[#6B5B9E] transition-transform group-hover:translate-x-0.5 group-hover:text-[#492B8C]" />
+            </Link>
             {isAdmin && (
               <Button
                 asChild
