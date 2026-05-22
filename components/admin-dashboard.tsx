@@ -1144,6 +1144,13 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       if (res.ok) {
         const data = await res.json()
         setCuratedVideoMessage({ type: "success", text: `Synced ${data.synced_count || 0} videos from GitHub` })
+        if (selectedCohortId) {
+          setCohorts((prev) =>
+            prev.map((c) =>
+              c.id === selectedCohortId ? { ...c, curated_videos_source_url: sourceUrl } : c
+            )
+          )
+        }
         await fetchCuratedVideos(selectedCuratedWeek)
       } else {
         const data = await res.json()
@@ -3524,12 +3531,14 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                             </a>
                           </div>
                         </div>
-                        <button
-                          onClick={() => handleDeleteCuratedVideo(video.id)}
-                          className="p-2 rounded-lg hover:bg-red-50 text-[#6B5B9E] hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {!video.id.startsWith("json-") && (
+                          <button
+                            onClick={() => handleDeleteCuratedVideo(video.id)}
+                            className="p-2 rounded-lg hover:bg-red-50 text-[#6B5B9E] hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     )
                   })}
