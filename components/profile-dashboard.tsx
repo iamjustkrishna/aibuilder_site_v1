@@ -17,6 +17,7 @@ import {
   Globe,
   Linkedin,
   Loader2,
+  Pencil,
   Sparkles,
   UserCircle2,
   Award,
@@ -53,7 +54,6 @@ type ProjectFormState = {
 
 type ProfileDraftState = {
   slug: string
-  headline: string
   bio: string
   is_public: boolean
 }
@@ -102,13 +102,12 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
   const [projectList, setProjectList] = useState(projects)
   const [certificateList, setCertificateList] = useState(certificates)
   const [showProjectForm, setShowProjectForm] = useState(false)
-  const [showProfileForm, setShowProfileForm] = useState(false)
+  const [editingField, setEditingField] = useState<"bio" | "slug" | null>(null)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isSavingProject, setIsSavingProject] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [profileDraft, setProfileDraft] = useState<ProfileDraftState>({
     slug: profile.slug || slugify(profile.full_name),
-    headline: profile.headline || "",
     bio: profile.bio || "",
     is_public: profile.is_public ?? true,
   })
@@ -181,7 +180,6 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
     const { error } = await supabase.from("user_profiles").upsert({
       user_id: currentProfile.id,
       slug: slugify(profileDraft.slug || currentProfile.full_name),
-      headline: profileDraft.headline.trim() || null,
       bio: profileDraft.bio.trim() || null,
       is_public: profileDraft.is_public,
     })
@@ -196,7 +194,6 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
     setCurrentProfile((current) => ({
       ...current,
       slug: slugify(profileDraft.slug || current.full_name),
-      headline: profileDraft.headline.trim() || null,
       bio: profileDraft.bio.trim() || null,
       is_public: profileDraft.is_public,
     }))
@@ -273,8 +270,11 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
     architect: "Architect",
   }[currentProfile.membership_tier]
 
+  const isEditingBio = editingField === "bio"
+  const isEditingSlug = editingField === "slug"
+
   return (
-    <div className="min-h-screen bg-[#F4F1FB]">
+    <div className="min-h-screen bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
         <div className="flex items-center justify-between gap-4 mb-6">
           <Link
@@ -292,7 +292,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
         </div>
 
         <section className="bg-white rounded-3xl border border-[#E8E3F3] shadow-sm overflow-hidden">
-          <div className="p-6 sm:p-8 border-b border-[#E8E3F3] bg-gradient-to-br from-white to-[#F4F1FB]">
+          <div className="p-6 sm:p-8 border-b border-[#E8E3F3] bg-white">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="flex items-start gap-4">
                 {currentProfile.avatar_url ? (
@@ -334,16 +334,16 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                <div className="p-3 rounded-2xl bg-[#F4F1FB]">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+              <div className="p-3 rounded-2xl bg-white border border-[#E8E3F3]">
                   <p className="text-[#6B5B9E] text-xs">Projects</p>
                   <p className="font-semibold text-[#1A0A3D]">{projectList.length}</p>
                 </div>
-                <div className="p-3 rounded-2xl bg-[#F4F1FB]">
+              <div className="p-3 rounded-2xl bg-white border border-[#E8E3F3]">
                   <p className="text-[#6B5B9E] text-xs">Certificates</p>
                   <p className="font-semibold text-[#1A0A3D]">{certificateList.length}</p>
                 </div>
-                <div className="p-3 rounded-2xl bg-[#F4F1FB]">
+              <div className="p-3 rounded-2xl bg-white border border-[#E8E3F3]">
                   <p className="text-[#6B5B9E] text-xs">Member since</p>
                   <p className="font-semibold text-[#1A0A3D]">{new Date(currentProfile.created_at).toLocaleDateString()}</p>
                 </div>
@@ -387,10 +387,10 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                   <button
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border ${
                       active
-                        ? "bg-[#492B8C] text-white shadow-sm"
-                        : "bg-[#F4F1FB] text-[#6B5B9E] hover:bg-[#E8E3F3] hover:text-[#1A0A3D]"
+                        ? "bg-[#492B8C] text-white border-[#492B8C] shadow-sm"
+                        : "bg-white text-[#492B8C] border-[#E8E3F3] hover:bg-[#FFF8F2] hover:border-[#FFC9B0]"
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -401,7 +401,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
             </div>
 
             {statusMessage && (
-              <div className="mb-4 rounded-2xl border border-[#E8E3F3] bg-[#F4F1FB] px-4 py-3 text-sm text-[#1A0A3D]">
+              <div className="mb-4 rounded-2xl border border-[#E8E3F3] bg-white px-4 py-3 text-sm text-[#1A0A3D]">
                 {statusMessage}
               </div>
             )}
@@ -410,13 +410,56 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
               <div className="grid lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-4">
                   <div className="p-5 rounded-2xl border border-[#E8E3F3] bg-white">
-                    <div className="flex items-center gap-2 mb-3">
-                      <BookOpen className="w-4 h-4 text-[#492B8C]" />
-                      <h2 className="font-semibold text-[#1A0A3D]">About</h2>
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="w-4 h-4 text-[#492B8C]" />
+                        <h2 className="font-semibold text-[#1A0A3D]">About</h2>
+                      </div>
+                      <button
+                        onClick={() => setEditingField((current) => (current === "bio" ? null : "bio"))}
+                        className="inline-flex items-center gap-1 text-sm font-medium text-[#492B8C] hover:text-[#2D1A69]"
+                      >
+                        <Pencil className="w-4 h-4" />
+                        Edit
+                      </button>
                     </div>
-                    <p className="text-sm text-[#6B5B9E] leading-relaxed">
-                      {currentProfile.bio || "Add a short bio, what you are building, and your AI Builder goals. This section will be public when you share your profile."}
-                    </p>
+                    {isEditingBio ? (
+                      <div className="space-y-3">
+                        <Textarea
+                          value={profileDraft.bio}
+                          onChange={(e) => setProfileDraft((current) => ({ ...current, bio: e.target.value }))}
+                          placeholder="Tell people about your cohort journey..."
+                          className="min-h-28 border-[#E8E3F3]"
+                        />
+                        <div className="flex items-center gap-3">
+                          <Button
+                            onClick={handleSaveProfile}
+                            disabled={isSavingProfile}
+                            className="rounded-full bg-[#492B8C] text-white hover:bg-[#2D1A69]"
+                          >
+                            {isSavingProfile ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              "Save about"
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setEditingField(null)}
+                            className="rounded-full border-[#E8E3F3] text-[#492B8C]"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-[#1A0A3D] leading-relaxed">
+                        {currentProfile.bio || "Add a short bio, what you are building, and your AI Builder goals. This section will be public when you share your profile."}
+                      </p>
+                    )}
                   </div>
 
                   <div className="p-5 rounded-2xl border border-[#E8E3F3] bg-white">
@@ -425,9 +468,53 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                       <h2 className="font-semibold text-[#1A0A3D]">Profile details</h2>
                     </div>
                     <div className="grid sm:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-[#6B5B9E] text-xs mb-1">Slug</p>
-                        <p className="text-[#1A0A3D] font-medium">{currentProfile.slug || "Not set yet"}</p>
+                      <div className="sm:col-span-2">
+                        <div className="flex items-center justify-between gap-3 mb-1">
+                          <p className="text-[#6B5B9E] text-xs">Slug</p>
+                          <button
+                            onClick={() => setEditingField((current) => (current === "slug" ? null : "slug"))}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-[#492B8C] hover:text-[#2D1A69]"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            Edit slug
+                          </button>
+                        </div>
+                        {isEditingSlug ? (
+                          <div className="space-y-3">
+                            <Input
+                              value={profileDraft.slug}
+                              onChange={(e) => setProfileDraft((current) => ({ ...current, slug: e.target.value }))}
+                              placeholder="your-name"
+                              className="border-[#E8E3F3]"
+                            />
+                            <div className="flex items-center gap-3">
+                              <Button
+                                onClick={handleSaveProfile}
+                                disabled={isSavingProfile}
+                                className="rounded-full bg-[#492B8C] text-white hover:bg-[#2D1A69]"
+                              >
+                                {isSavingProfile ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Saving...
+                                  </>
+                                ) : (
+                                  "Save slug"
+                                )}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => setEditingField(null)}
+                                className="rounded-full border-[#E8E3F3] text-[#492B8C]"
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                            <p className="text-xs text-[#6B5B9E]">Auto-generated from your name, but you can change it.</p>
+                          </div>
+                        ) : (
+                          <p className="text-[#1A0A3D] font-medium">{currentProfile.slug || "Not set yet"}</p>
+                        )}
                       </div>
                       <div>
                         <p className="text-[#6B5B9E] text-xs mb-1">Visibility</p>
@@ -443,83 +530,12 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                       </div>
                     </div>
                   </div>
-
-                  <div className="p-5 rounded-2xl border border-[#E8E3F3] bg-white">
-                    <div className="flex items-center justify-between gap-3 mb-4">
-                      <div>
-                        <h2 className="font-semibold text-[#1A0A3D]">Edit profile</h2>
-                        <p className="text-sm text-[#6B5B9E]">Update your about section and profile slug.</p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowProfileForm((current) => !current)}
-                        className="rounded-full"
-                      >
-                        {showProfileForm ? "Close" : "Edit"}
-                      </Button>
-                    </div>
-
-                    {showProfileForm && (
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-[#1A0A3D] mb-2">Slug</label>
-                          <Input
-                            value={profileDraft.slug}
-                            onChange={(e) => setProfileDraft((current) => ({ ...current, slug: e.target.value }))}
-                            placeholder="your-name"
-                          />
-                          <p className="text-xs text-[#6B5B9E] mt-2">Auto-generated from your name, but you can change it.</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-[#1A0A3D] mb-2">Headline</label>
-                          <Input
-                            value={profileDraft.headline}
-                            onChange={(e) => setProfileDraft((current) => ({ ...current, headline: e.target.value }))}
-                            placeholder="What are you building?"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-[#1A0A3D] mb-2">About</label>
-                          <Textarea
-                            value={profileDraft.bio}
-                            onChange={(e) => setProfileDraft((current) => ({ ...current, bio: e.target.value }))}
-                            placeholder="Tell people about your cohort journey..."
-                            className="min-h-28"
-                          />
-                        </div>
-                        <label className="flex items-center gap-3 text-sm text-[#1A0A3D]">
-                          <input
-                            type="checkbox"
-                            checked={profileDraft.is_public}
-                            onChange={(e) => setProfileDraft((current) => ({ ...current, is_public: e.target.checked }))}
-                            className="w-4 h-4 rounded border-[#E8E3F3] text-[#492B8C] focus:ring-[#492B8C]"
-                          />
-                          Make profile public
-                        </label>
-                        <Button
-                          onClick={handleSaveProfile}
-                          disabled={isSavingProfile}
-                          className="rounded-full bg-[#492B8C] text-white hover:bg-[#2D1A69]"
-                        >
-                          {isSavingProfile ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            "Save profile"
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="p-5 rounded-2xl border border-[#E8E3F3] bg-[#F4F1FB]">
+                  <div className="p-5 rounded-2xl border border-[#E8E3F3] bg-white">
                     <h3 className="font-semibold text-[#1A0A3D] mb-2">Quick actions</h3>
-                    <p className="text-sm text-[#6B5B9E] mb-4">Show off what you built in the cohort.</p>
+                    <p className="text-sm text-[#1A0A3D] mb-4">Show off what you built in the cohort.</p>
                     <Button
                       className="w-full rounded-full bg-[#492B8C] text-white hover:bg-[#2D1A69]"
                       onClick={() => setShowProjectForm(true)}
@@ -544,10 +560,10 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                   </Button>
                 </div>
                 {projectList.length === 0 ? (
-                  <div className="p-8 rounded-2xl border border-dashed border-[#E8E3F3] bg-[#F4F1FB] text-center">
-                    <Layers3 className="w-10 h-10 mx-auto text-[#6B5B9E] mb-3" />
+                  <div className="p-8 rounded-2xl border border-dashed border-[#E8E3F3] bg-white text-center">
+                    <Layers3 className="w-10 h-10 mx-auto text-[#492B8C] mb-3" />
                     <p className="font-semibold text-[#1A0A3D] mb-1">No projects added yet</p>
-                    <p className="text-sm text-[#6B5B9E]">Add your cohort builds, demos, links, and descriptions here.</p>
+                    <p className="text-sm text-[#1A0A3D]">Add your cohort builds, demos, links, and descriptions here.</p>
                   </div>
                 ) : (
                   projectList.map((project) => (
@@ -557,15 +573,15 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                           <div className="flex flex-wrap items-center gap-2">
                             <h3 className="text-lg font-semibold text-[#1A0A3D]">{project.title}</h3>
                             {project.featured && <Badge className="rounded-full bg-[#FF6B34] text-white hover:bg-[#FF6B34]">Featured</Badge>}
-                            <Badge variant="outline" className="rounded-full border-[#E8E3F3] text-[#6B5B9E]">
+                            <Badge variant="outline" className="rounded-full border-[#E8E3F3] text-[#492B8C]">
                               {project.status}
                             </Badge>
                           </div>
-                          {project.description && <p className="text-sm text-[#6B5B9E] leading-relaxed">{project.description}</p>}
+                          {project.description && <p className="text-sm text-[#1A0A3D] leading-relaxed">{project.description}</p>}
                           {project.technologies.length > 0 && (
                             <div className="flex flex-wrap gap-2">
                               {project.technologies.map((tech) => (
-                                <span key={tech} className="px-2.5 py-1 rounded-full bg-[#F4F1FB] text-xs text-[#492B8C]">
+                                <span key={tech} className="px-2.5 py-1 rounded-full bg-white border border-[#E8E3F3] text-xs text-[#492B8C]">
                                   {tech}
                                 </span>
                               ))}
@@ -609,10 +625,10 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
             {activeTab === "certificates" && (
               <div className="space-y-4">
                 {certificateList.length === 0 ? (
-                  <div className="p-8 rounded-2xl border border-dashed border-[#E8E3F3] bg-[#F4F1FB] text-center">
-                    <Award className="w-10 h-10 mx-auto text-[#6B5B9E] mb-3" />
+                  <div className="p-8 rounded-2xl border border-dashed border-[#E8E3F3] bg-white text-center">
+                    <Award className="w-10 h-10 mx-auto text-[#492B8C] mb-3" />
                     <p className="font-semibold text-[#1A0A3D] mb-1">Certificates will show here</p>
-                    <p className="text-sm text-[#6B5B9E]">Once certificates are generated and visible, they will appear in this section.</p>
+                    <p className="text-sm text-[#1A0A3D]">Once certificates are generated and visible, they will appear in this section.</p>
                   </div>
                 ) : (
                   certificateList.map((certificate) => (
@@ -649,7 +665,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                 </div>
                 <button
                   onClick={() => setShowProjectForm(false)}
-                  className="w-9 h-9 rounded-full bg-[#F4F1FB] flex items-center justify-center text-[#6B5B9E] hover:text-[#1A0A3D]"
+                  className="w-9 h-9 rounded-full bg-white border border-[#E8E3F3] flex items-center justify-center text-[#492B8C] hover:text-[#1A0A3D]"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -722,7 +738,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                 <Button
                   variant="outline"
                   onClick={() => setShowProjectForm(false)}
-                  className="rounded-full"
+                  className="rounded-full border-[#E8E3F3] text-[#492B8C]"
                 >
                   Cancel
                 </Button>
