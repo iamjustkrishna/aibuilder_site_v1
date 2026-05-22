@@ -228,7 +228,7 @@ export function EndQuizLeaderboard({ currentCohortName }: EndQuizLeaderboardProp
                     entry.is_current_user ? "border-[#492B8C] bg-[#FFF8F2]" : "border-[#E8E3F3] bg-white"
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-full bg-[#F4F1FB] flex items-center justify-center text-xs font-bold text-[#492B8C]">
+                  <div className="w-8 h-8 rounded-full bg-white border border-[#E8E3F3] flex items-center justify-center text-xs font-bold text-[#492B8C]">
                     #{entry.rank}
                   </div>
                   <div className="flex-1 min-w-0">

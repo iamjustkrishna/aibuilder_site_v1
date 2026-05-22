@@ -1,8 +1,10 @@
 "use client"
 
 import { motion, useInView } from "framer-motion"
-import { useRef } from "react"
-import { Sparkles, Mail } from "lucide-react"
+import { useRef, useState } from "react"
+import { Sparkles, Mail, Trophy, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { EndQuizLeaderboard } from "@/components/end-quiz-leaderboard"
 
 const footerLinks = {
   Program: [
@@ -20,6 +22,7 @@ const footerLinks = {
 export function Footer() {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: "-50px" })
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false)
 
   return (
     <footer ref={ref} className="border-t border-[#492B8C]/30 bg-[#2D1A69]">
@@ -89,11 +92,46 @@ export function Footer() {
           className="mt-16 pt-8 border-t border-[#492B8C]/30 flex flex-col sm:flex-row items-center justify-between gap-4"
         >
           <p className="text-sm text-[#C3AFFF]">&copy; {new Date().getFullYear()} AI Builder Cohort. All rights reserved.</p>
-          <a href="mailto:support@aibuilder.space" className="text-sm text-[#C3AFFF] hover:text-[#FF6B34] transition-colors">
-            support@aibuilder.space
-          </a>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setLeaderboardOpen(true)}
+              className="rounded-full bg-white text-[#2D1A69] hover:bg-[#FFF8F2] border border-[#E8E3F3] shadow-sm"
+            >
+              <Trophy className="w-4 h-4 mr-2" />
+              Leaderboard
+            </Button>
+            <a href="mailto:support@aibuilder.space" className="text-sm text-[#C3AFFF] hover:text-[#FF6B34] transition-colors">
+              support@aibuilder.space
+            </a>
+          </div>
         </motion.div>
       </div>
+
+      {leaderboardOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 p-4 flex items-center justify-center">
+          <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl bg-white shadow-2xl flex flex-col">
+            <div className="p-4 border-b border-[#E8E3F3] flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-[#6B5B9E]">Current cohort</p>
+                <h3 className="text-xl font-bold text-[#1A0A3D]" style={{ fontFamily: "var(--font-cal-sans)" }}>
+                  Leaderboard
+                </h3>
+              </div>
+              <button
+                onClick={() => setLeaderboardOpen(false)}
+                className="w-9 h-9 rounded-full border border-[#E8E3F3] flex items-center justify-center text-[#492B8C]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4 md:p-6">
+              <EndQuizLeaderboard />
+            </div>
+          </div>
+        </div>
+      )}
     </footer>
   )
 }

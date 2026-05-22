@@ -2,7 +2,6 @@
 
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { EndQuizLeaderboard } from "@/components/end-quiz-leaderboard"
 import {
   Sparkles,
   LogOut,
@@ -28,7 +27,6 @@ import {
   Users,
   Check,
   Share2,
-  Trophy,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -477,18 +475,6 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
               </a>
             </Button>
 
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className="border-[#492B8C] text-[#492B8C] hover:bg-[#492B8C] hover:text-white rounded-full hidden sm:flex"
-            >
-              <a href="#leaderboard">
-                <Trophy className="w-4 h-4 mr-2" />
-                Leaderboard
-              </a>
-            </Button>
-
             <Link
               href="/dashboard/profile"
               className="group flex items-center gap-3 rounded-2xl px-3 py-2 transition-all duration-200 hover:bg-[#F4F1FB] hover:shadow-sm hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-[#492B8C]/20"
@@ -575,8 +561,6 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
             View Program Guide
           </Button>
         </div>
-
-        <EndQuizLeaderboard currentCohortName={currentCohort?.name || null} />
 
         {/* Cohort Weeks - shown for foundational and above */}
         {tierOrder[tier] >= tierOrder["foundational"] && (
