@@ -27,9 +27,10 @@ type LeaderboardEntry = {
 
 interface EndQuizLeaderboardProps {
   currentCohortName?: string | null
+  showQuizCard?: boolean
 }
 
-export function EndQuizLeaderboard({ currentCohortName }: EndQuizLeaderboardProps) {
+export function EndQuizLeaderboard({ currentCohortName, showQuizCard = true }: EndQuizLeaderboardProps) {
   const [leaderboardLoading, setLeaderboardLoading] = useState(true)
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([])
   const [currentUserRank, setCurrentUserRank] = useState<number | null>(null)
@@ -131,8 +132,9 @@ export function EndQuizLeaderboard({ currentCohortName }: EndQuizLeaderboardProp
 
   return (
     <section id="leaderboard" className="mb-8">
-      <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-6">
-        <div className="rounded-3xl border border-[#E8E3F3] bg-white p-6 shadow-sm">
+      <div className={showQuizCard ? "grid lg:grid-cols-[1.1fr_0.9fr] gap-6" : "space-y-6"}>
+        {showQuizCard && (
+          <div className="rounded-3xl border border-[#E8E3F3] bg-white p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-11 h-11 rounded-2xl bg-[#492B8C] text-white flex items-center justify-center">
               <ClipboardList className="w-5 h-5" />
@@ -189,7 +191,8 @@ export function EndQuizLeaderboard({ currentCohortName }: EndQuizLeaderboardProp
               Using project: <span className="font-semibold text-[#492B8C]">{quizMeta.project_title}</span>
             </div>
           )}
-        </div>
+          </div>
+        )}
 
         <div className="rounded-3xl border border-[#E8E3F3] bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-3 mb-4">
@@ -250,7 +253,7 @@ export function EndQuizLeaderboard({ currentCohortName }: EndQuizLeaderboardProp
         </div>
       </div>
 
-      {quizOpen && (
+      {showQuizCard && quizOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 p-4 flex items-center justify-center">
           <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-3xl bg-white shadow-2xl flex flex-col">
             <div className="p-5 border-b border-[#E8E3F3] flex items-start justify-between gap-4">

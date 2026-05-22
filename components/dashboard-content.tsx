@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
+import { EndQuizLeaderboard } from "@/components/end-quiz-leaderboard"
 import {
   Sparkles,
   LogOut,
@@ -27,6 +28,7 @@ import {
   Users,
   Check,
   Share2,
+  Trophy,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -307,6 +309,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   const [selectedPdfTitle, setSelectedPdfTitle] = useState<string>("")
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null)
   const [showMentorModal, setShowMentorModal] = useState(false)
+  const [showLeaderboardModal, setShowLeaderboardModal] = useState(false)
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[]>([])
   const [currentCohort, setCurrentCohort] = useState<CohortSummary | null>(null)
   const [expandedDescriptions, setExpandedDescriptions] = useState<Record<string, boolean>>({})
@@ -539,6 +542,18 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
 
         {/* Quick Actions */}
         <div className="mb-8 flex flex-wrap gap-3">
+          {currentCohort && (
+            <Button
+              type="button"
+              onClick={() => setShowLeaderboardModal(true)}
+              variant="ghost"
+              className="rounded-full !bg-white !text-[#2D1A69] border border-[#E8E3F3] hover:!bg-[#FFF8F2] shadow-sm"
+            >
+              <Trophy className="w-4 h-4 mr-2" />
+              Leaderboard
+            </Button>
+          )}
+
           <Button
             asChild
             className="bg-[#00C8A7] text-white hover:bg-[#00C8A7]/90 rounded-full"
@@ -561,6 +576,30 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
             View Program Guide
           </Button>
         </div>
+
+        {showLeaderboardModal && (
+          <div className="fixed inset-0 z-50 bg-black/70 p-4 flex items-center justify-center">
+            <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl bg-white shadow-2xl flex flex-col">
+              <div className="p-4 border-b border-[#E8E3F3] flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-[#6B5B9E]">Current cohort</p>
+                  <h3 className="text-xl font-bold text-[#1A0A3D]" style={{ fontFamily: "var(--font-cal-sans)" }}>
+                    Leaderboard
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowLeaderboardModal(false)}
+                  className="w-9 h-9 rounded-full border border-[#E8E3F3] flex items-center justify-center text-[#492B8C] bg-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="overflow-y-auto p-4 md:p-6">
+                <EndQuizLeaderboard currentCohortName={currentCohort?.name || null} showQuizCard={false} />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Cohort Weeks - shown for foundational and above */}
         {tierOrder[tier] >= tierOrder["foundational"] && (
