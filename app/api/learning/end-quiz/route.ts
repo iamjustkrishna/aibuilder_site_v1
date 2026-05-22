@@ -211,7 +211,7 @@ export async function GET() {
 
   const { data: cohort, error: cohortError } = await serviceClient
     .from("cohorts")
-    .select("id, name, code")
+    .select("id, name, code, curated_videos_source_url")
     .eq("id", currentCohortId)
     .maybeSingle()
 
@@ -224,7 +224,37 @@ export async function GET() {
     serviceClient.from("cohort_video_configs").select("week_number, video_title").eq("cohort_id", currentCohortId).eq("is_active", true).order("week_number", { ascending: true }),
   ])
 
-  const contentSummary = buildContentSummary(weeks || [], videos || [])
+  let jsonVideos: Array<{ week_number: number; video_title: string }> = []
+  if (cohort.curated_videos_source_url) {
+    try {
+      const response = await fetch(cohort.curated_videos_source_url, { next: { revalidate: 60 } })
+      if (response.ok) {
+        const githubData = await response.json()
+        let videosArray: any[] = []
+        if (Array.isArray(githubData)) {
+          videosArray = githubData
+        } else if (githubData && typeof githubData === "object" && Array.isArray(githubData.videos)) {
+          videosArray = githubData.videos
+        }
+        
+        videosArray.forEach((video) => {
+          const videoTitle = typeof video.video_title === "string" ? video.video_title.trim() : typeof video.title === "string" ? video.title.trim() : ""
+          const weekNumber = Number(video.week_number)
+          if (videoTitle && Number.isFinite(weekNumber) && weekNumber > 0) {
+            jsonVideos.push({
+              week_number: weekNumber,
+              video_title: videoTitle,
+            })
+          }
+        })
+      }
+    } catch (err) {
+      console.error("Error fetching JSON videos in end-quiz GET:", err)
+    }
+  }
+
+  const combinedVideos = [...(videos || []), ...jsonVideos]
+  const contentSummary = buildContentSummary(weeks || [], combinedVideos)
   const projectSnapshot: ProjectSnapshot = {
     id: project.id,
     title: project.title,
@@ -333,7 +363,7 @@ export async function POST(request: Request) {
 
   const { data: cohort, error: cohortError } = await serviceClient
     .from("cohorts")
-    .select("id, name, code")
+    .select("id, name, code, curated_videos_source_url")
     .eq("id", currentCohortId)
     .maybeSingle()
 
@@ -346,7 +376,37 @@ export async function POST(request: Request) {
     serviceClient.from("cohort_video_configs").select("week_number, video_title").eq("cohort_id", currentCohortId).eq("is_active", true).order("week_number", { ascending: true }),
   ])
 
-  const contentSummary = buildContentSummary(weeks || [], videos || [])
+  let jsonVideos: Array<{ week_number: number; video_title: string }> = []
+  if (cohort.curated_videos_source_url) {
+    try {
+      const response = await fetch(cohort.curated_videos_source_url, { next: { revalidate: 60 } })
+      if (response.ok) {
+        const githubData = await response.json()
+        let videosArray: any[] = []
+        if (Array.isArray(githubData)) {
+          videosArray = githubData
+        } else if (githubData && typeof githubData === "object" && Array.isArray(githubData.videos)) {
+          videosArray = githubData.videos
+        }
+        
+        videosArray.forEach((video) => {
+          const videoTitle = typeof video.video_title === "string" ? video.video_title.trim() : typeof video.title === "string" ? video.title.trim() : ""
+          const weekNumber = Number(video.week_number)
+          if (videoTitle && Number.isFinite(weekNumber) && weekNumber > 0) {
+            jsonVideos.push({
+              week_number: weekNumber,
+              video_title: videoTitle,
+            })
+          }
+        })
+      }
+    } catch (err) {
+      console.error("Error fetching JSON videos in end-quiz POST:", err)
+    }
+  }
+
+  const combinedVideos = [...(videos || []), ...jsonVideos]
+  const contentSummary = buildContentSummary(weeks || [], combinedVideos)
   const projectSnapshot: ProjectSnapshot = {
     id: project.id,
     title: project.title,

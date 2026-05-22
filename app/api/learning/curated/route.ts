@@ -368,12 +368,31 @@ export async function POST(request: Request) {
     const resolvedTitle = typeof title === "string" ? title.trim() : typeof video_title === "string" ? video_title.trim() : ""
     const resolvedUrl = typeof youtube_url === "string" ? youtube_url.trim() : typeof video_url === "string" ? video_url.trim() : ""
     const resolvedWeekNumber = Number(week_number)
+    const questionCount = body.question_count !== undefined ? Number(body.question_count) : 3
+    const autoGenerateQuiz = body.auto_generate_quiz !== false
+    const isActive = body.is_active !== false
+    const resourceId = typeof body.resource_id === "string" ? body.resource_id.trim() : ""
 
-    if (!resolvedTitle || !resolvedUrl || !Number.isFinite(resolvedWeekNumber) || resolvedWeekNumber <= 0) {
-      return NextResponse.json(
-        { error: "Title/video_title, YouTube URL/video_url, and week number are required" },
-        { status: 400 }
-      )
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+    if (!resolvedTitle) {
+      return NextResponse.json({ error: "title/video_title is required" }, { status: 400 })
+    }
+
+    if (!resolvedUrl) {
+      return NextResponse.json({ error: "video_url/youtube_url is required" }, { status: 400 })
+    }
+
+    if (Number.isNaN(resolvedWeekNumber) || resolvedWeekNumber <= 0 || !Number.isInteger(resolvedWeekNumber)) {
+      return NextResponse.json({ error: "week_number must be an integer greater than 0" }, { status: 400 })
+    }
+
+    if (questionCount < 1 || questionCount > 10 || !Number.isInteger(questionCount)) {
+      return NextResponse.json({ error: "question_count must be an integer between 1 and 10" }, { status: 400 })
+    }
+
+    if (resourceId && !uuidRegex.test(resourceId)) {
+      return NextResponse.json({ error: "Invalid resource_id format" }, { status: 400 })
     }
 
     // Get the highest sort_order for this week to auto-increment
@@ -398,9 +417,11 @@ export async function POST(request: Request) {
         description: description || null,
         video_url: resolvedUrl,
         sort_order: nextSortOrder,
-        question_count: 3,
-        auto_generate_quiz: true,
-        is_active: true,
+        question_count: questionCount,
+        auto_generate_quiz: autoGenerateQuiz,
+        is_active: isActive,
+        resource_id: resourceId || null,
+        updated_at: new Date().toISOString(),
       })
       .select()
       .single()
@@ -418,7 +439,6 @@ export async function POST(request: Request) {
     )
   }
 }
-
 export async function DELETE(request: Request) {
   try {
     const supabase = await createClient()
@@ -441,6 +461,11 @@ export async function DELETE(request: Request) {
         { error: "Video ID is required" },
         { status: 400 }
       )
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(videoId)) {
+      return NextResponse.json({ error: "Invalid video_id format" }, { status: 400 })
     }
 
     const serviceClient = createServiceClient()

@@ -22,6 +22,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "cohort_id and cohort_video_config_id are required" }, { status: 400 })
   }
 
+  if (cohortVideoConfigId.startsWith("json-")) {
+    return NextResponse.json({
+      success: true,
+      should_show_quiz: false,
+      completed: true,
+    })
+  }
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!uuidRegex.test(cohortVideoConfigId)) {
+    return NextResponse.json({ error: "Invalid cohort_video_config_id format" }, { status: 400 })
+  }
+
   const cappedProgress = Math.min(100, Math.max(0, maxProgressPercent))
   const safeWatched = Math.max(0, Math.floor(watchedSeconds))
   const isCompleted = endedOnce && cappedProgress >= 90

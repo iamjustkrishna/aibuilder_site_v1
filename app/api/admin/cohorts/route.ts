@@ -142,12 +142,40 @@ export async function POST(request: Request) {
     const questionCount = body.question_count !== undefined ? Number(body.question_count) : 3
     const autoGenerateQuiz = body.auto_generate_quiz !== false
     const isActive = body.is_active !== false
+    const resourceId = typeof body.resource_id === "string" ? body.resource_id.trim() : ""
 
-    if (!cohortId || (!weekId && (!weekNumberRaw || Number.isNaN(weekNumberRaw))) || !title) {
-      return NextResponse.json(
-        { error: "cohort_id, week_id or week_number, and title/video_title are required" },
-        { status: 400 },
-      )
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+    if (!cohortId) {
+      return NextResponse.json({ error: "cohort_id is required" }, { status: 400 })
+    }
+
+    if (!uuidRegex.test(cohortId)) {
+      return NextResponse.json({ error: "Invalid cohort_id format" }, { status: 400 })
+    }
+
+    if (weekId && !uuidRegex.test(weekId)) {
+      return NextResponse.json({ error: "Invalid week_id format" }, { status: 400 })
+    }
+
+    if (resourceId && !uuidRegex.test(resourceId)) {
+      return NextResponse.json({ error: "Invalid resource_id format" }, { status: 400 })
+    }
+
+    if (!title) {
+      return NextResponse.json({ error: "title/video_title is required" }, { status: 400 })
+    }
+
+    if (!weekId && (weekNumberRaw === null || Number.isNaN(weekNumberRaw))) {
+      return NextResponse.json({ error: "week_id or week_number is required" }, { status: 400 })
+    }
+
+    if (weekNumberRaw !== null && (weekNumberRaw <= 0 || !Number.isInteger(weekNumberRaw))) {
+      return NextResponse.json({ error: "week_number must be an integer greater than 0" }, { status: 400 })
+    }
+
+    if (questionCount < 1 || questionCount > 10 || !Number.isInteger(questionCount)) {
+      return NextResponse.json({ error: "question_count must be an integer between 1 and 10" }, { status: 400 })
     }
 
     const serviceClient = createServiceClient()
@@ -168,6 +196,10 @@ export async function POST(request: Request) {
       weekNumber = cohortWeek.week_number
     }
 
+    if (weekNumber !== null && weekNumber <= 0) {
+      return NextResponse.json({ error: "Resolved week_number must be greater than 0" }, { status: 400 })
+    }
+
     const { data: video, error: videoError } = await serviceClient
       .from("cohort_video_configs")
       .insert({
@@ -180,7 +212,7 @@ export async function POST(request: Request) {
         question_count: questionCount,
         auto_generate_quiz: autoGenerateQuiz,
         is_active: isActive,
-        resource_id: body.resource_id || null,
+        resource_id: resourceId || null,
         updated_at: new Date().toISOString(),
       })
       .select()
@@ -389,6 +421,16 @@ export async function DELETE(request: Request) {
   const body = await request.json()
   const videoId = typeof body.video_id === "string" ? body.video_id.trim() : ""
   const cohortId = typeof body.cohort_id === "string" ? body.cohort_id.trim() : ""
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+  if (videoId && !uuidRegex.test(videoId)) {
+    return NextResponse.json({ error: "Invalid video_id format" }, { status: 400 })
+  }
+
+  if (cohortId && !uuidRegex.test(cohortId)) {
+    return NextResponse.json({ error: "Invalid cohort_id format" }, { status: 400 })
+  }
 
   const serviceClient = createServiceClient()
 

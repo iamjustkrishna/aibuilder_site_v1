@@ -108,6 +108,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "cohort_video_config_id is required" }, { status: 400 })
   }
 
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!uuidRegex.test(cohortVideoConfigId)) {
+    return NextResponse.json({ error: "Invalid cohort_video_config_id format" }, { status: 400 })
+  }
+
   const serviceClient = createServiceClient()
   const { data: existingQuiz, error: quizError } = await serviceClient
     .from("learning_video_quizzes")
@@ -212,6 +217,11 @@ export async function POST(request: Request) {
 
   if (!quizId || !cohortId || !cohortVideoConfigId) {
     return NextResponse.json({ error: "quiz_id, cohort_id and cohort_video_config_id are required" }, { status: 400 })
+  }
+
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!uuidRegex.test(cohortVideoConfigId)) {
+    return NextResponse.json({ error: "Invalid cohort_video_config_id format" }, { status: 400 })
   }
 
   const answerByQuestionId = new Map<string, number>()
