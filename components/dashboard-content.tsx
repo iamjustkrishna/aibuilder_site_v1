@@ -262,8 +262,8 @@ const architectResources = [
 const cohortWeeks = [
   { key: "week-1", label: "Week 1", topic: "Understanding AI", color: "from-[#492B8C] to-[#2D1A69]", tier: "foundational" },
   { key: "week-2", label: "Week 2", topic: "Building AI Apps", color: "from-[#00C8A7] to-[#009E87]", tier: "foundational" },
-  { key: "week-3", label: "Week 3", topic: "AI Agents", color: "from-[#FFD13F] to-[#FF9F00]", tier: "builder" },
-  { key: "week-4", label: "Week 4", topic: "Launch & Monetize", color: "from-[#FF6B34] to-[#E84C1E]", tier: "architect" },
+  { key: "week-3", label: "Week 3", topic: "AI Agents", color: "from-[#FFD13F] to-[#FF9F00]", tier: "foundational" },
+  { key: "week-4", label: "Week 4", topic: "Launch & Monetize", color: "from-[#FF6B34] to-[#E84C1E]", tier: "foundational" },
 ]
 
 const tierOrder = { initial: 0, foundational: 1, builder: 2, architect: 3 }
@@ -580,7 +580,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
 
         {/* Quick Actions */}
         <div className="mb-8 flex flex-wrap gap-3">
-          {currentCohort && isCurrentCohortParticipant && (
+          {currentCohort && isCurrentCohortParticipant && tier !== "initial" && (
             <Button
               type="button"
               onClick={() => setShowLeaderboardModal(true)}
@@ -613,14 +613,16 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
             <FileText className="w-4 h-4 mr-2" />
             View Program Guide
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowSetupModal(true)}
-            className="!bg-white border-[#FF6B34] text-[#FF6B34] hover:!bg-[#FF6B34] hover:!text-white rounded-full shadow-sm"
-          >
-            <Wrench className="w-4 h-4 mr-2" />
-            System Setup & AI Tools
-          </Button>
+          {tier !== "initial" && (
+            <Button
+              variant="outline"
+              onClick={() => setShowSetupModal(true)}
+              className="!bg-white border-[#FF6B34] text-[#FF6B34] hover:!bg-[#FF6B34] hover:!text-white rounded-full shadow-sm"
+            >
+              <Wrench className="w-4 h-4 mr-2" />
+              System Setup & AI Tools
+            </Button>
+          )}
         </div>
 
         {showLeaderboardModal && (
