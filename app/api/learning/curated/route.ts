@@ -175,7 +175,9 @@ export async function GET(request: Request) {
     .filter(cohort => cohort.curated_videos_source_url)
     .map(async (cohort) => {
       try {
-        const response = await fetch(cohort.curated_videos_source_url, { next: { revalidate: 60 } })
+        // Append cache-busting timestamp parameter to bypass GitHub Raw CDN caching and Next.js caching
+        const cacheBusterUrl = `${cohort.curated_videos_source_url}?t=${Date.now()}`
+        const response = await fetch(cacheBusterUrl, { cache: "no-store" })
         if (!response.ok) {
           console.error(`Failed to fetch JSON videos from ${cohort.curated_videos_source_url}`)
           return []
@@ -272,7 +274,7 @@ export async function POST(request: Request) {
     let currentCohort = null
     const { data: existingCurrentCohort } = await serviceClient
       .from("cohorts")
-      .select("id, curated_videos_source_url")
+      .select("*")
       .eq("is_current", true)
       .limit(1)
       .maybeSingle()
@@ -283,7 +285,7 @@ export async function POST(request: Request) {
       // Find any cohort
       const { data: anyCohort } = await serviceClient
         .from("cohorts")
-        .select("id, curated_videos_source_url")
+        .select("*")
         .limit(1)
         .maybeSingle()
 
@@ -300,7 +302,7 @@ export async function POST(request: Request) {
             status: "active",
             is_current: true,
           })
-          .select("id, curated_videos_source_url")
+          .select("*")
           .single()
 
         if (createError) {
@@ -348,6 +350,16 @@ export async function POST(request: Request) {
           .eq("id", currentCohort.id)
 
         if (updateError) {
+          if (updateError.message.includes("curated_videos_source_url") || updateError.code === "42703") {
+            return NextResponse.json(
+              {
+                error: "The database column 'curated_videos_source_url' does not exist in your 'cohorts' table. " +
+                  "Please execute the following SQL statement in your Supabase Dashboard SQL Editor to update your schema:\n\n" +
+                  "ALTER TABLE public.cohorts ADD COLUMN IF NOT EXISTS curated_videos_source_url text, ADD COLUMN IF NOT EXISTS curated_videos_synced_at timestamptz;"
+              },
+              { status: 400 }
+            )
+          }
           throw new Error(updateError.message)
         }
 

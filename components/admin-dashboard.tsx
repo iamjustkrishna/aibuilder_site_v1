@@ -3359,7 +3359,10 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                 {weekConfig.map((week) => (
                   <button
                     key={week.key}
-                    onClick={() => setSelectedCuratedWeek(week.key)}
+                    onClick={() => {
+                      setSelectedCuratedWeek(week.key)
+                      fetchCuratedVideos(week.key)
+                    }}
                     className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
                       selectedCuratedWeek === week.key
                         ? `bg-gradient-to-r ${week.color} text-white`

@@ -20,6 +20,7 @@ import {
   Wrench,
   Zap,
   Gift,
+  ChevronLeft,
   ChevronRight,
   ChevronDown,
   ChevronUp,
@@ -33,7 +34,7 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import type { User } from "@supabase/supabase-js"
 
 interface Profile {
@@ -317,6 +318,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
   const [curatedVideos, setCuratedVideos] = useState<any[]>([])
   const [activeWeek, setActiveWeek] = useState<string>("week-1")
   const [loadingCuratedVideos, setLoadingCuratedVideos] = useState(true)
+  const curatedScrollRef = useRef<HTMLDivElement>(null)
 
   // Check if user is admin
   useEffect(() => {
@@ -428,6 +430,16 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
 
   function toggleDescription(key: string) {
     setExpandedDescriptions((current) => ({ ...current, [key]: !current[key] }))
+  }
+
+  const scrollCurated = (direction: "left" | "right") => {
+    if (curatedScrollRef.current) {
+      const { scrollLeft, clientWidth } = curatedScrollRef.current
+      const scrollTo = direction === "left" 
+        ? scrollLeft - clientWidth * 0.75 
+        : scrollLeft + clientWidth * 0.75
+      curatedScrollRef.current.scrollTo({ left: scrollTo, behavior: "smooth" })
+    }
   }
 
   const handleSignOut = async () => {
@@ -906,58 +918,92 @@ Register on AIBuilder 🚀`
             })}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="w-full">
             {loadingCuratedVideos ? (
-              <div className="col-span-full text-center py-8 text-[#6B5B9E]">
-                Loading videos...
+              <div className="text-center py-12 text-[#6B5B9E] bg-[#F4F1FB]/20 border border-[#E8E3F3] rounded-2xl">
+                <span className="inline-block animate-pulse">Loading curated videos...</span>
               </div>
             ) : curatedVideos.length === 0 ? (
-              <div className="col-span-full text-center py-8">
-                <Video className="w-10 h-10 mx-auto mb-3 opacity-40 text-[#6B5B9E]" />
-                <p className="font-medium text-[#1A0A3D]">No videos yet for this week</p>
+              <div className="text-center py-12 bg-[#F4F1FB]/30 border border-dashed border-[#E8E3F3] rounded-2xl">
+                <Video className="w-12 h-12 mx-auto mb-3 opacity-40 text-[#6B5B9E]" />
+                <p className="font-semibold text-[#1A0A3D]">No videos yet for this week</p>
                 <p className="text-sm text-[#6B5B9E] mt-1">Videos will be added as the week progresses</p>
               </div>
             ) : (
-              curatedVideos.map((video) => {
-                const videoUrl = video.youtube_url || video.video_url || video.url || ""
-                const videoId = extractYouTubeId(videoUrl)
-                return (
-                  <div
-                    key={video.id}
-                    className="group rounded-xl bg-white border border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-md transition-all overflow-hidden cursor-pointer"
-                    onClick={() => {
-                      if (videoId) {
-                        setSelectedVideoTitle(video.title || video.video_title || "Untitled video")
-                        setSelectedVideo(videoId)
-                      }
-                    }}
-                  >
-                    <div className="relative aspect-video bg-[#1A0A3D]">
-                      {videoId && (
-                        <Image
-                          src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
-                          alt={video.title || video.video_title || "Video"}
-                          fill
-                          className="object-cover group-hover:opacity-80 transition-opacity"
-                        />
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-14 h-14 rounded-full bg-[#FF6B34] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                          <PlayCircle className="w-7 h-7 text-white" />
+              <div className="relative group/carousel px-2">
+                {/* Scroll Container */}
+                <div 
+                  ref={curatedScrollRef}
+                  className="flex gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-4 no-scrollbar [&::-webkit-scrollbar]:hidden"
+                  style={{
+                    msOverflowStyle: 'none',
+                    scrollbarWidth: 'none',
+                  }}
+                >
+                  {curatedVideos.map((video) => {
+                    const videoUrl = video.youtube_url || video.video_url || video.url || ""
+                    const videoId = extractYouTubeId(videoUrl)
+                    return (
+                      <div
+                        key={video.id}
+                        className="flex-none w-[280px] sm:w-[320px] snap-start group rounded-2xl bg-white border border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer flex flex-col transform hover:-translate-y-1"
+                        onClick={() => {
+                          if (videoId) {
+                            setSelectedVideoTitle(video.title || video.video_title || "Untitled video")
+                            setSelectedVideo(videoId)
+                          }
+                        }}
+                      >
+                        <div className="relative aspect-video bg-[#1A0A3D] overflow-hidden">
+                          {videoId && (
+                            <Image
+                              src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
+                              alt={video.title || video.video_title || "Video"}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-500 group-hover:opacity-90"
+                            />
+                          )}
+                          <div className="absolute inset-0 bg-black/10 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
+                            <div className="w-12 h-12 rounded-full bg-[#FF6B34] flex items-center justify-center shadow-lg transform group-hover:scale-110 group-hover:bg-[#ff8454] transition-all duration-300">
+                              <PlayCircle className="w-6 h-6 text-white" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-4 flex-1 flex flex-col justify-between">
+                          <div>
+                            <h3 className="font-semibold text-[#1A0A3D] mb-2 line-clamp-2 group-hover:text-[#492B8C] transition-colors duration-300 text-sm sm:text-base leading-snug">
+                              {video.title || video.video_title || "Untitled video"}
+                            </h3>
+                            {video.description && (
+                              <p className="text-xs sm:text-sm text-[#6B5B9E] line-clamp-2 leading-relaxed">{video.description}</p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-medium text-[#1A0A3D] mb-1 line-clamp-2 group-hover:text-[#492B8C] transition-colors">
-                        {video.title || video.video_title || "Untitled video"}
-                      </h3>
-                      {video.description && (
-                        <p className="text-sm text-[#6B5B9E] line-clamp-2">{video.description}</p>
-                      )}
-                    </div>
-                  </div>
-                )
-              })
+                    )
+                  })}
+                </div>
+
+                {/* Navigation Arrows */}
+                {curatedVideos.length > 0 && (
+                  <>
+                    <button
+                      onClick={() => scrollCurated("left")}
+                      className="absolute left-[-12px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border border-[#E8E3F3] shadow-md flex items-center justify-center text-[#492B8C] hover:bg-[#492B8C] hover:text-white transition-all duration-300 opacity-0 group-hover/carousel:opacity-100 focus:outline-none z-10 hover:scale-110"
+                      aria-label="Scroll left"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => scrollCurated("right")}
+                      className="absolute right-[-12px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border border-[#E8E3F3] shadow-md flex items-center justify-center text-[#492B8C] hover:bg-[#492B8C] hover:text-white transition-all duration-300 opacity-0 group-hover/carousel:opacity-100 focus:outline-none z-10 hover:scale-110"
+                      aria-label="Scroll right"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>

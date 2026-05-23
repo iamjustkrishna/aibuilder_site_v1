@@ -211,7 +211,7 @@ export async function GET() {
 
   const { data: cohort, error: cohortError } = await serviceClient
     .from("cohorts")
-    .select("id, name, code, curated_videos_source_url")
+    .select("*")
     .eq("id", currentCohortId)
     .maybeSingle()
 
@@ -227,7 +227,9 @@ export async function GET() {
   let jsonVideos: Array<{ week_number: number; video_title: string }> = []
   if (cohort.curated_videos_source_url) {
     try {
-      const response = await fetch(cohort.curated_videos_source_url, { next: { revalidate: 60 } })
+      // Append cache-busting timestamp parameter to bypass GitHub Raw CDN caching and Next.js caching
+      const cacheBusterUrl = `${cohort.curated_videos_source_url}?t=${Date.now()}`
+      const response = await fetch(cacheBusterUrl, { cache: "no-store" })
       if (response.ok) {
         const githubData = await response.json()
         let videosArray: any[] = []
@@ -363,7 +365,7 @@ export async function POST(request: Request) {
 
   const { data: cohort, error: cohortError } = await serviceClient
     .from("cohorts")
-    .select("id, name, code, curated_videos_source_url")
+    .select("*")
     .eq("id", currentCohortId)
     .maybeSingle()
 
@@ -379,7 +381,9 @@ export async function POST(request: Request) {
   let jsonVideos: Array<{ week_number: number; video_title: string }> = []
   if (cohort.curated_videos_source_url) {
     try {
-      const response = await fetch(cohort.curated_videos_source_url, { next: { revalidate: 60 } })
+      // Append cache-busting timestamp parameter to bypass GitHub Raw CDN caching and Next.js caching
+      const cacheBusterUrl = `${cohort.curated_videos_source_url}?t=${Date.now()}`
+      const response = await fetch(cacheBusterUrl, { cache: "no-store" })
       if (response.ok) {
         const githubData = await response.json()
         let videosArray: any[] = []
