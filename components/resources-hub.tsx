@@ -402,7 +402,7 @@ export function ResourcesHub({ user, profile }: ResourcesHubProps) {
       const data = await response.json()
 
       if (data.success) {
-        const purchasedIds = new Set(data.purchases.map((p: any) => p.resource.id))
+        const purchasedIds = new Set<string>(data.purchases.map((p: any) => p.resource.id as string))
         setPurchasedResources(purchasedIds)
       }
     } catch (error) {

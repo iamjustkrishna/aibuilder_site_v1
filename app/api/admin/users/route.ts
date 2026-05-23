@@ -29,10 +29,28 @@ export async function GET() {
   // Use service client to bypass RLS and fetch ALL users
   const serviceClient = createServiceClient()
 
-  const { data: users, error: dbError } = await serviceClient
+  // Fetch all users with safe fallback
+  let selectColumns = "id, email, full_name, membership_tier, created_at, avatar_url, is_team_member"
+  let users: any[] | null = null
+  let dbError: any = null
+
+  const mainResult = await serviceClient
     .from("users")
-    .select("id, email, full_name, membership_tier, created_at, avatar_url")
+    .select(selectColumns)
     .order("created_at", { ascending: false })
+  
+  users = mainResult.data
+  dbError = mainResult.error
+
+  // Fallback if the column is_team_member is missing in SQL
+  if (dbError && dbError.message.includes("is_team_member")) {
+    const fallbackResult = await serviceClient
+      .from("users")
+      .select("id, email, full_name, membership_tier, created_at, avatar_url")
+      .order("created_at", { ascending: false })
+    users = fallbackResult.data
+    dbError = fallbackResult.error
+  }
 
   if (dbError) {
     return NextResponse.json({ error: dbError.message }, { status: 500 })
@@ -48,7 +66,7 @@ export async function GET() {
   }
 
   const requestMap = new Map<string, { count: number; requestedByMe: boolean }>()
-  const currentAdminEmail = user.email?.toLowerCase() || ""
+  const currentAdminEmail = user?.email?.toLowerCase() || ""
   for (const request of deletionRequests || []) {
     const entry = requestMap.get(request.user_id) || { count: 0, requestedByMe: false }
     entry.count += 1
@@ -78,12 +96,31 @@ export async function GET() {
     activityMap.set(session.user_id, entry)
   }
 
+  // Fetch cohort enrollments to map user -> cohort relationships
+  let enrollments: Array<{ user_id: string; cohort_id: string }> = []
+  const enrollmentsResult = await serviceClient
+    .from("cohort_enrollments")
+    .select("user_id, cohort_id")
+
+  if (!enrollmentsResult.error) {
+    enrollments = enrollmentsResult.data || []
+  }
+
+  const enrollmentMap = new Map<string, string[]>()
+  for (const enrollment of enrollments) {
+    const list = enrollmentMap.get(enrollment.user_id) || []
+    list.push(enrollment.cohort_id)
+    enrollmentMap.set(enrollment.user_id, list)
+  }
+
   const adminCount = getAdminEmails().length
   const response = (users || []).map((user) => {
     const requestState = requestMap.get(user.id) || { count: 0, requestedByMe: false }
     const activityState = activityMap.get(user.id) || { totalActiveSeconds: 0, sessionCount: 0, lastSeenAt: null }
     return {
       ...user,
+      is_team_member: (user as any).is_team_member ?? false,
+      cohort_ids: enrollmentMap.get(user.id) || [],
       deletion_request_count: requestState.count,
       deletion_requested_by_me: requestState.requestedByMe,
       deletion_required_count: adminCount,
@@ -210,12 +247,12 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "No admins configured" }, { status: 500 })
   }
 
-  const currentAdminEmail = user.email!.toLowerCase()
+  const currentAdminEmail = user?.email?.toLowerCase() || ""
   const { error: upsertError } = await serviceClient
     .from("user_deletion_requests")
     .upsert({
       user_id: targetUserId,
-      requested_by_user_id: user.id,
+      requested_by_user_id: user?.id,
       requested_by_email: currentAdminEmail,
       requested_at: new Date().toISOString(),
     }, { onConflict: "user_id,requested_by_email" })
@@ -252,7 +289,7 @@ export async function DELETE(request: Request) {
   })
 }
 
-// PUT - Update user's membership tier
+// PUT - Update user's details (membership tier, team member status, cohorts)
 export async function PUT(request: Request) {
   const { authorized, error } = await checkAdminAccess()
   if (!authorized) {
@@ -260,17 +297,25 @@ export async function PUT(request: Request) {
   }
 
   const body = await request.json()
-  const { userId, id, membership_tier } = body
+  const { userId, id, membership_tier, is_team_member, cohort_ids } = body
   const targetUserId = userId || id
 
-  if (!targetUserId || !membership_tier) {
-    return NextResponse.json({ error: "User ID and membership tier are required" }, { status: 400 })
+  if (!targetUserId) {
+    return NextResponse.json({ error: "User ID is required" }, { status: 400 })
   }
 
-  // Validate tier value
-  const validTiers = ["initial", "foundational", "builder", "architect"]
-  if (!validTiers.includes(membership_tier)) {
-    return NextResponse.json({ error: "Invalid membership tier" }, { status: 400 })
+  const updates: any = {}
+
+  if (membership_tier !== undefined) {
+    const validTiers = ["initial", "foundational", "builder", "architect"]
+    if (!validTiers.includes(membership_tier)) {
+      return NextResponse.json({ error: "Invalid membership tier" }, { status: 400 })
+    }
+    updates.membership_tier = membership_tier
+  }
+
+  if (is_team_member !== undefined) {
+    updates.is_team_member = is_team_member
   }
 
   // Use service client to bypass RLS for all operations
@@ -285,21 +330,68 @@ export async function PUT(request: Request) {
 
   if (userData?.email) {
     const userIsAdmin = await isAdminEmail(userData.email)
-    if (userIsAdmin) {
+    if (userIsAdmin && membership_tier !== undefined) {
       return NextResponse.json({ error: "Cannot modify admin user tier" }, { status: 403 })
     }
   }
 
-  const { data, error: dbError } = await serviceClient
-    .from("users")
-    .update({ membership_tier })
-    .eq("id", targetUserId)
-    .select()
-    .single()
+  let updatedUser = null
+  if (Object.keys(updates).length > 0) {
+    const { data, error: dbError } = await serviceClient
+      .from("users")
+      .update(updates)
+      .eq("id", targetUserId)
+      .select()
+      .single()
 
-  if (dbError) {
-    return NextResponse.json({ error: dbError.message }, { status: 500 })
+    if (dbError) {
+      return NextResponse.json({ error: dbError.message }, { status: 500 })
+    }
+    updatedUser = data
+  } else {
+    // Fetch existing user details if no users fields are updated
+    const { data } = await serviceClient
+      .from("users")
+      .select("*")
+      .eq("id", targetUserId)
+      .single()
+    updatedUser = data
   }
 
-  return NextResponse.json({ user: data })
+  // Handle cohort enrollments synchronization if cohort_ids provided
+  if (cohort_ids !== undefined && Array.isArray(cohort_ids)) {
+    // Delete existing enrollments for this user
+    const { error: deleteError } = await serviceClient
+      .from("cohort_enrollments")
+      .delete()
+      .eq("user_id", targetUserId)
+
+    if (deleteError) {
+      return NextResponse.json({ error: deleteError.message }, { status: 500 })
+    }
+
+    // Insert new enrollments
+    if (cohort_ids.length > 0) {
+      const toInsert = cohort_ids.map((cohortId: string) => ({
+        user_id: targetUserId,
+        cohort_id: cohortId,
+        enrollment_status: "active"
+      }))
+
+      const { error: insertError } = await serviceClient
+        .from("cohort_enrollments")
+        .insert(toInsert)
+
+      if (insertError) {
+        return NextResponse.json({ error: insertError.message }, { status: 500 })
+      }
+    }
+  }
+
+  return NextResponse.json({ 
+    user: {
+      ...updatedUser,
+      cohort_ids: cohort_ids !== undefined ? cohort_ids : (updatedUser.cohort_ids || [])
+    } 
+  })
 }

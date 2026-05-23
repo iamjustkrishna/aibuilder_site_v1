@@ -51,13 +51,13 @@ export async function POST(request: Request) {
   const htmlTemplate = typeof body.htmlTemplate === "string" ? body.htmlTemplate.trim() : ""
   const isHtml = typeof body.isHtml === "boolean" ? body.isHtml : !!htmlTemplate
   const intervalSeconds = Number(body.intervalSeconds || 0)
-  const recipientIds = Array.isArray(body.recipientIds) ? body.recipientIds.filter((id) => typeof id === "string" && id.trim()) : []
+  const recipientIds = Array.isArray(body.recipientIds) ? body.recipientIds.filter((id: any) => typeof id === "string" && id.trim()) : []
 
   if (!senderEmail || !appPassword || !subject || (!emailBody && !htmlTemplate) || recipientIds.length === 0) {
     return NextResponse.json({ error: "Sender email, app password, subject, and recipients are required" }, { status: 400 })
   }
 
-  if (user.email?.toLowerCase() !== senderEmail) {
+  if (user?.email?.toLowerCase() !== senderEmail) {
     return NextResponse.json({ error: "Sender email must match the signed-in admin email" }, { status: 400 })
   }
 
@@ -101,8 +101,8 @@ export async function POST(request: Request) {
       // Save mail history record
       try {
         await serviceClient.from("admin_mail_history").insert({
-          sent_by_admin_id: user.id,
-          sent_by_admin_email: user.email,
+          sent_by_admin_id: user?.id,
+          sent_by_admin_email: user?.email,
           recipient_user_id: recipient.id,
           recipient_email: recipient.email,
           recipient_name: recipient.full_name,
@@ -122,8 +122,8 @@ export async function POST(request: Request) {
       // Save failed mail history record
       try {
         await serviceClient.from("admin_mail_history").insert({
-          sent_by_admin_id: user.id,
-          sent_by_admin_email: user.email,
+          sent_by_admin_id: user?.id,
+          sent_by_admin_email: user?.email,
           recipient_user_id: recipient.id,
           recipient_email: recipient.email,
           recipient_name: recipient.full_name,

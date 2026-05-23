@@ -83,11 +83,18 @@ export interface ProfileViewModel {
   is_public?: boolean | null
 }
 
+interface UserCohortInfo {
+  id: string
+  name: string
+  code: string
+}
+
 interface ProfileDashboardProps {
   profile: ProfileViewModel
   projects: ProfileProject[]
   certificates: ProfileCertificate[]
   currentCohortId?: string | null
+  userCohorts?: UserCohortInfo[]
 }
 
 const tabs: { key: TabKey; label: string; icon: typeof UserCircle2 }[] = [
@@ -96,7 +103,7 @@ const tabs: { key: TabKey; label: string; icon: typeof UserCircle2 }[] = [
   { key: "certificates", label: "Certificates", icon: Award },
 ]
 
-export function ProfileDashboard({ profile, projects, certificates, currentCohortId = null }: ProfileDashboardProps) {
+export function ProfileDashboard({ profile, projects, certificates, currentCohortId = null, userCohorts = [] }: ProfileDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("overview")
   const [currentProfile, setCurrentProfile] = useState(profile)
   const [projectList, setProjectList] = useState(projects)
@@ -326,6 +333,11 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                         Private profile
                       </Badge>
                     )}
+                    {userCohorts.map((cohort) => (
+                      <Badge key={cohort.id} variant="secondary" className="rounded-full bg-[#FFF8F2] border border-[#FFC9B0] text-[#FF6B34]">
+                        {cohort.name || cohort.code} part
+                      </Badge>
+                    ))}
                   </div>
                   <p className="text-[#6B5B9E] mb-3">{currentProfile.email}</p>
                   <p className="text-[#1A0A3D] max-w-2xl leading-relaxed">
@@ -429,7 +441,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                           value={profileDraft.bio}
                           onChange={(e) => setProfileDraft((current) => ({ ...current, bio: e.target.value }))}
                           placeholder="Tell people about your cohort journey..."
-                          className="min-h-28 border-[#E8E3F3]"
+                          className="min-h-28 border-[#E8E3F3] bg-white !bg-white"
                         />
                         <div className="flex items-center gap-3">
                           <Button
@@ -485,7 +497,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                               value={profileDraft.slug}
                               onChange={(e) => setProfileDraft((current) => ({ ...current, slug: e.target.value }))}
                               placeholder="your-name"
-                              className="border-[#E8E3F3]"
+                              className="border-[#E8E3F3] bg-white !bg-white"
                             />
                             <div className="flex items-center gap-3">
                               <Button
@@ -678,6 +690,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                     value={projectDraft.title}
                     onChange={(e) => setProjectDraft((current) => ({ ...current, title: e.target.value }))}
                     placeholder="My AI product"
+                    className="bg-white !bg-white"
                   />
                 </div>
                 <div>
@@ -686,7 +699,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                     value={projectDraft.description}
                     onChange={(e) => setProjectDraft((current) => ({ ...current, description: e.target.value }))}
                     placeholder="What does it do?"
-                    className="min-h-24"
+                    className="min-h-24 bg-white !bg-white"
                   />
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -696,6 +709,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                       value={projectDraft.project_url}
                       onChange={(e) => setProjectDraft((current) => ({ ...current, project_url: e.target.value }))}
                       placeholder="https://..."
+                      className="bg-white !bg-white"
                     />
                   </div>
                   <div>
@@ -704,6 +718,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                       value={projectDraft.repo_url}
                       onChange={(e) => setProjectDraft((current) => ({ ...current, repo_url: e.target.value }))}
                       placeholder="https://github.com/..."
+                      className="bg-white !bg-white"
                     />
                   </div>
                   <div>
@@ -712,6 +727,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                       value={projectDraft.demo_url}
                       onChange={(e) => setProjectDraft((current) => ({ ...current, demo_url: e.target.value }))}
                       placeholder="https://youtube.com/..."
+                      className="bg-white !bg-white"
                     />
                   </div>
                   <div>
@@ -720,6 +736,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                       value={projectDraft.technologies}
                       onChange={(e) => setProjectDraft((current) => ({ ...current, technologies: e.target.value }))}
                       placeholder="Next.js, Supabase, OpenAI"
+                      className="bg-white !bg-white"
                     />
                   </div>
                 </div>

@@ -10,7 +10,7 @@ export default async function ProfilePage() {
     redirect("/login")
   }
 
-  const [{ data: userRecord }, { data: profileRecord }, { data: projects }, { data: currentCohort }, { data: certificateRows }] = await Promise.all([
+  const [{ data: userRecord }, { data: profileRecord }, { data: projects }, { data: currentCohort }, { data: certificateRows }, { data: enrollmentRows }] = await Promise.all([
     supabase
       .from("users")
       .select("id, email, full_name, avatar_url, membership_tier, created_at")
@@ -37,6 +37,10 @@ export default async function ProfilePage() {
       .select("id, cohort_id, status, certificate_url, visibility, generated_at, created_at")
       .eq("user_email", user.email || "")
       .order("created_at", { ascending: false }),
+    supabase
+      .from("cohort_enrollments")
+      .select("cohort_id, cohorts(name, code)")
+      .eq("user_id", user.id)
   ])
 
   const profile: ProfileViewModel = {
@@ -78,5 +82,11 @@ export default async function ProfilePage() {
     generated_at: certificate.generated_at,
   }))
 
-  return <ProfileDashboard profile={profile} projects={projectList} certificates={certificates} currentCohortId={currentCohort?.id || null} />
+  const userCohorts = (enrollmentRows || []).map((row: any) => ({
+    id: row.cohort_id,
+    name: row.cohorts?.name || "",
+    code: row.cohorts?.code || "",
+  }))
+
+  return <ProfileDashboard profile={profile} projects={projectList} certificates={certificates} currentCohortId={currentCohort?.id || null} userCohorts={userCohorts} />
 }

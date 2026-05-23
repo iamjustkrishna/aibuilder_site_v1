@@ -69,6 +69,8 @@ interface User {
   activity_session_count?: number
   last_seen_at?: string | null
   created_at: string
+  is_team_member?: boolean
+  cohort_ids?: string[]
 }
 
 interface SessionRecord {
@@ -184,6 +186,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [editingCohortId, setEditingCohortId] = useState<string | null>(null)
   const [addingToWeek, setAddingToWeek] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedUserCohortFilter, setSelectedUserCohortFilter] = useState<string>("all")
   const [weekVideoForm, setWeekVideoForm] = useState({ title: "", description: "", url: "", tier_required: "foundational" as Resource["tier_required"] })
   const [cohortForm, setCohortForm] = useState({
     code: "",
@@ -373,6 +376,19 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         setUsers(data || [])
       }
       await fetchPastMails()
+    } else if (activeTab === "users") {
+      const [usersRes, cohortsRes] = await Promise.all([
+        fetch("/api/admin/users"),
+        fetch("/api/admin/cohorts"),
+      ])
+      if (usersRes.ok) {
+        const data = await usersRes.json()
+        setUsers(data || [])
+      }
+      if (cohortsRes.ok) {
+        const data = await cohortsRes.json()
+        setCohorts(data || [])
+      }
     } else {
       const res = await fetch("/api/admin/users")
       if (res.ok) {
@@ -740,6 +756,23 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: userId, membership_tier: newTier }),
+    })
+    if (res.ok) fetchData()
+  }
+
+  async function handleUpdateUserTeamOrCohorts(
+    userId: string,
+    isTeamMember: boolean | undefined,
+    cohortIds: string[] | undefined
+  ) {
+    const res = await fetch("/api/admin/users", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: userId,
+        is_team_member: isTeamMember,
+        cohort_ids: cohortIds,
+      }),
     })
     if (res.ok) fetchData()
   }
@@ -1169,10 +1202,29 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     r.description?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const filteredUsers = users.filter(u => 
-    u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredUsers = users.filter(u => {
+    // Search query matching
+    const matchesSearch = 
+      u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
+
+    if (!matchesSearch) return false
+
+    // Cohort/Team matching
+    if (selectedUserCohortFilter === "all") {
+      return true
+    } else if (selectedUserCohortFilter === "team") {
+      const isAdmin = isUserAdmin(u.email)
+      const isTeam = u.is_team_member || false
+      return isAdmin || isTeam
+    } else {
+      const inCohort = u.cohort_ids?.includes(selectedUserCohortFilter) || false
+      const isAdmin = isUserAdmin(u.email)
+      const isTeam = u.is_team_member || false
+      // Only show actual cohort participants (excluding admins/team members)
+      return inCohort && !isAdmin && !isTeam
+    }
+  })
 
   const filteredRegistrations = registrations.filter((registration) =>
     registration.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1337,137 +1389,143 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
-        {/* Tabs & Search */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="flex gap-1 p-1 bg-white/10 rounded-xl backdrop-blur-sm overflow-x-auto">
-            <button
-              onClick={() => { setActiveTab("cohorts"); setSearchQuery(""); }}
-              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                activeTab === "cohorts"
-                  ? "bg-white text-[#1A0A3D] shadow-lg"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              <Layers className="w-4 h-4" />
-              <span className="text-sm">Cohorts</span>
-              <span className="px-1.5 py-0.5 rounded-full text-xs bg-[#492B8C] text-white">{cohorts.length}</span>
-            </button>
-            <button
-              onClick={() => { setActiveTab("weeks"); setSearchQuery(""); }}
-              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                activeTab === "weeks"
-                  ? "bg-white text-[#1A0A3D] shadow-lg"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              <Calendar className="w-4 h-4" />
-              <span className="text-sm">Cohort Weeks</span>
-            </button>
-            <button
-              onClick={() => { setActiveTab("resources"); setSearchQuery(""); }}
-              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                activeTab === "resources"
-                  ? "bg-white text-[#1A0A3D] shadow-lg"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              <Package className="w-4 h-4" />
-              <span className="text-sm">Resources</span>
-              <span className="px-1.5 py-0.5 rounded-full text-xs bg-[#FF6B34] text-white">{resources.length}</span>
-            </button>
-            <button
-              onClick={() => { setActiveTab("users"); setSearchQuery(""); }}
-              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                activeTab === "users"
-                  ? "bg-white text-[#1A0A3D] shadow-lg"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span className="text-sm">Users</span>
-              <span className="px-1.5 py-0.5 rounded-full text-xs bg-[#00C8A7] text-white">{users.length}</span>
-            </button>
-            <button
-              onClick={() => { setActiveTab("registrations"); setSearchQuery(""); }}
-              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                activeTab === "registrations"
-                  ? "bg-white text-[#1A0A3D] shadow-lg"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              <span className="text-sm">Registrations</span>
-              <span className="px-1.5 py-0.5 rounded-full text-xs bg-[#FF6B34] text-white">{registrations.length}</span>
-            </button>
-            <button
-              onClick={() => { setActiveTab("sessions"); setSearchQuery(""); }}
-              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                activeTab === "sessions"
-                  ? "bg-white text-[#1A0A3D] shadow-lg"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              <Calendar className="w-4 h-4" />
-              <span className="text-sm">Sessions</span>
-              <span className="px-1.5 py-0.5 rounded-full text-xs bg-[#FF6B34] text-white">{sessions.length}</span>
-            </button>
-            <button
-              onClick={() => { setActiveTab("mail"); setSearchQuery(""); }}
-              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                activeTab === "mail"
-                  ? "bg-white text-[#1A0A3D] shadow-lg"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              <Mail className="w-4 h-4" />
-              <span className="text-sm">Send Mail</span>
-            </button>
-            <button
-              onClick={() => { setActiveTab("activity"); setSearchQuery(""); }}
-              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                activeTab === "activity"
-                  ? "bg-white text-[#1A0A3D] shadow-lg"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              <TrendingUp className="w-4 h-4" />
-              <span className="text-sm">Activity</span>
-            </button>
-            <button
-              onClick={() => { setActiveTab("curated-videos"); setSearchQuery(""); }}
-              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                activeTab === "curated-videos"
-                  ? "bg-white text-[#1A0A3D] shadow-lg"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              <Film className="w-4 h-4" />
-              <span className="text-sm">Curated Videos</span>
-            </button>
-            <button
-              onClick={() => { setActiveTab("certificates"); setSearchQuery(""); }}
-              className={`flex-shrink-0 px-3 sm:px-4 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                activeTab === "certificates"
-                  ? "bg-white text-[#1A0A3D] shadow-lg"
-                  : "text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              <Award className="w-4 h-4" />
-              <span className="text-sm">Certificates</span>
-            </button>
+        {/* Premium Tab Navigation Row */}
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-4 mb-6">
+          <div className="relative flex-1 w-full min-w-0 group/slider select-none">
+            {/* Scroll masks/fade indicators for mobile */}
+            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#1A0A3D] to-transparent pointer-events-none z-10 opacity-0 group-hover/slider:opacity-100 transition-opacity duration-300" />
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#1A0A3D] to-transparent pointer-events-none z-10 opacity-0 group-hover/slider:opacity-100 transition-opacity duration-300" />
+            
+            <div className="flex gap-1.5 p-1.5 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md overflow-x-auto no-scrollbar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              <button
+                onClick={() => { setActiveTab("cohorts"); setSearchQuery(""); }}
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 border ${
+                  activeTab === "cohorts"
+                    ? "bg-white text-[#1A0A3D] border-white shadow-xl shadow-white/5 scale-[1.02]"
+                    : "text-white/70 border-transparent hover:text-white hover:bg-white/10 hover:scale-[1.01]"
+                }`}
+              >
+                <Layers className="w-4 h-4" />
+                <span className="text-sm font-semibold">Cohorts</span>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#492B8C] text-white">{cohorts.length}</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("weeks"); setSearchQuery(""); }}
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 border ${
+                  activeTab === "weeks"
+                    ? "bg-white text-[#1A0A3D] border-white shadow-xl shadow-white/5 scale-[1.02]"
+                    : "text-white/70 border-transparent hover:text-white hover:bg-white/10 hover:scale-[1.01]"
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                <span className="text-sm font-semibold">Cohort Weeks</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("resources"); setSearchQuery(""); }}
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 border ${
+                  activeTab === "resources"
+                    ? "bg-white text-[#1A0A3D] border-white shadow-xl shadow-white/5 scale-[1.02]"
+                    : "text-white/70 border-transparent hover:text-white hover:bg-white/10 hover:scale-[1.01]"
+                }`}
+              >
+                <Package className="w-4 h-4" />
+                <span className="text-sm font-semibold">Resources</span>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF6B34] text-white">{resources.length}</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("users"); setSearchQuery(""); }}
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 border ${
+                  activeTab === "users"
+                    ? "bg-white text-[#1A0A3D] border-white shadow-xl shadow-white/5 scale-[1.02]"
+                    : "text-white/70 border-transparent hover:text-white hover:bg-white/10 hover:scale-[1.01]"
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span className="text-sm font-semibold">Users</span>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#00C8A7] text-white">{users.length}</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("registrations"); setSearchQuery(""); }}
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 border ${
+                  activeTab === "registrations"
+                    ? "bg-white text-[#1A0A3D] border-white shadow-xl shadow-white/5 scale-[1.02]"
+                    : "text-white/70 border-transparent hover:text-white hover:bg-white/10 hover:scale-[1.01]"
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                <span className="text-sm font-semibold">Registrations</span>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF6B34] text-white">{registrations.length}</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("sessions"); setSearchQuery(""); }}
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 border ${
+                  activeTab === "sessions"
+                    ? "bg-white text-[#1A0A3D] border-white shadow-xl shadow-white/5 scale-[1.02]"
+                    : "text-white/70 border-transparent hover:text-white hover:bg-white/10 hover:scale-[1.01]"
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                <span className="text-sm font-semibold">Sessions</span>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF6B34] text-white">{sessions.length}</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("mail"); setSearchQuery(""); }}
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 border ${
+                  activeTab === "mail"
+                    ? "bg-white text-[#1A0A3D] border-white shadow-xl shadow-white/5 scale-[1.02]"
+                    : "text-white/70 border-transparent hover:text-white hover:bg-white/10 hover:scale-[1.01]"
+                }`}
+              >
+                <Mail className="w-4 h-4" />
+                <span className="text-sm font-semibold">Send Mail</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("activity"); setSearchQuery(""); }}
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 border ${
+                  activeTab === "activity"
+                    ? "bg-white text-[#1A0A3D] border-white shadow-xl shadow-white/5 scale-[1.02]"
+                    : "text-white/70 border-transparent hover:text-white hover:bg-white/10 hover:scale-[1.01]"
+                }`}
+              >
+                <TrendingUp className="w-4 h-4" />
+                <span className="text-sm font-semibold">Activity</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("curated-videos"); setSearchQuery(""); }}
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 border ${
+                  activeTab === "curated-videos"
+                    ? "bg-white text-[#1A0A3D] border-white shadow-xl shadow-white/5 scale-[1.02]"
+                    : "text-white/70 border-transparent hover:text-white hover:bg-white/10 hover:scale-[1.01]"
+                }`}
+              >
+                <Film className="w-4 h-4" />
+                <span className="text-sm font-semibold">Curated Videos</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("certificates"); setSearchQuery(""); }}
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 border ${
+                  activeTab === "certificates"
+                    ? "bg-white text-[#1A0A3D] border-white shadow-xl shadow-white/5 scale-[1.02]"
+                    : "text-white/70 border-transparent hover:text-white hover:bg-white/10 hover:scale-[1.01]"
+                }`}
+              >
+                <Award className="w-4 h-4" />
+                <span className="text-sm font-semibold">Certificates</span>
+              </button>
+            </div>
           </div>
           
           {activeTab !== "weeks" && activeTab !== "cohorts" && (
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
-            <input
-              type="text"
-              placeholder={`Search ${activeTab}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-white/40 focus:bg-white/15 transition-all"
-            />
-          </div>
+            <div className="w-full lg:w-72 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
+              <input
+                type="text"
+                placeholder={`Search ${activeTab}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:border-white/40 focus:bg-white/15 transition-all"
+              />
+            </div>
           )}
         </div>
 
@@ -3009,6 +3067,27 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
               </div>
             )}
 
+            {/* Cohort & Team filter */}
+            <div className="mb-4 flex items-center gap-3">
+              <label className="text-sm font-medium text-white/80">Filter users by:</label>
+              <div className="relative">
+                <select
+                  value={selectedUserCohortFilter}
+                  onChange={(e) => setSelectedUserCohortFilter(e.target.value)}
+                  className="appearance-none pl-3 pr-8 py-2 bg-white/10 border border-white/20 text-white rounded-xl text-sm focus:outline-none focus:border-white focus:ring-1 focus:ring-white transition-all cursor-pointer"
+                >
+                  <option value="all" className="text-[#1A0A3D]">All Users</option>
+                  <option value="team" className="text-[#1A0A3D]">Team Members & Admins</option>
+                  {cohorts.map((cohort) => (
+                    <option key={cohort.id} value={cohort.id} className="text-[#1A0A3D]">
+                      {cohort.name || cohort.code}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/60 pointer-events-none" />
+              </div>
+            </div>
+
             {loading ? (
               <div className="text-center py-12 text-white/60">Loading users...</div>
             ) : filteredUsers.length === 0 ? (
@@ -3038,6 +3117,11 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                               Admin
                             </span>
                           )}
+                          {user.is_team_member && (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-[#00C8A7] text-white font-medium">
+                              Team Member
+                            </span>
+                          )}
                           {approvalCount > 0 && !userIsAdmin && (
                             <span className="px-2 py-0.5 rounded-full text-xs bg-[#F4F1FB] text-[#6B5B9E] font-medium">
                               Deletion pending {approvalCount}/{requiredApprovals}
@@ -3053,6 +3137,48 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                             Active time: {formatDuration(user.total_active_seconds || 0)}
                             {user.last_seen_at ? ` • Last seen ${new Date(user.last_seen_at).toLocaleDateString()}` : ""}
                           </p>
+                        )}
+
+                        {!userIsAdmin && (
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <label className="flex items-center gap-2 text-xs font-semibold text-[#492B8C] cursor-pointer bg-[#F4F1FB] hover:bg-[#FFF8F2] px-2.5 py-1 rounded-full border border-[#E8E3F3] transition-colors select-none">
+                              <input
+                                type="checkbox"
+                                checked={user.is_team_member || false}
+                                onChange={(e) => handleUpdateUserTeamOrCohorts(user.id, e.target.checked, user.cohort_ids)}
+                                className="w-3.5 h-3.5 rounded border-[#E8E3F3] text-[#FF6B34] focus:ring-[#FF6B34]"
+                              />
+                              Team Member
+                            </label>
+                          </div>
+                        )}
+
+                        {!userIsAdmin && cohorts.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                            <span className="text-[10px] uppercase font-bold text-[#6B5B9E] tracking-wider mr-1">Cohorts:</span>
+                            {cohorts.map((cohort) => {
+                              const isEnrolled = user.cohort_ids?.includes(cohort.id) || false
+                              return (
+                                <button
+                                  key={cohort.id}
+                                  onClick={() => {
+                                    const currentCohortIds = user.cohort_ids || []
+                                    const newCohortIds = isEnrolled
+                                      ? currentCohortIds.filter((id: string) => id !== cohort.id)
+                                      : [...currentCohortIds, cohort.id]
+                                    handleUpdateUserTeamOrCohorts(user.id, user.is_team_member, newCohortIds)
+                                  }}
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all ${
+                                    isEnrolled
+                                      ? "bg-[#492B8C] text-white border-transparent shadow-sm"
+                                      : "bg-white text-[#6B5B9E] border-[#E8E3F3] hover:bg-[#F4F1FB]"
+                                  }`}
+                                >
+                                  {cohort.name || cohort.code}
+                                </button>
+                              )
+                            })}
+                          </div>
                         )}
                       </div>
                       <div className="flex items-center gap-2 self-end sm:self-center">

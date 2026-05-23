@@ -77,8 +77,8 @@ export async function POST(request: Request) {
   const meetLink = typeof body.meet_link === "string" ? body.meet_link.trim() : ""
   const sessionAt = typeof body.session_at === "string" ? body.session_at.trim() : ""
   const visibilityScope = typeof body.visibility_scope === "string" ? body.visibility_scope.trim() : "all"
-  const audienceTiers = Array.isArray(body.audience_tiers) ? body.audience_tiers.filter((tier) => typeof tier === "string") : []
-  const selectedUserIds = Array.isArray(body.selected_user_ids) ? body.selected_user_ids.filter((id) => typeof id === "string") : []
+  const audienceTiers = Array.isArray(body.audience_tiers) ? body.audience_tiers.filter((tier: any) => typeof tier === "string") : []
+  const selectedUserIds = Array.isArray(body.selected_user_ids) ? body.selected_user_ids.filter((id: any) => typeof id === "string") : []
   const isActive = body.is_active !== false
 
   if (!title || !meetLink || !sessionAt) {
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
   }
 
   if (visibilityScope === "users" && selectedUserIds.length > 0) {
-    const audienceRows = selectedUserIds.map((userId) => ({ session_id: session.id, user_id: userId }))
+    const audienceRows = selectedUserIds.map((userId: any) => ({ session_id: session.id, user_id: userId }))
     const { error: audienceError } = await serviceClient
       .from("upcoming_session_users")
       .insert(audienceRows)
@@ -145,8 +145,8 @@ export async function PUT(request: Request) {
   const meetLink = typeof body.meet_link === "string" ? body.meet_link.trim() : ""
   const sessionAt = typeof body.session_at === "string" ? body.session_at.trim() : ""
   const visibilityScope = typeof body.visibility_scope === "string" ? body.visibility_scope.trim() : "all"
-  const audienceTiers = Array.isArray(body.audience_tiers) ? body.audience_tiers.filter((tier) => typeof tier === "string") : []
-  const selectedUserIds = Array.isArray(body.selected_user_ids) ? body.selected_user_ids.filter((uid) => typeof uid === "string") : []
+  const audienceTiers = Array.isArray(body.audience_tiers) ? body.audience_tiers.filter((tier: any) => typeof tier === "string") : []
+  const selectedUserIds = Array.isArray(body.selected_user_ids) ? body.selected_user_ids.filter((uid: any) => typeof uid === "string") : []
   const isActive = body.is_active !== false
 
   if (!id || !title || !meetLink || !sessionAt) {
@@ -196,7 +196,7 @@ export async function PUT(request: Request) {
   }
 
   if (visibilityScope === "users" && selectedUserIds.length > 0) {
-    const audienceRows = selectedUserIds.map((userId) => ({ session_id: id, user_id: userId }))
+    const audienceRows = selectedUserIds.map((userId: any) => ({ session_id: id, user_id: userId }))
     const { error: audienceError } = await serviceClient
       .from("upcoming_session_users")
       .insert(audienceRows)
