@@ -504,7 +504,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
               asChild
               variant="outline"
               size="sm"
-              className="border-[#00C8A7] text-[#00C8A7] hover:bg-[#00C8A7] hover:text-white rounded-full hidden sm:flex"
+              className="!bg-white border-[#00C8A7] text-[#00C8A7] hover:!bg-[#00C8A7] hover:!text-white rounded-full hidden sm:flex shadow-sm"
             >
               <a
                 href="https://whatsapp.com/channel/0029VbCJ26365yDAn7xmbq2R"
@@ -608,7 +608,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
           <Button
             variant="outline"
             onClick={() => setShowPdfViewer(true)}
-            className="border-[#492B8C] text-[#492B8C] hover:bg-[#492B8C] hover:text-white rounded-full"
+            className="!bg-white border-[#492B8C] text-[#492B8C] hover:!bg-[#492B8C] hover:!text-white rounded-full shadow-sm"
           >
             <FileText className="w-4 h-4 mr-2" />
             View Program Guide
@@ -616,7 +616,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
           <Button
             variant="outline"
             onClick={() => setShowSetupModal(true)}
-            className="border-[#FF6B34] text-[#FF6B34] hover:bg-[#FF6B34] hover:text-white rounded-full"
+            className="!bg-white border-[#FF6B34] text-[#FF6B34] hover:!bg-[#FF6B34] hover:!text-white rounded-full shadow-sm"
           >
             <Wrench className="w-4 h-4 mr-2" />
             System Setup & AI Tools
@@ -782,7 +782,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
         )}
 
         {/* Membership Tier Card */}
-        <div className="mb-8 p-6 rounded-2xl bg-[#F4F1FB] border border-[#E8E3F3]">
+        <div className="mb-8 p-6 rounded-2xl bg-white border border-[#E8E3F3] shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className={`px-3 py-1 rounded-full ${tierData.color} text-white text-sm font-medium flex items-center gap-1`}>
@@ -814,7 +814,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                       <h3 className="font-semibold text-[#1A0A3D]">{session.title}</h3>
                       {session.description && <p className="text-sm text-[#6B5B9E] mt-1 line-clamp-2">{session.description}</p>}
                     </div>
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-[#F4F1FB] text-[#6B5B9E] uppercase tracking-wider">
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-white border border-[#E8E3F3] text-[#6B5B9E] uppercase tracking-wider">
                       {session.visibility_scope === "all" ? "All" : session.visibility_scope}
                     </span>
                   </div>
@@ -822,7 +822,7 @@ export function DashboardContent({ user, profile }: DashboardContentProps) {
                   {session.audience_tiers?.length ? (
                     <div className="flex flex-wrap gap-2 mt-3">
                       {session.audience_tiers.map((tierName) => (
-                        <span key={tierName} className="px-2 py-1 rounded-full bg-[#F4F1FB] text-[#6B5B9E] text-xs capitalize">
+                        <span key={tierName} className="px-2 py-1 rounded-full bg-white border border-[#E8E3F3] text-[#6B5B9E] text-xs capitalize">
                           {tierName}
                         </span>
                       ))}
@@ -902,11 +902,11 @@ Register on AIBuilder 🚀`
 
           <div className="w-full">
             {loadingCuratedVideos ? (
-              <div className="text-center py-12 text-[#6B5B9E] bg-[#F4F1FB]/20 border border-[#E8E3F3] rounded-2xl">
+              <div className="text-center py-12 text-[#6B5B9E] bg-white border border-[#E8E3F3] rounded-2xl shadow-sm">
                 <span className="inline-block animate-pulse">Loading curated videos...</span>
               </div>
             ) : curatedVideos.length === 0 ? (
-              <div className="text-center py-12 bg-[#F4F1FB]/30 border border-dashed border-[#E8E3F3] rounded-2xl">
+              <div className="text-center py-12 bg-white border border-dashed border-[#E8E3F3] rounded-2xl shadow-sm">
                 <Video className="w-12 h-12 mx-auto mb-3 opacity-40 text-[#6B5B9E]" />
                 <p className="font-semibold text-[#1A0A3D]">No videos yet for this week</p>
                 <p className="text-sm text-[#6B5B9E] mt-1">Videos will be added as the week progresses</p>
@@ -1025,7 +1025,7 @@ Register on AIBuilder 🚀`
                       className="group p-5 rounded-xl bg-white border border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-md transition-all cursor-pointer"
                     >
                       <div className="flex items-start gap-4">
-                        <div className="p-2 rounded-lg bg-[#F4F1FB] group-hover:bg-[#492B8C] transition-colors">
+                        <div className="p-2 rounded-lg bg-white border border-[#E8E3F3] group-hover:bg-[#492B8C] transition-colors">
                           <IconComponent className="w-5 h-5 text-[#492B8C] group-hover:text-white transition-colors" />
                         </div>
                         <div className="flex-1">
@@ -1093,7 +1093,7 @@ Register on AIBuilder 🚀`
                 className={`group p-5 rounded-xl bg-white border border-[#E8E3F3] hover:border-[#492B8C] hover:shadow-md transition-all cursor-pointer ${isComingSoon ? "opacity-70" : ""}`}
               >
                 <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-lg bg-[#F4F1FB] group-hover:bg-[#492B8C] transition-colors relative">
+                  <div className="p-2 rounded-lg bg-white border border-[#E8E3F3] group-hover:bg-[#492B8C] transition-colors relative">
                     <resource.icon className="w-5 h-5 text-[#492B8C] group-hover:text-white transition-colors" />
                     {isComingSoon && (
                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#FF6B34] rounded-full ring-2 ring-white animate-pulse" />
@@ -1145,7 +1145,7 @@ Register on AIBuilder 🚀`
               ).map((resource, index) => (
                 <div
                   key={index}
-                  className="relative p-5 rounded-xl bg-[#F4F1FB]/50 border border-[#E8E3F3] opacity-60"
+                  className="relative p-5 rounded-xl bg-white border border-[#E8E3F3] opacity-60 shadow-sm"
                 >
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="p-2 rounded-full bg-white shadow-md">
@@ -1153,7 +1153,7 @@ Register on AIBuilder 🚀`
                     </div>
                   </div>
                     <div className="flex items-start gap-4 blur-[2px]">
-                      <div className="p-2 rounded-lg bg-[#F4F1FB]">
+                      <div className="p-2 rounded-lg bg-white border border-[#E8E3F3]">
                         <resource.icon className="w-5 h-5 text-[#492B8C]" />
                       </div>
                       <div className="flex-1">
@@ -1248,7 +1248,7 @@ Register on AIBuilder 🚀`
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setShowSetupModal(false)}>
           <div className="bg-white rounded-3xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
             {/* Header with Progress Bar */}
-            <div className="p-6 border-b border-[#E8E3F3] bg-gradient-to-r from-[#F4F1FB] to-white flex-shrink-0">
+            <div className="p-6 border-b border-[#E8E3F3] bg-white flex-shrink-0">
               <div className="flex items-center justify-between gap-4 mb-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -1283,7 +1283,7 @@ Register on AIBuilder 🚀`
                       </span>
                       <span className="font-semibold text-[#492B8C]">{completed} / {total} Setup Tasks Completed ({percent}%)</span>
                     </div>
-                    <div className="w-full h-2.5 bg-[#F4F1FB] rounded-full overflow-hidden border border-[#E8E3F3]">
+                    <div className="w-full h-2.5 bg-white rounded-full overflow-hidden border border-[#E8E3F3]">
                       <div 
                         className="h-full bg-gradient-to-r from-[#492B8C] to-[#FF6B34] transition-all duration-500 ease-out rounded-full" 
                         style={{ width: `${percent}%` }}
@@ -1295,7 +1295,7 @@ Register on AIBuilder 🚀`
             </div>
 
             {/* Modal Body / Checklist Grid */}
-            <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-[#F4F1FB]/30 space-y-6">
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-white space-y-6">
               {/* Dev Essentials Section */}
               <div>
                 <h4 className="text-sm font-bold text-[#492B8C] uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -1340,7 +1340,7 @@ Register on AIBuilder 🚀`
                             <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
                               isChecked 
                                 ? "bg-[#492B8C] border-[#492B8C] text-white scale-110" 
-                                : "border-[#E8E3F3] bg-[#F4F1FB] group-hover:border-[#6B5B9E]"
+                                : "border-[#E8E3F3] bg-white group-hover:border-[#6B5B9E]"
                             }`}>
                               {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                             </div>
@@ -1400,7 +1400,7 @@ Register on AIBuilder 🚀`
                             <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
                               isChecked 
                                 ? "bg-[#FF6B34] border-[#FF6B34] text-white scale-110" 
-                                : "border-[#E8E3F3] bg-[#F4F1FB] group-hover:border-[#6B5B9E]"
+                                : "border-[#E8E3F3] bg-white group-hover:border-[#6B5B9E]"
                             }`}>
                               {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                             </div>
@@ -1466,7 +1466,7 @@ Register on AIBuilder 🚀`
                             <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
                               isChecked 
                                 ? "bg-[#6B5B9E] border-[#6B5B9E] text-white scale-110" 
-                                : "border-[#E8E3F3] bg-[#F4F1FB] group-hover:border-[#6B5B9E]"
+                                : "border-[#E8E3F3] bg-white group-hover:border-[#6B5B9E]"
                             }`}>
                               {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                             </div>
@@ -1589,7 +1589,7 @@ Register on AIBuilder 🚀`
                 Unlock personalized guidance and project feedback directed by our expert mentors.
               </p>
 
-              <div className="p-4 rounded-2xl bg-[#F4F1FB] border border-[#E8E3F3] text-sm">
+              <div className="p-4 rounded-2xl bg-white border border-[#E8E3F3] text-sm shadow-sm">
                 <p className="font-semibold text-[#1A0A3D] mb-1">How to schedule:</p>
                 <p className="text-[#6B5B9E]">Mail to <span className="text-[#492B8C] font-bold">support@aibuilder.space</span> for one on one session.</p>
               </div>
