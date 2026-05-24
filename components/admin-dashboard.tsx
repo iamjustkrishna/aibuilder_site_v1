@@ -39,8 +39,10 @@ import {
   Film,
   Award,
   Sparkles,
+  Check,
 } from "lucide-react"
 import Link from "next/link"
+import { motion, AnimatePresence } from "framer-motion"
 import CertificateManagement from "@/components/certificate-management"
 interface Resource {
   id: string
@@ -209,6 +211,28 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [editingProject, setEditingProject] = useState<any>(null)
   const [savingShowcase, setSavingShowcase] = useState(false)
   const [savingProject, setSavingProject] = useState(false)
+  
+  // Custom Alert Modal State
+  const [customAlert, setCustomAlert] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    type: "success" | "error" | "info"
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info"
+  })
+
+  function showCustomAlert(title: string, message: string, type: "success" | "error" | "info" = "info") {
+    setCustomAlert({
+      isOpen: true,
+      title,
+      message,
+      type
+    })
+  }
   const [weekVideoForm, setWeekVideoForm] = useState({ title: "", description: "", url: "", tier_required: "foundational" as Resource["tier_required"] })
   const [cohortForm, setCohortForm] = useState({
     code: "",
@@ -365,14 +389,14 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       })
       const data = await res.json()
       if (!res.ok) {
-        alert(data.error || "Failed to save showcase settings")
+        showCustomAlert("Error Saving Settings", data.error || "Failed to save showcase settings", "error")
         return
       }
-      alert("Showcase settings saved successfully!")
+      showCustomAlert("Settings Saved", "Your graduation showcase settings have been successfully saved!", "success")
       setShowcaseConfig(data)
     } catch (err) {
       console.error(err)
-      alert("An error occurred while saving showcase settings.")
+      showCustomAlert("Connection Error", "An error occurred while saving showcase settings. Please check your network connection.", "error")
     } finally {
       setSavingShowcase(false)
     }
@@ -391,10 +415,10 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       })
       const data = await res.json()
       if (!res.ok) {
-        alert(data.error || "Failed to save project")
+        showCustomAlert("Error Saving Project", data.error || "Failed to save project", "error")
         return
       }
-      alert("Project saved successfully!")
+      showCustomAlert("Project Saved", "The participant project has been successfully saved and updated!", "success")
       setProjectEditorOpen(false)
       setEditingProject(null)
       if (selectedShowcaseCohortId) {
@@ -402,7 +426,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       }
     } catch (err) {
       console.error(err)
-      alert("An error occurred while saving the project.")
+      showCustomAlert("Connection Error", "An error occurred while saving the project. Please check your network connection.", "error")
     } finally {
       setSavingProject(false)
     }
@@ -420,17 +444,17 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         })
       })
       if (res.ok) {
-        alert("Project deleted successfully.")
+        showCustomAlert("Project Deleted", "The showcase project was successfully deleted.", "success")
         if (selectedShowcaseCohortId) {
           fetchShowcaseData(selectedShowcaseCohortId)
         }
       } else {
         const data = await res.json()
-        alert(data.error || "Failed to delete project")
+        showCustomAlert("Deletion Failed", data.error || "Failed to delete project", "error")
       }
     } catch (err) {
       console.error(err)
-      alert("An error occurred.")
+      showCustomAlert("Connection Error", "An error occurred while deleting the project.", "error")
     }
   }
 
@@ -4298,6 +4322,48 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
           </div>
         </div>
       )}
+      
+      {/* Custom Center Alert Modal */}
+      <AnimatePresence>
+        {customAlert.isOpen && (
+          <div 
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+            onClick={() => setCustomAlert({ ...customAlert, isOpen: false })}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-[#E8E3F3] text-center space-y-4 text-[#1A0A3D]"
+            >
+              <div className="mx-auto w-12 h-12 rounded-full flex items-center justify-center border bg-[#F4F1FB]">
+                {customAlert.type === "success" ? (
+                  <Check className="w-6 h-6 text-[#00C8A7]" />
+                ) : customAlert.type === "error" ? (
+                  <X className="w-6 h-6 text-[#FF6B34]" />
+                ) : (
+                  <Sparkles className="w-6 h-6 text-[#FFD13F]" />
+                )}
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold" style={{ fontFamily: "var(--font-cal-sans)" }}>
+                  {customAlert.title}
+                </h3>
+                <p className="text-sm text-[#6B5B9E] font-medium leading-relaxed">
+                  {customAlert.message}
+                </p>
+              </div>
+              <Button 
+                onClick={() => setCustomAlert({ ...customAlert, isOpen: false })}
+                className="w-full bg-[#492B8C] hover:bg-[#3D2174] text-white rounded-xl h-10 font-bold"
+              >
+                Okay
+              </Button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
