@@ -38,6 +38,7 @@ import {
   CheckCircle2,
   Film,
   Award,
+  Sparkles,
 } from "lucide-react"
 import Link from "next/link"
 import CertificateManagement from "@/components/certificate-management"
@@ -187,6 +188,27 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [addingToWeek, setAddingToWeek] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedUserCohortFilter, setSelectedUserCohortFilter] = useState<string>("all")
+
+  // Cohort Showcase States
+  const [selectedShowcaseCohortId, setSelectedShowcaseCohortId] = useState<string | null>(null)
+  const [showcaseModalOpen, setShowcaseModalOpen] = useState(false)
+  const [showcaseConfig, setShowcaseConfig] = useState<any>({
+    slug: "",
+    title: "",
+    hero_title: "",
+    hero_subtitle: "",
+    summary: "",
+    highlight_video_url: "",
+    is_active: false,
+    settings: {}
+  })
+  const [showcaseParticipants, setShowcaseParticipants] = useState<any[]>([])
+  const [showcaseManualProjects, setShowcaseManualProjects] = useState<any[]>([])
+  const [loadingShowcaseData, setLoadingShowcaseData] = useState(false)
+  const [projectEditorOpen, setProjectEditorOpen] = useState(false)
+  const [editingProject, setEditingProject] = useState<any>(null)
+  const [savingShowcase, setSavingShowcase] = useState(false)
+  const [savingProject, setSavingProject] = useState(false)
   const [weekVideoForm, setWeekVideoForm] = useState({ title: "", description: "", url: "", tier_required: "foundational" as Resource["tier_required"] })
   const [cohortForm, setCohortForm] = useState({
     code: "",
@@ -287,6 +309,130 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       }))
     }
   }, [userEmail])
+
+  useEffect(() => {
+    if (selectedShowcaseCohortId) {
+      fetchShowcaseData(selectedShowcaseCohortId)
+    }
+  }, [selectedShowcaseCohortId])
+
+  async function fetchShowcaseData(cohortId: string) {
+    setLoadingShowcaseData(true)
+    try {
+      const showcaseRes = await fetch(`/api/admin/cohort-showcase?cohort_id=${cohortId}`)
+      if (showcaseRes.ok) {
+        const showcaseData = await showcaseRes.json()
+        if (showcaseData && !showcaseData.needsMigration) {
+          setShowcaseConfig(showcaseData)
+        } else {
+          const selectedCohort = cohorts.find(c => c.id === cohortId)
+          const defaultSlug = selectedCohort ? selectedCohort.code.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "cohort"
+          const defaultTitle = selectedCohort ? `${selectedCohort.name} Showcase` : "Graduation Showcase"
+          setShowcaseConfig({
+            cohort_id: cohortId,
+            slug: defaultSlug,
+            title: defaultTitle,
+            hero_title: `Welcome to the ${defaultTitle}`,
+            hero_subtitle: "See the amazing AI applications and autonomous agents built by our participants.",
+            summary: "",
+            highlight_video_url: "",
+            is_active: false,
+            settings: {}
+          })
+        }
+      }
+
+      const projectsRes = await fetch(`/api/admin/cohort-projects?cohort_id=${cohortId}`)
+      if (projectsRes.ok) {
+        const projectsData = await projectsRes.json()
+        setShowcaseParticipants(projectsData.participants || [])
+        setShowcaseManualProjects(projectsData.manualProjects || [])
+      }
+    } catch (error) {
+      console.error("Failed to load showcase details:", error)
+    } finally {
+      setLoadingShowcaseData(false)
+    }
+  }
+
+  async function handleSaveShowcaseSettings() {
+    setSavingShowcase(true)
+    try {
+      const res = await fetch("/api/admin/cohort-showcase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(showcaseConfig)
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || "Failed to save showcase settings")
+        return
+      }
+      alert("Showcase settings saved successfully!")
+      setShowcaseConfig(data)
+    } catch (err) {
+      console.error(err)
+      alert("An error occurred while saving showcase settings.")
+    } finally {
+      setSavingShowcase(false)
+    }
+  }
+
+  async function handleSaveProject(projectData: any) {
+    setSavingProject(true)
+    try {
+      const res = await fetch("/api/admin/cohort-projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...projectData,
+          cohort_id: selectedShowcaseCohortId
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || "Failed to save project")
+        return
+      }
+      alert("Project saved successfully!")
+      setProjectEditorOpen(false)
+      setEditingProject(null)
+      if (selectedShowcaseCohortId) {
+        fetchShowcaseData(selectedShowcaseCohortId)
+      }
+    } catch (err) {
+      console.error(err)
+      alert("An error occurred while saving the project.")
+    } finally {
+      setSavingProject(false)
+    }
+  }
+
+  async function handleDeleteManualProject(projectId: string) {
+    if (!confirm("Are you sure you want to delete this showcase project?")) return
+    try {
+      const res = await fetch("/api/admin/cohort-projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete",
+          id: projectId
+        })
+      })
+      if (res.ok) {
+        alert("Project deleted successfully.")
+        if (selectedShowcaseCohortId) {
+          fetchShowcaseData(selectedShowcaseCohortId)
+        }
+      } else {
+        const data = await res.json()
+        alert(data.error || "Failed to delete project")
+      }
+    } catch (err) {
+      console.error(err)
+      alert("An error occurred.")
+    }
+  }
 
   async function fetchAdminEmails() {
     try {
@@ -1670,6 +1816,16 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                             <Star className="w-4 h-4 inline mr-1" /> Set Current
                           </button>
                         )}
+                        <button
+                          onClick={() => {
+                            setSelectedShowcaseCohortId(cohort.id)
+                            setShowcaseModalOpen(true)
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-[#FF6B34]/10 text-[#FF6B34] hover:bg-[#FF6B34]/20 text-sm font-medium transition-colors"
+                          title="Configure showcase / graduation page"
+                        >
+                          <Sparkles className="w-4 h-4 inline mr-1" /> Showcase
+                        </button>
                         <button
                           onClick={() => {
                             setSelectedCohortId(cohort.id)
@@ -3682,6 +3838,466 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
           <CertificateManagement />
         )}
       </div>
+
+      {/* Cohort Showcase Settings Modal */}
+      {showcaseModalOpen && selectedShowcaseCohortId && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => {
+          setShowcaseModalOpen(false)
+          setSelectedShowcaseCohortId(null)
+        }}>
+          <div className="bg-white rounded-3xl w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden shadow-2xl relative text-[#1A0A3D]" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="p-6 border-b border-[#E8E3F3] bg-[#F4F1FB] flex-shrink-0 flex items-center justify-between">
+              <div>
+                <span className="px-2.5 py-0.5 text-xs font-semibold bg-[#FF6B34]/10 text-[#FF6B34] rounded-full uppercase tracking-wider">Graduation showcase</span>
+                <h3 className="text-2xl font-bold text-[#1A0A3D] mt-1" style={{ fontFamily: "var(--font-cal-sans)" }}>
+                  Configure Cohort Showcase: {cohorts.find(c => c.id === selectedShowcaseCohortId)?.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowcaseModalOpen(false)
+                  setSelectedShowcaseCohortId(null)
+                }}
+                className="w-9 h-9 rounded-full border border-[#E8E3F3] flex items-center justify-center text-[#492B8C] bg-white hover:bg-[#F4F1FB]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {loadingShowcaseData ? (
+              <div className="flex-1 flex flex-col items-center justify-center">
+                <Loader2 className="w-10 h-10 animate-spin text-[#492B8C] mb-2" />
+                <p className="text-[#6B5B9E]">Loading showcase settings & projects...</p>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Showcase General Config (Left Column) */}
+                <div className="space-y-5 border-r border-[#E8E3F3] lg:pr-8">
+                  <h4 className="text-lg font-bold text-[#1A0A3D] border-b border-[#E8E3F3] pb-2 flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-[#FF6B34]" /> General Page Settings
+                  </h4>
+
+                  <div className="flex items-center justify-between p-4 bg-[#F4F1FB] rounded-2xl border border-[#E8E3F3]">
+                    <div>
+                      <p className="font-semibold text-[#1A0A3D]">Make Showcase Page Active</p>
+                      <p className="text-xs text-[#6B5B9E]">Toggling active makes this page visible to the public at `/cohort/{showcaseConfig.slug}`</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={showcaseConfig.is_active || false}
+                        onChange={(e) => setShowcaseConfig({ ...showcaseConfig, is_active: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00C8A7]"></div>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-[#1A0A3D] mb-1">URL Slug *</label>
+                    <div className="flex rounded-xl shadow-sm border border-[#E8E3F3] bg-white overflow-hidden">
+                      <span className="inline-flex items-center px-3 bg-[#F4F1FB] border-r border-[#E8E3F3] text-sm text-[#6B5B9E]">/cohort/</span>
+                      <input
+                        type="text"
+                        value={showcaseConfig.slug}
+                        onChange={(e) => setShowcaseConfig({ ...showcaseConfig, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })}
+                        placeholder="cohort-1"
+                        className="flex-1 px-3 py-2 text-sm focus:outline-none text-[#1A0A3D]"
+                      />
+                    </div>
+                    <p className="text-[11px] text-[#6B5B9E] mt-1">Lowercase letters, numbers, and hyphens only.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-[#1A0A3D] mb-1">Gallery Title *</label>
+                    <Input
+                      value={showcaseConfig.title}
+                      onChange={(e) => setShowcaseConfig({ ...showcaseConfig, title: e.target.value })}
+                      placeholder="e.g. AI Builder Cohort 1 Graduation Gallery"
+                      className="border-[#E8E3F3]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-[#1A0A3D] mb-1">Hero Title</label>
+                    <Input
+                      value={showcaseConfig.hero_title || ""}
+                      onChange={(e) => setShowcaseConfig({ ...showcaseConfig, hero_title: e.target.value })}
+                      placeholder="e.g. Welcome to the Cohort 1 Showcase"
+                      className="border-[#E8E3F3]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-[#1A0A3D] mb-1">Hero Subtitle</label>
+                    <Input
+                      value={showcaseConfig.hero_subtitle || ""}
+                      onChange={(e) => setShowcaseConfig({ ...showcaseConfig, hero_subtitle: e.target.value })}
+                      placeholder="e.g. See the amazing AI apps built in our 4-week program."
+                      className="border-[#E8E3F3]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-[#1A0A3D] mb-1">Highlight Recap Video URL (YouTube)</label>
+                    <Input
+                      value={showcaseConfig.highlight_video_url || ""}
+                      onChange={(e) => setShowcaseConfig({ ...showcaseConfig, highlight_video_url: e.target.value })}
+                      placeholder="e.g. https://www.youtube.com/watch?v=..."
+                      className="border-[#E8E3F3]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-[#1A0A3D] mb-1">Graduation Cohort Summary / Story</label>
+                    <Textarea
+                      value={showcaseConfig.summary || ""}
+                      onChange={(e) => setShowcaseConfig({ ...showcaseConfig, summary: e.target.value })}
+                      placeholder="Write an inspirational summary describing what this cohort achieved..."
+                      className="border-[#E8E3F3] h-28 resize-none"
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleSaveShowcaseSettings}
+                    disabled={savingShowcase || !showcaseConfig.slug || !showcaseConfig.title}
+                    className="w-full bg-[#00C8A7] hover:bg-[#00C8A7]/90 text-white rounded-xl py-3 font-semibold"
+                  >
+                    {savingShowcase ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" /> Saving Settings...
+                      </>
+                    ) : (
+                      "Save Showcase Settings"
+                    )}
+                  </Button>
+                </div>
+
+                {/* Showcase Projects Management (Right Column) */}
+                <div className="space-y-5 flex flex-col h-full">
+                  <div className="flex items-center justify-between border-b border-[#E8E3F3] pb-2 flex-shrink-0">
+                    <h4 className="text-lg font-bold text-[#1A0A3D] flex items-center gap-2">
+                      <Code className="w-5 h-5 text-[#492B8C]" /> Participant Projects
+                    </h4>
+                    <Button
+                      onClick={() => {
+                        setEditingProject({
+                          title: "",
+                          description: "",
+                          project_url: "",
+                          repo_url: "",
+                          demo_url: "",
+                          thumbnail_url: "",
+                          technologies: [],
+                          status: "published",
+                          featured: false,
+                          developer_name: "",
+                          developer_email: "",
+                          developer_avatar_url: ""
+                        })
+                        setProjectEditorOpen(true)
+                      }}
+                      className="bg-[#492B8C] hover:bg-[#3D2174] text-white text-xs rounded-full px-4 py-1.5"
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-1" /> Add Manual Project
+                    </Button>
+                  </div>
+
+                  {/* List of projects */}
+                  <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[50vh]">
+                    {/* Manual purely admin added projects first */}
+                    {showcaseManualProjects.map((proj) => (
+                      <div key={proj.id} className="p-4 bg-[#FFF8F2] border border-[#FF6B34]/20 rounded-2xl flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-[#FF6B34] text-white rounded">Manual Entry</span>
+                            {proj.featured && <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-[#FFD13F] text-[#1A0A3D] rounded">★ Featured</span>}
+                            <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded text-white ${proj.status === "published" ? "bg-emerald-500" : "bg-gray-500"}`}>{proj.status}</span>
+                          </div>
+                          <h5 className="font-semibold text-[#1A0A3D] mt-1 truncate">{proj.title}</h5>
+                          <p className="text-xs text-[#6B5B9E] truncate">By {proj.developer_name || "Guest Developer"}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <button
+                            onClick={() => {
+                              setEditingProject(proj)
+                              setProjectEditorOpen(true)
+                            }}
+                            className="p-2 hover:bg-[#F4F1FB] rounded-lg text-[#492B8C] transition-colors"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteManualProject(proj.id)}
+                            className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Participant projects */}
+                    {showcaseParticipants.map((part) => {
+                      const hasProj = !!part.project
+                      return (
+                        <div key={part.user_id} className={`p-4 border rounded-2xl flex items-center justify-between gap-4 ${
+                          hasProj ? "bg-emerald-50/50 border-emerald-100" : "bg-white border-[#E8E3F3]"
+                        }`}>
+                          <div className="min-w-0 flex items-center gap-3">
+                            {part.avatar_url ? (
+                              <img src={part.avatar_url} className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-[#E8E3F3]" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-[#F4F1FB] border border-[#E8E3F3] flex items-center justify-center flex-shrink-0 text-sm font-semibold text-[#492B8C]">
+                                {part.full_name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <h5 className="font-semibold text-[#1A0A3D] truncate">{part.full_name}</h5>
+                              <p className="text-xs text-[#6B5B9E] truncate">{part.email}</p>
+                              {hasProj ? (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-[11px] text-[#00C8A7] font-semibold truncate">App: {part.project.title}</span>
+                                  {part.project.featured && <span className="text-[10px] bg-[#FFD13F] text-[#1A0A3D] px-1 rounded font-bold">★ Featured</span>}
+                                  <span className={`text-[10px] px-1 rounded text-white font-semibold ${part.project.status === "published" ? "bg-emerald-500" : "bg-gray-500"}`}>{part.project.status}</span>
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-[#6B5B9E] block mt-0.5">No showcase project yet</span>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              setEditingProject(part.project || {
+                                user_id: part.user_id,
+                                title: "",
+                                description: "",
+                                project_url: "",
+                                repo_url: "",
+                                demo_url: "",
+                                thumbnail_url: "",
+                                technologies: [],
+                                status: "published",
+                                featured: false,
+                                developer_name: part.full_name,
+                                developer_email: part.email,
+                                developer_avatar_url: part.avatar_url
+                              })
+                              setProjectEditorOpen(true)
+                            }}
+                            className={`rounded-full text-xs font-semibold px-4 py-1.5 ${
+                              hasProj
+                                ? "bg-[#FF6B34]/10 text-[#FF6B34] hover:bg-[#FF6B34]/20"
+                                : "bg-[#492B8C]/10 text-[#492B8C] hover:bg-[#492B8C]/20"
+                            }`}
+                          >
+                            {hasProj ? "Edit Showcase" : "Add Showcase"}
+                          </Button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Project Editor Nested Modal */}
+      {projectEditorOpen && editingProject && (
+        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4" onClick={() => {
+          setProjectEditorOpen(false)
+          setEditingProject(null)
+        }}>
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl relative text-[#1A0A3D]" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-[#E8E3F3] bg-[#F4F1FB] flex items-center justify-between flex-shrink-0">
+              <h3 className="text-xl font-bold text-[#1A0A3D]">
+                {editingProject.id ? "Edit Showcase Project" : "Add Showcase Project"}
+              </h3>
+              <button
+                onClick={() => {
+                  setProjectEditorOpen(false)
+                  setEditingProject(null)
+                }}
+                className="w-8 h-8 rounded-full border border-[#E8E3F3] flex items-center justify-center text-[#492B8C] bg-white hover:bg-[#F4F1FB]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {/* Optional User ID linking details */}
+              {editingProject.user_id && (
+                <div className="p-3 bg-[#E8E3F3]/50 rounded-xl text-xs text-[#6B5B9E]">
+                  This showcase project is linked to registered user ID: <span className="font-mono text-[#1A0A3D]">{editingProject.user_id}</span>
+                </div>
+              )}
+
+              {/* Developer overrides */}
+              <div className="border border-[#E8E3F3] p-4 rounded-2xl bg-[#F4F1FB]/30 space-y-3">
+                <p className="text-xs font-bold text-[#6B5B9E] uppercase tracking-wider">Developer Display Overrides</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1A0A3D] mb-1">Developer Name override</label>
+                    <Input
+                      value={editingProject.developer_name || ""}
+                      onChange={(e) => setEditingProject({ ...editingProject, developer_name: e.target.value })}
+                      placeholder="e.g. John Doe"
+                      className="border-[#E8E3F3] text-sm bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1A0A3D] mb-1">Developer Email override</label>
+                    <Input
+                      value={editingProject.developer_email || ""}
+                      onChange={(e) => setEditingProject({ ...editingProject, developer_email: e.target.value })}
+                      placeholder="e.g. email@address.com"
+                      className="border-[#E8E3F3] text-sm bg-white"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-[#1A0A3D] mb-1">Developer Avatar URL override</label>
+                    <Input
+                      value={editingProject.developer_avatar_url || ""}
+                      onChange={(e) => setEditingProject({ ...editingProject, developer_avatar_url: e.target.value })}
+                      placeholder="e.g. https://domain.com/avatar.jpg"
+                      className="border-[#E8E3F3] text-sm bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Project core metadata */}
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-semibold text-[#1A0A3D] mb-1">Project Title *</label>
+                  <Input
+                    value={editingProject.title}
+                    onChange={(e) => setEditingProject({ ...editingProject, title: e.target.value })}
+                    placeholder="e.g. Autonomous Sales Agent"
+                    className="border-[#E8E3F3]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-[#1A0A3D] mb-1">Project Pitch / Description</label>
+                  <Textarea
+                    value={editingProject.description || ""}
+                    onChange={(e) => setEditingProject({ ...editingProject, description: e.target.value })}
+                    placeholder="Short description pitching what this app does, how it works, and technology used..."
+                    className="border-[#E8E3F3] h-24 resize-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1A0A3D] mb-1">Live App URL</label>
+                    <Input
+                      value={editingProject.project_url || ""}
+                      onChange={(e) => setEditingProject({ ...editingProject, project_url: e.target.value })}
+                      placeholder="https://yourapp.com"
+                      className="border-[#E8E3F3] text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1A0A3D] mb-1">GitHub Repo URL</label>
+                    <Input
+                      value={editingProject.repo_url || ""}
+                      onChange={(e) => setEditingProject({ ...editingProject, repo_url: e.target.value })}
+                      placeholder="https://github.com/user/repo"
+                      className="border-[#E8E3F3] text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1A0A3D] mb-1">Demo Video Embed URL (YouTube/Vimeo/Loom)</label>
+                    <Input
+                      value={editingProject.demo_url || ""}
+                      onChange={(e) => setEditingProject({ ...editingProject, demo_url: e.target.value })}
+                      placeholder="e.g. https://www.youtube.com/watch?v=..."
+                      className="border-[#E8E3F3] text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1A0A3D] mb-1">Main App Screenshot / Photo URL</label>
+                    <Input
+                      value={editingProject.thumbnail_url || ""}
+                      onChange={(e) => setEditingProject({ ...editingProject, thumbnail_url: e.target.value })}
+                      placeholder="e.g. https://domain.com/screenshot.jpg"
+                      className="border-[#E8E3F3] text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-[#1A0A3D] mb-1">Technologies Used (separated by commas)</label>
+                  <Input
+                    value={Array.isArray(editingProject.technologies) ? editingProject.technologies.join(", ") : ""}
+                    onChange={(e) => setEditingProject({
+                      ...editingProject,
+                      technologies: e.target.value.split(",").map(t => t.trim()).filter(Boolean)
+                    })}
+                    placeholder="Next.js, Supabase, Tailwind CSS, OpenAI, LangChain"
+                    className="border-[#E8E3F3]"
+                  />
+                </div>
+
+                <div className="flex gap-4 p-4 bg-[#F4F1FB]/30 border border-[#E8E3F3] rounded-2xl">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={editingProject.featured || false}
+                      onChange={(e) => setEditingProject({ ...editingProject, featured: e.target.checked })}
+                      className="rounded text-[#492B8C] focus:ring-[#492B8C] border-[#E8E3F3] h-4 w-4"
+                    />
+                    <span className="text-sm font-medium text-[#1A0A3D]">Featured Project (Pin to top)</span>
+                  </label>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold">Status:</span>
+                    <select
+                      value={editingProject.status || "published"}
+                      onChange={(e) => setEditingProject({ ...editingProject, status: e.target.value })}
+                      className="text-sm px-2 py-1 bg-white border border-[#E8E3F3] rounded focus:outline-none"
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-[#E8E3F3] bg-[#F4F1FB] flex items-center justify-end gap-2 flex-shrink-0">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setProjectEditorOpen(false)
+                  setEditingProject(null)
+                }}
+                className="border-[#E8E3F3] rounded-xl text-xs px-4"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleSaveProject(editingProject)}
+                disabled={savingProject || !editingProject.title}
+                className="bg-[#00C8A7] hover:bg-[#00C8A7]/90 text-white rounded-xl text-xs px-6"
+              >
+                {savingProject ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> Saving...
+                  </>
+                ) : (
+                  "Save Project Details"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

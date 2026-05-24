@@ -23,7 +23,22 @@ const textRevealVariants = {
   }),
 }
 
+import { useState, useEffect } from "react"
+
 export function Hero() {
+  const [latestShowcase, setLatestShowcase] = useState<any>(null)
+
+  useEffect(() => {
+    fetch("/api/cohorts/showcases")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setLatestShowcase(data[0]) // Select the latest active showcase
+        }
+      })
+      .catch(err => console.error("Failed to load hero showcase:", err))
+  }, [])
+
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-24 pb-16 overflow-hidden bg-white">
       {/* Subtle radial glow */}
@@ -37,8 +52,19 @@ export function Hero() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#F4F1FB] border border-[#E8E3F3] mb-8"
         >
-          <span className="w-2 h-2 rounded-full bg-[#FF6B34] pulse-glow" />
-          <span className="text-sm text-[#492B8C]">Season 0 | Join Season 1, Register Now</span>
+          {latestShowcase ? (
+            <a href={`/cohort/${latestShowcase.slug}`} className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#00C8A7] pulse-glow animate-pulse" />
+              <span className="text-sm text-[#492B8C] font-semibold hover:text-[#FF6B34] transition-colors flex items-center gap-1">
+                Graduation Spotlight: See what Cohort graduates built! <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </a>
+          ) : (
+            <>
+              <span className="w-2 h-2 rounded-full bg-[#FF6B34] pulse-glow" />
+              <span className="text-sm text-[#492B8C]">Season 0 | Join Season 1, Register Now</span>
+            </>
+          )}
         </motion.div>
 
         {/* Headline with text mask animation */}

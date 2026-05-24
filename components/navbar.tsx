@@ -20,6 +20,7 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [activeShowcases, setActiveShowcases] = useState<any[]>([])
   const navRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -36,8 +37,31 @@ export function Navbar() {
       setUser(session?.user ?? null)
     })
 
+    // Fetch showcases
+    fetch("/api/cohorts/showcases")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setActiveShowcases(data)
+        }
+      })
+      .catch(err => console.error("Failed to load active showcases:", err))
+
     return () => subscription.unsubscribe()
   }, [])
+
+  // Dynamically insert showcase links right after "Resources"
+  const dynamicNavItems: Array<{ label: string; href: string; external?: boolean }> = [
+    { label: "Curriculum", href: "#curriculum" },
+    { label: "Resources", href: "/resources" },
+    ...activeShowcases.map(s => ({
+      label: s.cohort?.code ? `${s.cohort.code} Gallery` : s.title,
+      href: `/cohort/${s.slug}`
+    })),
+    { label: "Pricing", href: "#pricing" },
+    { label: "FAQs", href: "#faqs" },
+    { label: "Community", href: "https://whatsapp.com/channel/0029VbCJ26365yDAn7xmbq2R", external: true },
+  ]
 
   return (
     <motion.header
@@ -60,7 +84,7 @@ export function Navbar() {
 
         {/* Desktop Nav Items */}
         <div className="hidden md:flex items-center gap-1 relative">
-          {navItems.map((item, index) => (
+          {dynamicNavItems.map((item, index) => (
             <a
               key={item.label}
               href={item.href}
@@ -122,7 +146,7 @@ export function Navbar() {
           className="absolute top-full left-0 right-0 mt-2 p-4 rounded-2xl bg-[#2D1A69]/95 backdrop-blur-md border border-[#492B8C]/50"
         >
           <div className="flex flex-col gap-2">
-            {navItems.map((item) => (
+            {dynamicNavItems.map((item) => (
               <a
                 key={item.label}
                 href={item.href}
