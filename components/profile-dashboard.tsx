@@ -301,23 +301,23 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
         <section className="bg-white rounded-3xl border border-[#E8E3F3] shadow-sm overflow-hidden">
           <div className="p-6 sm:p-8 border-b border-[#E8E3F3] bg-white">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              <div className="flex items-start gap-4">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 flex-1">
                 {currentProfile.avatar_url ? (
                   <Image
                     src={currentProfile.avatar_url}
                     alt={currentProfile.full_name}
                     width={84}
                     height={84}
-                    className="rounded-2xl ring-4 ring-white shadow-sm"
+                    className="rounded-2xl ring-4 ring-white shadow-sm flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded-2xl bg-[#492B8C] text-white flex items-center justify-center text-2xl font-bold shadow-sm">
+                  <div className="w-20 h-20 rounded-2xl bg-[#492B8C] text-white flex items-center justify-center text-2xl font-bold shadow-sm flex-shrink-0">
                     {initials}
                   </div>
                 )}
 
-                <div>
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-2">
                     <h1 className="text-2xl sm:text-3xl font-bold text-[#1A0A3D]" style={{ fontFamily: "var(--font-cal-sans)" }}>
                       {currentProfile.full_name}
                     </h1>
@@ -346,23 +346,25 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-              <div className="p-3 rounded-2xl bg-white border border-[#E8E3F3]">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3 text-sm w-full lg:w-auto">
+                <div className="p-3 rounded-2xl bg-white border border-[#E8E3F3] text-center sm:text-left">
                   <p className="text-[#6B5B9E] text-xs">Projects</p>
                   <p className="font-semibold text-[#1A0A3D]">{projectList.length}</p>
                 </div>
-              <div className="p-3 rounded-2xl bg-white border border-[#E8E3F3]">
+                <div className="p-3 rounded-2xl bg-white border border-[#E8E3F3] text-center sm:text-left">
                   <p className="text-[#6B5B9E] text-xs">Certificates</p>
                   <p className="font-semibold text-[#1A0A3D]">{certificateList.length}</p>
                 </div>
-              <div className="p-3 rounded-2xl bg-white border border-[#E8E3F3]">
+                <div className="p-3 rounded-2xl bg-white border border-[#E8E3F3] text-center sm:text-left">
                   <p className="text-[#6B5B9E] text-xs">Member since</p>
-                  <p className="font-semibold text-[#1A0A3D]">{new Date(currentProfile.created_at).toLocaleDateString()}</p>
+                  <p className="font-semibold text-[#1A0A3D] text-[10px] sm:text-sm truncate">
+                    {new Date(currentProfile.created_at).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 mt-6">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-6">
               {currentProfile.website_url && (
                 <Button asChild variant="outline" size="sm" className="rounded-full border-[#E8E3F3]">
                   <a href={currentProfile.website_url} target="_blank" rel="noopener noreferrer">
@@ -391,7 +393,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
           </div>
 
           <div className="p-4 sm:p-6">
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-6">
               {tabs.map((tab) => {
                 const Icon = tab.icon
                 const active = activeTab === tab.key
@@ -601,7 +603,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                           )}
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end flex-shrink-0">
                           {project.project_url && (
                             <Button asChild variant="outline" size="sm" className="rounded-full">
                               <a href={project.project_url} target="_blank" rel="noopener noreferrer">
@@ -644,7 +646,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                   </div>
                 ) : (
                   certificateList.map((certificate) => (
-                    <div key={certificate.id} className="p-5 rounded-2xl border border-[#E8E3F3] bg-white flex items-center justify-between gap-4">
+                    <div key={certificate.id} className="p-5 rounded-2xl border border-[#E8E3F3] bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
                         <h3 className="font-semibold text-[#1A0A3D]">{certificate.title}</h3>
                         <p className="text-sm text-[#6B5B9E]">
@@ -652,7 +654,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                         </p>
                       </div>
                       {certificate.certificate_url && (
-                        <Button asChild variant="outline" size="sm" className="rounded-full">
+                        <Button asChild variant="outline" size="sm" className="rounded-full w-full sm:w-auto justify-center">
                           <a href={certificate.certificate_url} target="_blank" rel="noopener noreferrer">
                             View
                             <ExternalLink className="w-4 h-4 ml-2" />
@@ -668,9 +670,9 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
         </section>
 
         {showProjectForm && (
-          <div className="fixed inset-0 z-50 bg-black/60 px-4 py-6 flex items-center justify-center">
-            <div className="w-full max-w-2xl rounded-3xl bg-white shadow-2xl overflow-hidden">
-              <div className="p-5 border-b border-[#E8E3F3] flex items-center justify-between">
+          <div className="fixed inset-0 z-50 bg-black/60 p-4 sm:p-6 flex items-center justify-center overflow-y-auto">
+            <div className="w-full max-w-2xl rounded-3xl bg-white shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="p-5 border-b border-[#E8E3F3] flex items-center justify-between flex-shrink-0">
                 <div>
                   <h2 className="text-lg font-semibold text-[#1A0A3D]">Add project</h2>
                   <p className="text-sm text-[#6B5B9E]">Save your cohort work and share it on your profile.</p>
@@ -683,7 +685,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                 </button>
               </div>
 
-              <div className="p-5 grid gap-4">
+              <div className="p-5 overflow-y-auto grid gap-4 flex-1">
                 <div>
                   <label className="block text-sm font-medium text-[#1A0A3D] mb-2">Project name</label>
                   <Input
@@ -740,7 +742,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                     />
                   </div>
                 </div>
-                <label className="flex items-center gap-3 text-sm text-[#1A0A3D]">
+                <label className="flex items-center gap-3 text-sm text-[#1A0A3D] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={projectDraft.featured}
@@ -751,7 +753,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                 </label>
               </div>
 
-              <div className="p-5 border-t border-[#E8E3F3] flex items-center justify-end gap-3">
+              <div className="p-5 border-t border-[#E8E3F3] flex items-center justify-end gap-3 flex-shrink-0 bg-[#F4F1FB]">
                 <Button
                   variant="outline"
                   onClick={() => setShowProjectForm(false)}
