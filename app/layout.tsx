@@ -3,7 +3,6 @@ import type { Metadata } from "next"
 import { Manrope, DM_Sans, Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Chatbot } from "@/components/chatbot"
-import { FloatingShowcase } from "@/components/floating-showcase"
 import { ActivityTracker } from "@/components/activity-tracker"
 import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
@@ -44,7 +43,6 @@ export default function RootLayout({
         {children}
         <ActivityTracker />
         <Chatbot />
-        <FloatingShowcase />
         <Toaster position="top-center" richColors closeButton />
         <Analytics />
       </body>
