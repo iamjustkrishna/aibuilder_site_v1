@@ -3388,23 +3388,21 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                               Team Member
                             </label>
 
-                            {selectedUserCohortFilter !== "all" && selectedUserCohortFilter !== "team" && (
-                              (() => {
-                                const enrollment = user.cohort_enrollments?.find((e: any) => e.cohort_id === selectedUserCohortFilter)
-                                const remindersEnabled = enrollment ? enrollment.admin_reminders_enabled !== false : true
-                                return (
-                                  <label className="flex items-center gap-2 text-xs font-semibold text-[#492B8C] cursor-pointer bg-[#F4F1FB] hover:bg-[#FFF8F2] px-2.5 py-1 rounded-full border border-[#E8E3F3] transition-colors select-none">
-                                    <input
-                                      type="checkbox"
-                                      checked={remindersEnabled}
-                                      onChange={(e) => handleToggleUserCohortReminder(user.id, selectedUserCohortFilter, e.target.checked)}
-                                      className="w-3.5 h-3.5 rounded border-[#E8E3F3] text-[#FF6B34] focus:ring-[#FF6B34]"
-                                    />
-                                    Automated Mail Reminders
-                                  </label>
-                                )
-                              })()
-                            )}
+                            {cohorts.filter(cohort => user.cohort_ids?.includes(cohort.id)).map((cohort) => {
+                              const enrollment = user.cohort_enrollments?.find((e: any) => e.cohort_id === cohort.id)
+                              const remindersEnabled = enrollment ? enrollment.admin_reminders_enabled !== false : true
+                              return (
+                                <label key={cohort.id} className="flex items-center gap-2 text-xs font-semibold text-[#FF6B34] cursor-pointer bg-[#FFF8F2] hover:bg-[#FFF8F2]/80 px-2.5 py-1 rounded-full border border-[#FFC9B0] transition-colors select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={remindersEnabled}
+                                    onChange={(e) => handleToggleUserCohortReminder(user.id, cohort.id, e.target.checked)}
+                                    className="w-3.5 h-3.5 rounded border-[#E8E3F3] text-[#FF6B34] focus:ring-[#FF6B34]"
+                                  />
+                                  Auto Mail Reminders: {cohort.name || cohort.code}
+                                </label>
+                              )
+                            })}
                           </div>
                         )}
 
