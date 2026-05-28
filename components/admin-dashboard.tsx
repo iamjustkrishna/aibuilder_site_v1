@@ -500,8 +500,8 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     setSessionFormMessage(null)
   }
 
-  async function fetchData() {
-    setLoading(true)
+  async function fetchData(silent = false) {
+    if (!silent) setLoading(true)
     if (activeTab === "resources" || activeTab === "weeks") {
       const res = await fetch("/api/admin/resources")
       if (res.ok) {
@@ -568,7 +568,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         setUsers(data || [])
       }
     }
-    setLoading(false)
+    if (!silent) setLoading(false)
   }
 
   async function fetchCohortDetails(cohortId: string) {
@@ -952,7 +952,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: userId, membership_tier: newTier }),
     })
-    if (res.ok) fetchData()
+    if (res.ok) fetchData(true)
   }
 
   async function handleUpdateUserTeamOrCohorts(
@@ -969,7 +969,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         cohort_ids: cohortIds,
       }),
     })
-    if (res.ok) fetchData()
+    if (res.ok) fetchData(true)
   }
 
   async function handleToggleUserCohortReminder(
@@ -986,7 +986,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         admin_reminders_enabled: remindersEnabled,
       }),
     })
-    if (res.ok) fetchData()
+    if (res.ok) fetchData(true)
   }
 
   async function handleAddUser() {
