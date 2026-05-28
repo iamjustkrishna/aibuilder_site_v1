@@ -305,7 +305,7 @@ async function main() {
   console.log('Fetching enrolled active users...');
   const { data: enrollments, error: enrollmentsError } = await supabase
     .from('cohort_enrollments')
-    .select('user_id')
+    .select('user_id, admin_reminders_enabled')
     .eq('cohort_id', cohort.id)
     .eq('enrollment_status', 'active');
 
@@ -340,6 +340,7 @@ async function main() {
 
   const submittedUserIds = new Set((projects || []).map(p => p.user_id));
   const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
+  const enrollmentMap = new Map((enrollments || []).map(e => [e.user_id, e]));
 
   // Filter users to get those who need a reminder
   const targetUsers = (users || []).filter(user => {
@@ -349,10 +350,17 @@ async function main() {
     // 2. Must NOT have submitted a project for this cohort
     if (submittedUserIds.has(user.id)) return false;
 
-    // 3. Must NOT have disabled automatic reminder emails
+    // 3. Must NOT have disabled automatic reminder emails in their profile
     const profile = profileMap.get(user.id);
     if (profile && profile.receive_automatic_emails === false) {
-      console.log(`User ${user.email} has disabled automatic email updates. Skipping.`);
+      console.log(`User ${user.email} has disabled automatic email updates in their profile. Skipping.`);
+      return false;
+    }
+
+    // 4. Must NOT have been deselected by the admin for reminders
+    const enrollment = enrollmentMap.get(user.id);
+    if (enrollment && enrollment.admin_reminders_enabled === false) {
+      console.log(`User ${user.email} has been deselected by the admin for reminders. Skipping.`);
       return false;
     }
 

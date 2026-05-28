@@ -97,20 +97,28 @@ export async function GET() {
   }
 
   // Fetch cohort enrollments to map user -> cohort relationships
-  let enrollments: Array<{ user_id: string; cohort_id: string }> = []
+  let enrollments: any[] = []
   const enrollmentsResult = await serviceClient
     .from("cohort_enrollments")
-    .select("user_id, cohort_id")
+    .select("user_id, cohort_id, admin_reminders_enabled")
 
   if (!enrollmentsResult.error) {
     enrollments = enrollmentsResult.data || []
   }
 
   const enrollmentMap = new Map<string, string[]>()
+  const enrollmentDetailsMap = new Map<string, Array<{ cohort_id: string; admin_reminders_enabled: boolean }>>()
   for (const enrollment of enrollments) {
     const list = enrollmentMap.get(enrollment.user_id) || []
     list.push(enrollment.cohort_id)
     enrollmentMap.set(enrollment.user_id, list)
+
+    const detailsList = enrollmentDetailsMap.get(enrollment.user_id) || []
+    detailsList.push({
+      cohort_id: enrollment.cohort_id,
+      admin_reminders_enabled: enrollment.admin_reminders_enabled !== false,
+    })
+    enrollmentDetailsMap.set(enrollment.user_id, detailsList)
   }
 
   const adminCount = getAdminEmails().length
@@ -121,6 +129,7 @@ export async function GET() {
       ...user,
       is_team_member: (user as any).is_team_member ?? false,
       cohort_ids: enrollmentMap.get(user.id) || [],
+      cohort_enrollments: enrollmentDetailsMap.get(user.id) || [],
       deletion_request_count: requestState.count,
       deletion_requested_by_me: requestState.requestedByMe,
       deletion_required_count: adminCount,
@@ -297,7 +306,7 @@ export async function PUT(request: Request) {
   }
 
   const body = await request.json()
-  const { userId, id, membership_tier, is_team_member, cohort_ids } = body
+  const { userId, id, membership_tier, is_team_member, cohort_ids, cohort_id, admin_reminders_enabled } = body
   const targetUserId = userId || id
 
   if (!targetUserId) {
@@ -388,10 +397,34 @@ export async function PUT(request: Request) {
     }
   }
 
+  // Handle cohort reminder status update if cohort_id and admin_reminders_enabled provided
+  if (cohort_id !== undefined && admin_reminders_enabled !== undefined) {
+    const { error: updateEnrollmentError } = await serviceClient
+      .from("cohort_enrollments")
+      .update({ admin_reminders_enabled: admin_reminders_enabled === true })
+      .match({ user_id: targetUserId, cohort_id })
+
+    if (updateEnrollmentError) {
+      return NextResponse.json({ error: updateEnrollmentError.message }, { status: 500 })
+    }
+  }
+
+  // Fetch latest cohort enrollments
+  const { data: latestEnrollments } = await serviceClient
+    .from("cohort_enrollments")
+    .select("cohort_id, admin_reminders_enabled")
+    .eq("user_id", targetUserId)
+
+  const mappedEnrollments = (latestEnrollments || []).map((e) => ({
+    cohort_id: e.cohort_id,
+    admin_reminders_enabled: e.admin_reminders_enabled !== false
+  }))
+
   return NextResponse.json({ 
     user: {
       ...updatedUser,
-      cohort_ids: cohort_ids !== undefined ? cohort_ids : (updatedUser.cohort_ids || [])
+      cohort_ids: mappedEnrollments.map(e => e.cohort_id),
+      cohort_enrollments: mappedEnrollments
     } 
   })
 }

@@ -74,6 +74,7 @@ interface User {
   created_at: string
   is_team_member?: boolean
   cohort_ids?: string[]
+  cohort_enrollments?: Array<{ cohort_id: string; admin_reminders_enabled: boolean }>
 }
 
 interface SessionRecord {
@@ -966,6 +967,23 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         id: userId,
         is_team_member: isTeamMember,
         cohort_ids: cohortIds,
+      }),
+    })
+    if (res.ok) fetchData()
+  }
+
+  async function handleToggleUserCohortReminder(
+    userId: string,
+    cohortId: string,
+    remindersEnabled: boolean
+  ) {
+    const res = await fetch("/api/admin/users", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: userId,
+        cohort_id: cohortId,
+        admin_reminders_enabled: remindersEnabled,
       }),
     })
     if (res.ok) fetchData()
@@ -3369,6 +3387,24 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                               />
                               Team Member
                             </label>
+
+                            {selectedUserCohortFilter !== "all" && selectedUserCohortFilter !== "team" && (
+                              (() => {
+                                const enrollment = user.cohort_enrollments?.find((e: any) => e.cohort_id === selectedUserCohortFilter)
+                                const remindersEnabled = enrollment ? enrollment.admin_reminders_enabled !== false : true
+                                return (
+                                  <label className="flex items-center gap-2 text-xs font-semibold text-[#492B8C] cursor-pointer bg-[#F4F1FB] hover:bg-[#FFF8F2] px-2.5 py-1 rounded-full border border-[#E8E3F3] transition-colors select-none">
+                                    <input
+                                      type="checkbox"
+                                      checked={remindersEnabled}
+                                      onChange={(e) => handleToggleUserCohortReminder(user.id, selectedUserCohortFilter, e.target.checked)}
+                                      className="w-3.5 h-3.5 rounded border-[#E8E3F3] text-[#FF6B34] focus:ring-[#FF6B34]"
+                                    />
+                                    Automated Mail Reminders
+                                  </label>
+                                )
+                              })()
+                            )}
                           </div>
                         )}
 
