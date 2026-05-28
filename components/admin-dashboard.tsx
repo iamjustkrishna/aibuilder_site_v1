@@ -100,6 +100,7 @@ interface Cohort {
   curated_videos_source_url?: string | null
   enrollment_count?: number
   created_at: string
+  project_submission_active?: boolean
 }
 
 interface CohortWeek {
@@ -662,6 +663,29 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     } catch (error) {
       console.error("Failed to set current cohort:", error)
       alert("Error setting current cohort")
+    }
+  }
+
+  async function handleToggleProjectSubmission(cohortId: string, currentStatus: boolean) {
+    try {
+      const res = await fetch(`/api/admin/cohorts`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "toggle-project-submission",
+          cohort_id: cohortId,
+          project_submission_active: !currentStatus,
+        }),
+      })
+      if (res.ok) {
+        const updatedCohort = await res.json()
+        setCohorts(cohorts.map(c => c.id === cohortId ? { ...c, project_submission_active: updatedCohort.project_submission_active } : c))
+      } else {
+        alert("Failed to update project submission status")
+      }
+    } catch (error) {
+      console.error("Failed to update project submission status:", error)
+      alert("Error updating project submission status")
     }
   }
 
@@ -1829,6 +1853,21 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                         <p className="text-xs text-[#8A7CB5]">
                           {cohort.enrollment_count || 0} enrolled {cohort.starts_at ? ` • Starts: ${new Date(cohort.starts_at).toLocaleDateString()}` : ""}
                         </p>
+                        <div className="flex items-center gap-2 mt-2.5">
+                          <span className="text-xs font-semibold text-[#8A7CB5]">Project Submission:</span>
+                          <button
+                            onClick={() => handleToggleProjectSubmission(cohort.id, !!cohort.project_submission_active)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all border ${
+                              cohort.project_submission_active
+                                ? "bg-[#00C8A7]/10 text-[#00C8A7] border-[#00C8A7]/30 hover:bg-[#00C8A7]/20 shadow-sm"
+                                : "bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200"
+                            }`}
+                            title="Click to toggle project submission reminders for this cohort"
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${cohort.project_submission_active ? "bg-[#00C8A7] animate-pulse" : "bg-slate-400"}`}></span>
+                            {cohort.project_submission_active ? "Submission ON" : "Submission OFF"}
+                          </button>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {!cohort.is_current && (

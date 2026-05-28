@@ -384,6 +384,28 @@ export async function PATCH(request: Request) {
     return NextResponse.json(cohort)
   }
 
+  if (action === "toggle-project-submission") {
+    if (!cohortId) {
+      return NextResponse.json({ error: "cohort_id is required" }, { status: 400 })
+    }
+
+    const projectSubmissionActive = body.project_submission_active === true
+    const serviceClient = createServiceClient()
+
+    const { data: cohort, error: updateError } = await serviceClient
+      .from("cohorts")
+      .update({ project_submission_active: projectSubmissionActive, updated_at: new Date().toISOString() })
+      .eq("id", cohortId)
+      .select()
+      .single()
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 })
+    }
+
+    return NextResponse.json(cohort)
+  }
+
   if (!cohortId || userIds.length === 0) {
     return NextResponse.json({ error: "cohort_id and user_ids are required" }, { status: 400 })
   }

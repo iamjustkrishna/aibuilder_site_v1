@@ -56,6 +56,7 @@ type ProfileDraftState = {
   slug: string
   bio: string
   is_public: boolean
+  receive_automatic_emails: boolean
 }
 
 export interface ProfileCertificate {
@@ -81,6 +82,7 @@ export interface ProfileViewModel {
   github_url?: string | null
   linkedin_url?: string | null
   is_public?: boolean | null
+  receive_automatic_emails?: boolean | null
 }
 
 interface UserCohortInfo {
@@ -117,6 +119,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
     slug: profile.slug || slugify(profile.full_name),
     bio: profile.bio || "",
     is_public: profile.is_public ?? true,
+    receive_automatic_emails: profile.receive_automatic_emails ?? true,
   })
   const [projectDraft, setProjectDraft] = useState<ProjectFormState>({
     title: "",
@@ -189,6 +192,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
       slug: slugify(profileDraft.slug || currentProfile.full_name),
       bio: profileDraft.bio.trim() || null,
       is_public: profileDraft.is_public,
+      receive_automatic_emails: profileDraft.receive_automatic_emails,
     })
 
     setIsSavingProfile(false)
@@ -203,12 +207,38 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
       slug: slugify(profileDraft.slug || current.full_name),
       bio: profileDraft.bio.trim() || null,
       is_public: profileDraft.is_public,
+      receive_automatic_emails: profileDraft.receive_automatic_emails,
     }))
     setProfileDraft((current) => ({
       ...current,
       slug: slugify(profileDraft.slug || currentProfile.full_name),
     }))
     setStatusMessage("Profile updated")
+  }
+
+  async function handleToggleAutomaticEmails(checked: boolean) {
+    setStatusMessage(null)
+    const supabase = createClient()
+
+    const { error } = await supabase
+      .from("user_profiles")
+      .update({ receive_automatic_emails: checked })
+      .eq("user_id", currentProfile.id)
+
+    if (error) {
+      setStatusMessage(error.message)
+      return
+    }
+
+    setCurrentProfile((current) => ({
+      ...current,
+      receive_automatic_emails: checked,
+    }))
+    setProfileDraft((current) => ({
+      ...current,
+      receive_automatic_emails: checked,
+    }))
+    setStatusMessage(checked ? "Email reminders enabled" : "Email reminders disabled")
   }
 
   async function handleCreateProject() {
@@ -541,6 +571,18 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                       <div>
                         <p className="text-[#6B5B9E] text-xs mb-1">Membership</p>
                         <p className="text-[#1A0A3D] font-medium">{tierLabel}</p>
+                      </div>
+                      <div className="sm:col-span-2 border-t border-[#E8E3F3] pt-4 mt-2">
+                        <p className="text-[#6B5B9E] text-xs mb-2">Email Notifications</p>
+                        <label className="flex items-center gap-3 text-sm text-[#1A0A3D] cursor-pointer font-medium">
+                          <input
+                            type="checkbox"
+                            checked={currentProfile.receive_automatic_emails ?? true}
+                            onChange={(e) => handleToggleAutomaticEmails(e.target.checked)}
+                            className="w-4 h-4 rounded border-[#E8E3F3] text-[#492B8C] focus:ring-[#492B8C]"
+                          />
+                          Receive automatic updates & project reminders email
+                        </label>
                       </div>
                     </div>
                   </div>

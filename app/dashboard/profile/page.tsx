@@ -18,7 +18,7 @@ export default async function ProfilePage() {
       .maybeSingle(),
     supabase
       .from("user_profiles")
-      .select("user_id, slug, headline, bio, website_url, github_url, linkedin_url, is_public")
+      .select("user_id, slug, headline, bio, website_url, github_url, linkedin_url, is_public, receive_automatic_emails")
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase
@@ -57,6 +57,7 @@ export default async function ProfilePage() {
     github_url: profileRecord?.github_url || null,
     linkedin_url: profileRecord?.linkedin_url || null,
     is_public: profileRecord?.is_public ?? true,
+    receive_automatic_emails: profileRecord?.receive_automatic_emails ?? true,
   }
 
   const projectList: ProfileProject[] = (projects || []).map((project) => ({
