@@ -163,11 +163,15 @@ export async function sendGmailMessage(options: {
   subtitle?: string
   body: string
   htmlTemplate?: string
+  provider?: "gmail" | "hostinger"
 }) {
+  const provider = options.provider || "gmail"
+  const smtpHost = provider === "hostinger" ? "smtp.hostinger.com" : "smtp.gmail.com"
+
   const socket = tls.connect({
-    host: "smtp.gmail.com",
+    host: smtpHost,
     port: 465,
-    servername: "smtp.gmail.com",
+    servername: smtpHost,
   })
 
   await new Promise<void>((resolve, reject) => {

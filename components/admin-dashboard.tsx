@@ -283,6 +283,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [loadingPastMails, setLoadingPastMails] = useState(false)
   const [expandedMailId, setExpandedMailId] = useState<string | null>(null)
   const [mailForm, setMailForm] = useState({
+    provider: "gmail" as "gmail" | "hostinger",
     senderEmail: userEmail || "",
     appPassword: "",
     subject: "AIBuilder Invite",
@@ -1204,7 +1205,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     setMailFormMessage(null)
 
     if (!mailForm.senderEmail.trim() || !mailForm.appPassword.trim()) {
-      setMailFormMessage({ type: "error", text: "Sender email and app password are required." })
+      setMailFormMessage({ type: "error", text: "Sender email and password are required." })
       return
     }
 
@@ -2841,22 +2842,51 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Mail Provider</label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setMailForm({ ...mailForm, provider: "gmail" })}
+                          className={`flex-1 px-3 py-2 rounded-lg font-medium text-sm transition-all ${
+                            mailForm.provider === "gmail"
+                              ? "bg-[#492B8C] text-white"
+                              : "bg-[#F4F1FB] text-[#6B5B9E] border border-[#E8E3F3]"
+                          }`}
+                        >
+                          Gmail
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMailForm({ ...mailForm, provider: "hostinger" })}
+                          className={`flex-1 px-3 py-2 rounded-lg font-medium text-sm transition-all ${
+                            mailForm.provider === "hostinger"
+                              ? "bg-[#492B8C] text-white"
+                              : "bg-[#F4F1FB] text-[#6B5B9E] border border-[#E8E3F3]"
+                          }`}
+                        >
+                          Hostinger
+                        </button>
+                      </div>
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">From Email *</label>
                       <Input
                         value={mailForm.senderEmail}
                         onChange={(e) => setMailForm({ ...mailForm, senderEmail: e.target.value })}
-                        placeholder="your@gmail.com"
+                        placeholder={mailForm.provider === "hostinger" ? "your@domain.com" : "your@gmail.com"}
                         className={mailFieldClassName}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">Gmail App Password *</label>
+                      <label className="block text-sm font-medium text-[#1A0A3D] mb-1.5">
+                        {mailForm.provider === "hostinger" ? "Hostinger Email Password *" : "Gmail App Password *"}
+                      </label>
                       <Input
                         type="password"
                         value={mailForm.appPassword}
                         onChange={(e) => setMailForm({ ...mailForm, appPassword: e.target.value })}
-                        placeholder="xxxx xxxx xxxx xxxx"
+                        placeholder={mailForm.provider === "hostinger" ? "your email password" : "xxxx xxxx xxxx xxxx"}
                         className={mailFieldClassName}
                       />
                     </div>

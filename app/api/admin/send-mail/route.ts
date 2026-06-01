@@ -43,6 +43,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
+  const provider = typeof body.provider === "string" ? body.provider.trim().toLowerCase() : "gmail"
   const senderEmail = typeof body.senderEmail === "string" ? body.senderEmail.trim().toLowerCase() : ""
   const appPassword = typeof body.appPassword === "string" ? body.appPassword.replace(/\s+/g, "").trim() : ""
   const subject = typeof body.subject === "string" ? body.subject.trim() : ""
@@ -55,10 +56,6 @@ export async function POST(request: Request) {
 
   if (!senderEmail || !appPassword || !subject || (!emailBody && !htmlTemplate) || recipientIds.length === 0) {
     return NextResponse.json({ error: "Sender email, app password, subject, and recipients are required" }, { status: 400 })
-  }
-
-  if (user?.email?.toLowerCase() !== senderEmail) {
-    return NextResponse.json({ error: "Sender email must match the signed-in admin email" }, { status: 400 })
   }
 
   if (!Number.isFinite(intervalSeconds) || intervalSeconds < 0) {
@@ -95,6 +92,7 @@ export async function POST(request: Request) {
         subtitle: subtitle ? replaceTemplate(subtitle, recipient) : undefined,
         body: replaceTemplate(emailBody, recipient),
         htmlTemplate: htmlTemplate ? replaceTemplate(htmlTemplate, recipient) : undefined,
+        provider,
       })
       sent.push({ email: recipient.email, name: recipient.full_name || recipient.email })
 
