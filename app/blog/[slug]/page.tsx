@@ -7,6 +7,8 @@ import { Footer } from "@/components/footer"
 import { BlogContent, type BlogPostRecord } from "@/components/blog-content"
 import { ArrowLeft, Calendar } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 function formatDate(value: string | null) {
   if (!value) return "Coming soon"
   return new Intl.DateTimeFormat("en-US", { dateStyle: "long" }).format(new Date(value))

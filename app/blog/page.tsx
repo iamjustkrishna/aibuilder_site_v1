@@ -6,6 +6,8 @@ import { Footer } from "@/components/footer"
 import { Badge } from "@/components/ui/badge"
 import type { BlogPostRecord } from "@/components/blog-content"
 
+export const dynamic = "force-dynamic"
+
 function formatDate(value: string | null) {
   if (!value) return "Coming soon"
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(value))

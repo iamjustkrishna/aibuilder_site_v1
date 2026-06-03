@@ -1,5 +1,5 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server"
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { isAdminEmail } from "@/lib/admin"
 
 async function checkAdminAccess() {
@@ -20,13 +20,13 @@ async function checkAdminAccess() {
   return { authorized: true, user }
 }
 
-export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { authorized, error } = await checkAdminAccess()
   if (!authorized) {
     return NextResponse.json({ error }, { status: 401 })
   }
 
-  const id = params.id
+  const { id } = await params
   if (!id) {
     return NextResponse.json({ error: "id is required" }, { status: 400 })
   }
