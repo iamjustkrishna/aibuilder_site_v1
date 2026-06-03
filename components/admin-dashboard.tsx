@@ -44,6 +44,7 @@ import {
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import CertificateManagement from "@/components/certificate-management"
+import { AdminBlogManager } from "@/components/admin-blog-manager"
 interface Resource {
   id: string
   title: string
@@ -171,7 +172,7 @@ const weekConfig = [
 ]
 
 export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
-  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "registrations" | "mail" | "sessions" | "activity" | "cohorts" | "curated-videos" | "certificates">("cohorts")
+  const [activeTab, setActiveTab] = useState<"weeks" | "resources" | "users" | "registrations" | "mail" | "sessions" | "activity" | "cohorts" | "curated-videos" | "blog" | "certificates">("cohorts")
   const [resources, setResources] = useState<Resource[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [sessions, setSessions] = useState<SessionRecord[]>([])
@@ -1713,6 +1714,17 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
               >
                 <Film className="w-4 h-4" />
                 <span className="text-sm font-semibold">Curated Videos</span>
+              </button>
+              <button
+                onClick={() => { setActiveTab("blog"); setSearchQuery(""); }}
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 border ${
+                  activeTab === "blog"
+                    ? "bg-white text-[#1A0A3D] border-white shadow-xl shadow-white/5 scale-[1.02]"
+                    : "text-white/70 border-transparent hover:text-white hover:bg-white/10 hover:scale-[1.01]"
+                }`}
+              >
+                <BookOpen className="w-4 h-4" />
+                <span className="text-sm font-semibold">Blog</span>
               </button>
               <button
                 onClick={() => { setActiveTab("certificates"); setSearchQuery(""); }}
@@ -3957,6 +3969,12 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {activeTab === "blog" && (
+          <div className="space-y-4">
+            <AdminBlogManager />
           </div>
         )}
 

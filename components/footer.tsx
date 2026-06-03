@@ -7,6 +7,7 @@ import { Sparkles, Mail } from "lucide-react"
 const footerLinks = {
   Program: [
     { label: "Curriculum", href: "#curriculum" },
+    { label: "Blog", href: "/blog" },
     { label: "FAQs", href: "#faqs" },
   ],
   Resources: [

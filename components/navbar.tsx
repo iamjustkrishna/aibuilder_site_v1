@@ -9,6 +9,7 @@ import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 const navItems = [
   { label: "Curriculum", href: "#curriculum" },
+  { label: "Blog", href: "/blog" },
   { label: "Resources", href: "/resources" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQs", href: "#faqs" },
@@ -42,6 +43,7 @@ export function Navbar() {
   // Keep main menu items clean and static
   const navItems = [
     { label: "Curriculum", href: "#curriculum" },
+    { label: "Blog", href: "/blog" },
     { label: "Resources", href: "/resources" },
     { label: "Pricing", href: "#pricing" },
     { label: "FAQs", href: "#faqs" },
