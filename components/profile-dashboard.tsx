@@ -23,6 +23,7 @@ import {
   Award,
   Layers3,
   Plus,
+  Upload,
   X,
 } from "lucide-react"
 
@@ -48,6 +49,7 @@ type ProjectFormState = {
   project_url: string
   repo_url: string
   demo_url: string
+  thumbnail_url: string
   technologies: string
   featured: boolean
 }
@@ -114,6 +116,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
   const [editingField, setEditingField] = useState<"bio" | "slug" | null>(null)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [isSavingProject, setIsSavingProject] = useState(false)
+  const [isUploadingProjectThumbnail, setIsUploadingProjectThumbnail] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [profileDraft, setProfileDraft] = useState<ProfileDraftState>({
     slug: profile.slug || slugify(profile.full_name),
@@ -127,6 +130,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
     project_url: "",
     repo_url: "",
     demo_url: "",
+    thumbnail_url: "",
     technologies: "",
     featured: false,
   })
@@ -174,6 +178,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
     project_url: project.project_url.trim() || null,
     repo_url: project.repo_url.trim() || null,
     demo_url: project.demo_url.trim() || null,
+    thumbnail_url: project.thumbnail_url.trim() || null,
     technologies: project.technologies
       .split(",")
       .map((item) => item.trim())
@@ -293,11 +298,48 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
       project_url: "",
       repo_url: "",
       demo_url: "",
+      thumbnail_url: "",
       technologies: "",
       featured: false,
     })
     setShowProjectForm(false)
     setStatusMessage("Project added")
+  }
+
+  async function handleProjectThumbnailUpload(file: File | null) {
+    if (!file) return
+
+    if (!file.type.startsWith("image/")) {
+      setStatusMessage("Please upload an image file")
+      return
+    }
+
+    setIsUploadingProjectThumbnail(true)
+    setStatusMessage(null)
+
+    try {
+      const payload = new FormData()
+      payload.append("file", file)
+
+      const res = await fetch("/api/projects/thumbnail-upload", {
+        method: "POST",
+        body: payload,
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setStatusMessage(data.error || "Failed to upload project screenshot")
+        return
+      }
+
+      setProjectDraft((current) => ({ ...current, thumbnail_url: data.url }))
+      setStatusMessage("Project screenshot uploaded")
+    } catch (error) {
+      console.error("Failed to upload project screenshot:", error)
+      setStatusMessage("Failed to upload project screenshot")
+    } finally {
+      setIsUploadingProjectThumbnail(false)
+    }
   }
 
   const tierLabel = {
@@ -625,7 +667,15 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                   projectList.map((project) => (
                     <div key={project.id} className="p-5 rounded-2xl border border-[#E8E3F3] bg-white">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                        <div className="space-y-2">
+                        <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row">
+                          {project.thumbnail_url && (
+                            <img
+                              src={project.thumbnail_url}
+                              alt={`${project.title} screenshot`}
+                              className="h-32 w-full rounded-2xl border border-[#E8E3F3] object-cover sm:h-24 sm:w-36"
+                            />
+                          )}
+                          <div className="min-w-0 space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <h3 className="text-lg font-semibold text-[#1A0A3D]">{project.title}</h3>
                             {project.featured && <Badge className="rounded-full bg-[#FF6B34] text-white hover:bg-[#FF6B34]">Featured</Badge>}
@@ -643,6 +693,7 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                               ))}
                             </div>
                           )}
+                          </div>
                         </div>
 
                         <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end flex-shrink-0">
@@ -773,6 +824,46 @@ export function ProfileDashboard({ profile, projects, certificates, currentCohor
                       placeholder="https://youtube.com/..."
                       className="bg-white !bg-white"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1A0A3D] mb-2">Main app screenshot / photo</label>
+                    <Input
+                      value={projectDraft.thumbnail_url}
+                      onChange={(e) => setProjectDraft((current) => ({ ...current, thumbnail_url: e.target.value }))}
+                      placeholder="https://... or upload below"
+                      className="bg-white !bg-white"
+                    />
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#E8E3F3] bg-white px-3 py-2 text-xs font-semibold text-[#492B8C] transition-colors hover:bg-[#F4F1FB] ${isUploadingProjectThumbnail ? "pointer-events-none opacity-60" : ""}`}>
+                        {isUploadingProjectThumbnail ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Upload className="h-3.5 w-3.5" />
+                        )}
+                        {isUploadingProjectThumbnail ? "Uploading..." : "Upload photo"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={isUploadingProjectThumbnail}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0] || null
+                            handleProjectThumbnailUpload(file)
+                            event.currentTarget.value = ""
+                          }}
+                        />
+                      </label>
+                      <p className="text-xs text-[#6B5B9E]">JPG, PNG, WebP, or GIF up to 6 MB.</p>
+                    </div>
+                    {projectDraft.thumbnail_url && (
+                      <div className="mt-3 overflow-hidden rounded-2xl border border-[#E8E3F3] bg-[#F4F1FB]">
+                        <img
+                          src={projectDraft.thumbnail_url}
+                          alt="Project screenshot preview"
+                          className="h-36 w-full object-cover"
+                        />
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#1A0A3D] mb-2">Technologies</label>

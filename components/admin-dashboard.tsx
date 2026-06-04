@@ -40,6 +40,7 @@ import {
   Award,
   Sparkles,
   Check,
+  Upload,
 } from "lucide-react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
@@ -214,6 +215,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   const [editingProject, setEditingProject] = useState<any>(null)
   const [savingShowcase, setSavingShowcase] = useState(false)
   const [savingProject, setSavingProject] = useState(false)
+  const [uploadingProjectThumbnail, setUploadingProjectThumbnail] = useState(false)
   
   // Custom Alert Modal State
   const [customAlert, setCustomAlert] = useState<{
@@ -433,6 +435,40 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       showCustomAlert("Connection Error", "An error occurred while saving the project. Please check your network connection.", "error")
     } finally {
       setSavingProject(false)
+    }
+  }
+
+  async function handleProjectThumbnailUpload(file: File | null) {
+    if (!file) return
+
+    if (!file.type.startsWith("image/")) {
+      showCustomAlert("Invalid File", "Please upload an image file for the project screenshot.", "error")
+      return
+    }
+
+    setUploadingProjectThumbnail(true)
+    try {
+      const payload = new FormData()
+      payload.append("file", file)
+
+      const res = await fetch("/api/projects/thumbnail-upload", {
+        method: "POST",
+        body: payload,
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        showCustomAlert("Upload Failed", data.error || "Failed to upload project screenshot.", "error")
+        return
+      }
+
+      setEditingProject((current: any) => current ? { ...current, thumbnail_url: data.url } : current)
+      showCustomAlert("Image Uploaded", "Project screenshot URL has been added to the showcase project.", "success")
+    } catch (error) {
+      console.error("Failed to upload project screenshot:", error)
+      showCustomAlert("Upload Failed", "Failed to upload project screenshot.", "error")
+    } finally {
+      setUploadingProjectThumbnail(false)
     }
   }
 
@@ -4372,6 +4408,37 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                       placeholder="e.g. https://domain.com/screenshot.jpg"
                       className="border-[#E8E3F3] text-sm"
                     />
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#E8E3F3] bg-white px-3 py-2 text-xs font-semibold text-[#492B8C] transition-colors hover:bg-[#F4F1FB] ${uploadingProjectThumbnail ? "pointer-events-none opacity-60" : ""}`}>
+                        {uploadingProjectThumbnail ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Upload className="h-3.5 w-3.5" />
+                        )}
+                        {uploadingProjectThumbnail ? "Uploading..." : "Upload photo"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={uploadingProjectThumbnail}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0] || null
+                            handleProjectThumbnailUpload(file)
+                            event.currentTarget.value = ""
+                          }}
+                        />
+                      </label>
+                      <p className="text-[11px] text-[#6B5B9E]">JPG, PNG, WebP, or GIF up to 6 MB.</p>
+                    </div>
+                    {editingProject.thumbnail_url && (
+                      <div className="mt-3 overflow-hidden rounded-xl border border-[#E8E3F3] bg-[#F4F1FB]">
+                        <img
+                          src={editingProject.thumbnail_url}
+                          alt="Project screenshot preview"
+                          className="h-32 w-full object-cover"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
