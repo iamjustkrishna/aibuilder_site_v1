@@ -61,7 +61,7 @@ setCohorts(cohorts)
 **Auth**: Admin required
 
 **Path Parameters**:
-- `cohort_id` (string, required) - The cohort ID (e.g., "cohort-0")
+- `cohort_id` (string, required) - The cohort ID (e.g., "cohort-1")
 
 **Query Parameters**: None
 
@@ -469,7 +469,7 @@ curl -X POST \
   -H "Content-Type: application/json" \
   -d '{
     "user_ids": ["user-1", "user-2"],
-    "cohort_id": "cohort-0"
+    "cohort_id": "cohort-1"
   }' \
   https://api.aibuilder.space/api/admin/certificates/generate
 ```

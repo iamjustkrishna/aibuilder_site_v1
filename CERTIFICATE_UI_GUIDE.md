@@ -10,8 +10,8 @@ Certificate Management Page
 │
 ├── Cohort & Generation Controls (Step 1)
 │   ├── Cohort Selector Dropdown
-│   │   └── Current: "Cohort 0 (Current)" with 12 users
-│   └── Options: Cohort 1 (8 users), Cohort 2 (15 users)
+│   │   └── Current: "Cohort 1 (Current)" with 12 users
+│   └── Options: Cohort 2 (8 users), Cohort 3 (15 users)
 │
 ├── User Selection Table (Step 2)
 │   ├── Header
@@ -215,9 +215,9 @@ Info Toast (Blue):
 ## Mock Data Preview
 
 ### Cohorts Available
-1. **Cohort 0 (Current)** - 12 users
-2. **Cohort 1** - 8 users
-3. **Cohort 2** - 15 users
+1. **Cohort 1 (Current)** - 12 users
+2. **Cohort 2** - 8 users
+3. **Cohort 3** - 15 users
 
 ### Sample Users
 - John Doe (Foundational)
@@ -249,9 +249,9 @@ Uncheck one: ☐ Select All [☐ John] [☑ Jane] [☑ Bob]
 
 ### Feature 2: Cohort Switching
 ```
-Selected: Cohort 0 (12 users) [☑ John] [☑ Jane]
+Selected: Cohort 1 (12 users) [☑ John] [☑ Jane]
 Click dropdown
-Select: Cohort 1 (8 users)
+Select: Cohort 2 (8 users)
 Result: Selection clears, user list updates
 ```
 

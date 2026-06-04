@@ -132,9 +132,9 @@ type activeTab = "weeks" | "resources" | ... | "certificates"
 ## 📊 Mock Data
 
 ### Cohorts (3 available)
-- Cohort 0 (Current) - 12 users
-- Cohort 1 - 8 users
-- Cohort 2 - 15 users
+- Cohort 1 (Current) - 12 users
+- Cohort 2 - 8 users
+- Cohort 3 - 15 users
 
 ### Users (12 samples)
 - Mix of tiers: Initial, Foundational, Builder, Architect
@@ -174,7 +174,7 @@ generated/failed (100%)
 
 ```
 1. Click Certificates tab
-2. Select Cohort 0
+2. Select Cohort 1
 3. Check "Select All"
 4. Click "Generate..."
 5. See toast: "Queued 12..."

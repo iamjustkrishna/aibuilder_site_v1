@@ -11,19 +11,19 @@
 
 #### Test Cohort Selection
 ```
-1. Click dropdown "Cohort 0 (Current)"
+1. Click dropdown "Cohort 1 (Current)"
 2. Should see:
-   - Cohort 0 (12 users) ✓
-   - Cohort 1 (8 users)
-   - Cohort 2 (15 users)
-3. Select "Cohort 1"
+   - Cohort 1 (12 users) ✓
+   - Cohort 2 (8 users)
+   - Cohort 3 (15 users)
+3. Select "Cohort 2"
 4. User list should update
 5. Selections should clear
 ```
 
 #### Test User Selection
 ```
-1. Start with Cohort 0
+1. Start with Cohort 1
 2. Click "☑ Select All"
 3. All 12 user checkboxes should be checked
 4. Counter should show "12 of 12 users selected"
@@ -204,12 +204,12 @@ In test with 12 users (Select All):
 
 #### Changing Cohorts
 ```
-1. Select Cohort 0, select 5 users
+1. Select Cohort 1, select 5 users
 2. Click Generate
 3. Wait for updates to start
-4. Switch to Cohort 1
+4. Switch to Cohort 2
 5. Selection clears, status table remains visible
-6. Switch back to Cohort 0
+6. Switch back to Cohort 1
 7. Cohort changes, but status table stays visible
    (Real implementation may want to clear after cohort change)
 ```
@@ -276,7 +276,7 @@ In test with 12 users (Select All):
 
 ### Load Test
 ```
-1. Select all 12 users in Cohort 0
+1. Select all 12 users in Cohort 1
 2. Generate certificates
 3. Watch status updates every 2 seconds
 4. Monitor browser performance (DevTools)
@@ -335,7 +335,7 @@ If creating a demo video:
 ```
 "Let me show you the Certificate Management interface...
 
-First, we select a cohort - here's Cohort 0 with 12 users.
+First, we select a cohort - here's Cohort 1 with 12 users.
 
 Next, I can select individual users or click Select All to choose everyone.
 

@@ -208,7 +208,7 @@ This component demonstrates:
 ### For Testing
 1. Open `/admin` page
 2. Click "Certificates" tab
-3. Start with Cohort 0
+3. Start with Cohort 1
 4. Select some users
 5. Click "Generate Certificates"
 6. Watch status updates in real-time

@@ -80,9 +80,9 @@
 
 ### Cohorts (3 mock cohorts)
 ```typescript
-Cohort 0 (Current) - 12 users
-Cohort 1          - 8 users
-Cohort 2          - 15 users
+Cohort 1 (Current) - 12 users
+Cohort 2          - 8 users
+Cohort 3          - 15 users
 ```
 
 ### Users (12 mock users with varied tiers)
@@ -248,22 +248,22 @@ For future developers working with this component:
 ## 📋 Testing Scenarios
 
 ### Scenario 1: Generate for One User
-1. Cohort: "Cohort 0"
+1. Cohort: "Cohort 1"
 2. Select: Only "John Doe"
 3. Generate: Should queue 1 certificate
 4. Progress: Should show 1 in progress → 1 generated
 
 ### Scenario 2: Select All and Generate
-1. Cohort: "Cohort 0"
+1. Cohort: "Cohort 1"
 2. Click "Select All" → 12 users selected
 3. Generate: Should queue 12 certificates
 4. Progress: Should show status updates for all 12
 5. Expect 1-2 failures (random 1 in 7)
 
 ### Scenario 3: Switch Cohorts Mid-Flight
-1. Start with Cohort 0 (12 users)
+1. Start with Cohort 1 (12 users)
 2. Select some users
-3. Switch to Cohort 1 (8 users)
+3. Switch to Cohort 2 (8 users)
 4. Should clear selections and update user list
 
 ### Scenario 4: Make All Visible

@@ -40,7 +40,7 @@ Modified `components/admin-dashboard.tsx`:
 ### 3. **Feature Implementation**
 
 #### ✅ Cohort & User Selection
-- Dropdown to select cohort (defaults to "Cohort 0")
+- Dropdown to select cohort (defaults to "Cohort 1")
 - Dynamic user list updates when cohort changes
 - Users table with avatars, names, emails, tier badges
 - "Select All" checkbox that auto-updates when individual selections change
