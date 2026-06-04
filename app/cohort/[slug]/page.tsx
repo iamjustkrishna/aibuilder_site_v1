@@ -219,7 +219,8 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
             </div>
             <div className="flex min-w-0 items-center justify-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 shadow-lg sm:px-5">
               <Calendar className="w-4 h-4 text-[#00C8A7]" />
-              <span className="truncate text-sm font-semibold text-slate-200">{showcase.cohort.code} Graduate Class</span>
+              {/* <span className="truncate text-sm font-semibold text-slate-200">{showcase.cohort.code} Graduate Class</span> */}
+              <span className="truncate text-sm font-semibold text-slate-200">Cohort-1 Graduate Class</span>
             </div>
           </div>
 
