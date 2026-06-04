@@ -112,7 +112,7 @@ export function CohortRegistrationForm() {
         return
       }
 
-      router.push(`/register/success?cohort=${encodeURIComponent(data.cohort?.name || "Cohort 1")}`)
+      router.push(`/register/success?cohort=${encodeURIComponent(data.cohort?.name || "Cohort 2")}`)
     } catch (error) {
       console.error("Failed to submit cohort registration:", error)
       setMessage({ type: "error", text: "Something went wrong while submitting the form." })

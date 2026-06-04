@@ -21,16 +21,16 @@ This document specifies the backend API endpoints needed to power the Certificat
 {
   "cohorts": [
     {
-      "id": "cohort-0",
-      "code": "COHORT-0",
-      "name": "Cohort 0 (Current)",
+      "id": "cohort-1",
+      "code": "COHORT-1",
+      "name": "Cohort 1 (Current)",
       "user_count": 12,
       "is_current": true
     },
     {
-      "id": "cohort-1",
-      "code": "COHORT-1",
-      "name": "Cohort 1",
+      "id": "cohort-2",
+      "code": "COHORT-2",
+      "name": "Cohort 2",
       "user_count": 8,
       "is_current": false
     }
@@ -119,7 +119,7 @@ setUsers(users)
 ```json
 {
   "user_ids": ["user-1", "user-2", "user-3"],
-  "cohort_id": "cohort-0"
+  "cohort_id": "cohort-1"
 }
 ```
 
@@ -459,7 +459,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 **Test 2: Get users in cohort**
 ```bash
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  https://api.aibuilder.space/api/admin/cohorts/cohort-0/users
+  https://api.aibuilder.space/api/admin/cohorts/cohort-1/users
 ```
 
 **Test 3: Generate certificates**

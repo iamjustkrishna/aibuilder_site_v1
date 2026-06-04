@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS cohort_showcases (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cohort_id UUID UNIQUE NOT NULL REFERENCES cohorts(id) ON DELETE CASCADE,
-  slug TEXT UNIQUE NOT NULL, -- e.g. "cohort-1", "cohort-0"
+  slug TEXT UNIQUE NOT NULL, -- e.g. "cohort-1", "cohort-2"
   title TEXT NOT NULL, -- e.g. "AI Builder Cohort 1 Graduation Gallery"
   hero_title TEXT,
   hero_subtitle TEXT,

@@ -31,23 +31,23 @@ export interface CertificateStatus {
 // Mock cohorts data
 export const MOCK_COHORTS: Cohort[] = [
   {
-    id: "cohort-0",
-    code: "cohort-0",
+    id: "cohort-1",
+    code: "cohort-1",
     name: "Cohort 1 (Current)",
     user_count: 12,
     is_current: true,
   },
   {
-    id: "cohort-1",
-    code: "cohort-1",
-    name: "Cohort 1",
+    id: "cohort-2",
+    code: "cohort-2",
+    name: "Cohort 2",
     user_count: 8,
     is_current: false,
   },
   {
-    id: "cohort-2",
-    code: "cohort-2",
-    name: "Cohort 2",
+    id: "cohort-3",
+    code: "cohort-3",
+    name: "Cohort 3",
     user_count: 15,
     is_current: false,
   },
