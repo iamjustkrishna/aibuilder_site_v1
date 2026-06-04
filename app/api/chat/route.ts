@@ -8,7 +8,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 // AI Builder Cohort FAQ context for the chatbot
 const systemPrompt = `You are the AI Builder Cohort Assistant, a helpful and friendly AI that answers questions about the AI Builder Cohort program.
 
-About the AI Builder Cohort (Season 01):
+About the AI Builder Cohort (Cohort 2 registration):
 - A 4-week program that teaches you to build AI apps and agents from scratch
 - 2-3 live classes per week, plus 2-4 recorded project videos each week
 - All sessions are recorded for replay within 24 hours

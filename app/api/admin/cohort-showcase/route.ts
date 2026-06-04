@@ -2,6 +2,10 @@ import { createClient, createServiceClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { isAdminEmail } from "@/lib/admin"
 
+function canonicalShowcaseSlug(slug: string) {
+  return slug === "cohort-0" ? "cohort-1" : slug
+}
+
 export async function GET(request: Request) {
   try {
     const supabase = await createClient()
@@ -65,7 +69,7 @@ export async function POST(request: Request) {
     const body = await request.json()
     const {
       cohort_id,
-      slug,
+      slug: rawSlug,
       title,
       hero_title,
       hero_subtitle,
@@ -74,6 +78,8 @@ export async function POST(request: Request) {
       is_active,
       settings = {}
     } = body
+
+    const slug = canonicalShowcaseSlug(String(rawSlug || "").trim())
 
     if (!cohort_id || !slug || !title) {
       return NextResponse.json({ error: "cohort_id, slug, and title are required" }, { status: 400 })

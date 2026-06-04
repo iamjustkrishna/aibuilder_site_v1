@@ -52,7 +52,7 @@ export function FloatingShowcase() {
           <Link href={`/cohort/${showcase.slug}`} className="relative block space-y-2 select-none">
             <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-[#00C8A7] tracking-widest uppercase">
               <span className="w-1.5 h-1.5 rounded-full bg-[#00C8A7] animate-pulse" />
-              <span>{showcase.cohort?.code || "COHORT-0"} GRADUATED</span>
+              <span>{showcase.cohort?.code || "COHORT-1"} GRADUATED</span>
             </div>
             
             <h4 className="text-xs font-bold text-white tracking-wide group-hover:text-[#00C8A7] transition-colors leading-snug flex items-center gap-1">

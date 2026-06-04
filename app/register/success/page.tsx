@@ -13,7 +13,7 @@ export default function RegistrationSuccessPage({
   searchParams?: SearchParams
 }) {
   const cohortValue = searchParams?.cohort
-  const cohortName = Array.isArray(cohortValue) ? cohortValue[0] : cohortValue || "Cohort 1"
+  const cohortName = Array.isArray(cohortValue) ? cohortValue[0] : cohortValue || "Cohort 2"
 
   return (
     <RegistrationSuccessClient cohortName={cohortName}>

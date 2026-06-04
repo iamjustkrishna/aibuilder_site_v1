@@ -62,7 +62,7 @@ export function Hero() {
           ) : (
             <>
               <span className="w-2 h-2 rounded-full bg-[#FF6B34] pulse-glow" />
-              <span className="text-sm text-[#492B8C]">Season 0 | Join Season 1, Register Now</span>
+              <span className="text-sm text-[#492B8C]">Cohort 1 complete | Register for Cohort 2</span>
             </>
           )}
         </motion.div>
@@ -124,7 +124,7 @@ export function Hero() {
             className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full px-8 h-12 text-base font-medium shadow-lg shadow-[#FF6B34]/20"
           >
             <a href="/register">
-              Register for Cohort 1
+              Register for Cohort 2
               <ArrowRight className="ml-2 w-4 h-4" />
             </a>
           </Button>

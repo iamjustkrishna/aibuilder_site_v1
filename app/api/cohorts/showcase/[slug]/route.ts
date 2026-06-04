@@ -1,21 +1,30 @@
 import { createServiceClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
+function canonicalShowcaseSlug(slug: string) {
+  return slug === "cohort-0" ? "cohort-1" : slug
+}
+
+function legacyShowcaseSlug(slug: string) {
+  return slug === "cohort-1" ? "cohort-0" : slug
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const slug = (await params).slug
+    const requestedSlug = (await params).slug
+    const slug = canonicalShowcaseSlug(requestedSlug)
 
-    if (!slug) {
+    if (!requestedSlug) {
       return NextResponse.json({ error: "Slug is required" }, { status: 400 })
     }
 
     const serviceClient = createServiceClient()
 
     // 1. Fetch the showcase by slug
-    const { data: showcase, error: showcaseError } = await serviceClient
+    let { data: showcase, error: showcaseError } = await serviceClient
       .from("cohort_showcases")
       .select(`
         *,
@@ -31,6 +40,28 @@ export async function GET(
       .eq("slug", slug)
       .eq("is_active", true)
       .maybeSingle()
+
+    if (!showcase && !showcaseError && slug !== legacyShowcaseSlug(slug)) {
+      const fallbackResult = await serviceClient
+        .from("cohort_showcases")
+        .select(`
+          *,
+          cohort:cohorts (
+            id,
+            code,
+            name,
+            description,
+            starts_at,
+            ends_at
+          )
+        `)
+        .eq("slug", legacyShowcaseSlug(slug))
+        .eq("is_active", true)
+        .maybeSingle()
+
+      showcase = fallbackResult.data
+      showcaseError = fallbackResult.error
+    }
 
     if (showcaseError) {
       return NextResponse.json({ error: showcaseError.message }, { status: 500 })
@@ -95,7 +126,10 @@ export async function GET(
     })
 
     return NextResponse.json({
-      showcase,
+      showcase: {
+        ...showcase,
+        slug: canonicalShowcaseSlug(showcase.slug),
+      },
       projects: combinedProjects
     })
   } catch (error: any) {

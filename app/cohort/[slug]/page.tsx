@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 
 interface Project {
@@ -65,6 +66,7 @@ function extractYouTubeId(url: string | null): string | null {
 }
 
 export default function CohortShowcasePage({ params }: { params: Promise<{ slug: string }> }) {
+  const router = useRouter()
   const resolvedParams = use(params)
   const slug = resolvedParams.slug
 
@@ -80,6 +82,11 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
   const [recapVideoOpen, setRecapVideoOpen] = useState(false)
 
   useEffect(() => {
+    if (slug === "cohort-0") {
+      router.replace("/cohort/cohort-1")
+      return
+    }
+
     async function fetchShowcase() {
       try {
         const res = await fetch(`/api/cohorts/showcase/${slug}`)
@@ -104,7 +111,7 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
     if (slug) {
       fetchShowcase()
     }
-  }, [slug])
+  }, [router, slug])
 
   if (loading) {
     return (

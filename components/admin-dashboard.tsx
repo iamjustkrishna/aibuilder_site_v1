@@ -1785,7 +1785,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                     <Input
                       value={cohortForm.code}
                       onChange={(e) => setCohortForm({ ...cohortForm, code: e.target.value })}
-                      placeholder="e.g. COHORT-0"
+                      placeholder="e.g. COHORT-1"
                       className="border-[#E8E3F3] focus:border-[#492B8C] focus:ring-[#492B8C]"
                     />
                   </div>

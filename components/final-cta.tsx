@@ -20,7 +20,7 @@ export function FinalCTA() {
       >
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#492B8C]/50 border border-[#492B8C] mb-6">
           <span className="w-2 h-2 rounded-full bg-[#FF6B34] pulse-glow" />
-          <span className="text-sm text-[#C3AFFF] font-medium">Season 0 filled - Join Season 1</span>
+          <span className="text-sm text-[#C3AFFF] font-medium">Cohort 1 filled - Join Cohort 2</span>
         </div>
         
         <h2
@@ -40,7 +40,7 @@ export function FinalCTA() {
             className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full px-8 h-14 text-base font-medium shadow-lg shadow-[#FF6B34]/20"
           >
             <a href="/register">
-              Register for Cohort 1
+              Register for Cohort 2
               <ArrowRight className="ml-2 w-5 h-5" />
             </a>
           </Button>

@@ -52,6 +52,7 @@ const AVAILABILITY_OPTIONS = [
   { value: "weekends", label: "Only Weekends (Saturday and Sunday)" },
   { value: "both", label: "Both Weekdays and Weekends" },
 ] as const
+const REGISTRATION_COHORT_LABEL = "Cohort 2"
 
 export function CohortRegistrationForm() {
   const router = useRouter()
@@ -138,7 +139,7 @@ export function CohortRegistrationForm() {
           <div className="inline-flex items-center gap-2 rounded-full border border-[#E8E3F3] bg-white px-4 py-2 shadow-sm">
             <Sparkles className="h-4 w-4 text-[#FF6B34]" />
             <span className="text-sm font-medium text-[#492B8C]">
-              {loadingCohort ? "Loading next cohort..." : currentCohort ? "Cohort 1 is open for registration" : "Registration closed"}
+              {loadingCohort ? "Loading next cohort..." : currentCohort ? `${REGISTRATION_COHORT_LABEL} is open for registration` : "Registration closed"}
             </span>
           </div>
 
@@ -150,7 +151,7 @@ export function CohortRegistrationForm() {
               Register for the next cohort
             </h1>
             <p className="max-w-2xl text-lg sm:text-xl leading-relaxed text-[#6B5B9E]">
-              Join Cohort 1 and build alongside a focused community of creators shipping real AI products together.
+              Join {REGISTRATION_COHORT_LABEL} and build alongside a focused community of creators shipping real AI products together.
             </p>
           </div>
 
@@ -179,12 +180,12 @@ export function CohortRegistrationForm() {
         >
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-[#1A0A3D]">Cohort 1 Registration</h2>
+              <h2 className="text-2xl font-bold text-[#1A0A3D]">{REGISTRATION_COHORT_LABEL} Registration</h2>
               <p className="mt-1 text-sm text-[#6B5B9E]">
                 {loadingCohort
                   ? "Checking the next cohort..."
                   : currentCohort
-                    ? "Cohort 1 is currently open for registration."
+                    ? `${REGISTRATION_COHORT_LABEL} is currently open for registration.`
                     : "No upcoming cohort is currently open."}
               </p>
             </div>
@@ -352,7 +353,7 @@ export function CohortRegistrationForm() {
               className="h-12 rounded-full bg-[#FF6B34] px-6 text-white hover:bg-[#E84C1E]"
             >
               {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {submitting ? "Submitting..." : "Register for Cohort 1"}
+              {submitting ? "Submitting..." : `Register for ${REGISTRATION_COHORT_LABEL}`}
             </Button>
             <p className="text-xs text-[#6B5B9E]">
               Seats are limited for the upcoming cohort, so register early.

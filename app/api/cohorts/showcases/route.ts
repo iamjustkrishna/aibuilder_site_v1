@@ -3,6 +3,10 @@ import { NextResponse } from "next/server"
 
 export const revalidate = 60 // Cache for 60 seconds
 
+function canonicalShowcaseSlug(slug: string | null | undefined) {
+  return slug === "cohort-0" ? "cohort-1" : slug
+}
+
 export async function GET() {
   try {
     const serviceClient = createServiceClient()
@@ -32,7 +36,10 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(showcases || [])
+    return NextResponse.json((showcases || []).map((showcase) => ({
+      ...showcase,
+      slug: canonicalShowcaseSlug(showcase.slug),
+    })))
   } catch (error: any) {
     console.error("GET public showcases error:", error)
     return NextResponse.json({ error: error.message || "Failed to load showcases" }, { status: 500 })
