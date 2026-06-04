@@ -167,58 +167,59 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
   const highlightVideoId = extractYouTubeId(showcase.highlight_video_url)
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white overflow-hidden pb-20">
+    <main className="min-h-screen bg-slate-950 text-white overflow-x-hidden pb-20">
       {/* Background glowing accents */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#492B8C]/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-1/3 right-1/4 w-[600px] h-[600px] bg-[#FF6B34]/5 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-[#492B8C]/10 blur-[100px] pointer-events-none sm:left-1/4 sm:h-[500px] sm:w-[500px] sm:translate-x-0 sm:blur-[120px]" />
+      <div className="absolute top-1/3 right-0 h-80 w-80 rounded-full bg-[#FF6B34]/5 blur-[110px] pointer-events-none sm:right-1/4 sm:h-[600px] sm:w-[600px] sm:blur-[140px]" />
 
       {/* Floating Header */}
-      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 py-4 px-4 sm:px-8 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+      <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-white/5 bg-slate-950/80 px-4 py-3 backdrop-blur-xl sm:px-8 sm:py-4">
+        <Link href="/" className="flex min-w-0 items-center gap-2 text-slate-400 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-medium">Back to Home</span>
+          <span className="text-sm font-medium sm:inline">Back</span>
+          <span className="hidden text-sm font-medium sm:inline">to Home</span>
         </Link>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#FF6B34] flex items-center justify-center">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[#FF6B34]">
             <Sparkles className="w-4 h-4 text-white" />
           </div>
-          <span className="font-semibold text-white tracking-wider text-sm">AI Builder Showcase</span>
+          <span className="truncate text-xs font-semibold tracking-wider text-white sm:text-sm">AI Builder Showcase</span>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative max-w-6xl mx-auto px-4 pt-16 pb-12 text-center">
+      <section className="relative mx-auto max-w-6xl px-4 pb-10 pt-10 text-center sm:pt-16 sm:pb-12">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           className="space-y-6"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-[#00C8A7] uppercase tracking-widest shadow-inner">
+          <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#00C8A7] shadow-inner sm:text-xs sm:tracking-widest">
             <Star className="w-3.5 h-3.5 fill-current animate-pulse text-[#FFD13F]" />
-            Graduation Spotlight
+            <span className="truncate">Graduation Spotlight</span>
           </div>
 
           <h1 
-            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent"
+            className="break-words text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent sm:text-5xl lg:text-6xl"
             style={{ fontFamily: "var(--font-cal-sans), sans-serif" }}
           >
             {showcase.hero_title || showcase.title}
           </h1>
 
-          <p className="text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-light">
+          <p className="mx-auto max-w-3xl text-base font-light leading-relaxed text-slate-400 sm:text-xl">
             {showcase.hero_subtitle || `Check out the next generation of builders. Over 4 weeks, these participants shipped real production-grade AI apps and autonomous agents.`}
           </p>
 
           {/* Quick Metrics */}
-          <div className="flex flex-wrap items-center justify-center gap-8 pt-4">
-            <div className="flex items-center gap-3 bg-white/5 px-5 py-2.5 rounded-full border border-white/10 shadow-lg">
+          <div className="mx-auto grid max-w-sm grid-cols-1 gap-3 pt-4 sm:max-w-none sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-4">
+            <div className="flex min-w-0 items-center justify-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 shadow-lg sm:px-5">
               <Layers className="w-4 h-4 text-[#FF6B34]" />
-              <span className="text-sm font-semibold text-slate-200">{projects.length} Shipped Projects</span>
+              <span className="truncate text-sm font-semibold text-slate-200">{projects.length} Shipped Projects</span>
             </div>
-            <div className="flex items-center gap-3 bg-white/5 px-5 py-2.5 rounded-full border border-white/10 shadow-lg">
+            <div className="flex min-w-0 items-center justify-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 shadow-lg sm:px-5">
               <Calendar className="w-4 h-4 text-[#00C8A7]" />
-              <span className="text-sm font-semibold text-slate-200">{showcase.cohort.code} Graduate Class</span>
+              <span className="truncate text-sm font-semibold text-slate-200">{showcase.cohort.code} Graduate Class</span>
             </div>
           </div>
 
@@ -227,11 +228,11 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
             <div className="pt-8">
               <button
                 onClick={() => setRecapVideoOpen(true)}
-                className="group relative inline-flex items-center gap-3 px-6 py-3.5 rounded-full bg-gradient-to-r from-[#FF6B34] to-[#E84C1E] text-white font-bold text-base hover:shadow-2xl hover:shadow-[#FF6B34]/30 transform hover:-translate-y-0.5 transition-all duration-300"
+                className="group relative inline-flex w-full max-w-sm items-center justify-center gap-3 rounded-full bg-gradient-to-r from-[#FF6B34] to-[#E84C1E] px-4 py-3 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-[#FF6B34]/30 sm:w-auto sm:max-w-none sm:px-6 sm:py-3.5 sm:text-base"
               >
                 <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#FF6B34] to-[#E84C1E] opacity-50 blur group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                 <PlayCircle className="w-6 h-6 flex-shrink-0" />
-                <span className="relative z-10">Watch Cohort Graduation Recap Video</span>
+                <span className="relative z-10 min-w-0">Watch Graduation Recap</span>
               </button>
             </div>
           )}
@@ -250,7 +251,7 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
           >
             <button
               onClick={() => setRecapVideoOpen(false)}
-              className="absolute top-6 right-6 text-slate-400 hover:text-white p-2 rounded-full border border-white/10 bg-slate-900/50"
+              className="absolute right-3 top-3 rounded-full border border-white/10 bg-slate-900/70 p-2 text-slate-400 hover:text-white sm:right-6 sm:top-6"
             >
               <X className="w-6 h-6" />
             </button>
@@ -259,7 +260,7 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-4xl aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-black shadow-[#FF6B34]/10"
+              className="relative aspect-video w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl shadow-[#FF6B34]/10 sm:rounded-3xl"
             >
               <iframe
                 src={`https://www.youtube.com/embed/${highlightVideoId}?autoplay=1`}
@@ -277,12 +278,12 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
       {/* Cohort Story Section */}
       {showcase.summary && (
         <section className="max-w-4xl mx-auto px-4 py-8">
-          <div className="p-6 sm:p-8 rounded-3xl bg-white/5 border border-white/10 relative overflow-hidden backdrop-blur-xl shadow-2xl">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-2xl backdrop-blur-xl sm:rounded-3xl sm:p-8">
             <div className="absolute top-0 right-0 w-24 h-24 bg-[#492B8C]/20 rounded-full blur-2xl pointer-events-none" />
-            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-white sm:text-xl" style={{ fontFamily: "var(--font-cal-sans)" }}>
               <Film className="w-5 h-5 text-[#FFD13F]" /> The Cohort Journey
             </h3>
-            <p className="text-slate-300 text-base leading-relaxed whitespace-pre-line font-light">
+            <p className="whitespace-pre-line break-words text-sm font-light leading-relaxed text-slate-300 sm:text-base">
               {showcase.summary}
             </p>
           </div>
@@ -290,16 +291,16 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
       )}
 
       {/* Projects Spotlight Header & Controls */}
-      <section className="max-w-6xl mx-auto px-4 pt-16 pb-8 space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-white flex items-center gap-2" style={{ fontFamily: "var(--font-cal-sans)" }}>
-              <Code className="w-6 h-6 text-[#00C8A7]" /> Shipped Application Gallery
+      <section className="mx-auto max-w-6xl space-y-6 px-4 pb-8 pt-12 sm:pt-16">
+        <div className="flex flex-col justify-between gap-4 border-b border-white/5 pb-4 md:flex-row md:items-center">
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-white sm:text-2xl" style={{ fontFamily: "var(--font-cal-sans)" }}>
+              <Code className="h-5 w-5 flex-shrink-0 text-[#00C8A7] sm:h-6 sm:w-6" /> <span className="min-w-0">Shipped Application Gallery</span>
             </h2>
             <p className="text-xs text-slate-400 mt-1">Discover, inspect, and try real AI models and frameworks deployed by builders.</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center md:w-auto">
             {/* Search Bar */}
             <div className="relative w-full sm:w-60">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -315,7 +316,7 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
             {/* Featured Only Toggle */}
             <button
               onClick={() => setShowFeaturedOnly(!showFeaturedOnly)}
-              className={`px-4 py-2.5 rounded-full text-xs font-semibold border flex items-center gap-1.5 transition-all duration-300 ${
+              className={`flex w-full items-center justify-center gap-1.5 rounded-full border px-4 py-2.5 text-xs font-semibold transition-all duration-300 sm:w-auto ${
                 showFeaturedOnly
                   ? "bg-[#FFD13F]/10 border-[#FFD13F] text-[#FFD13F]"
                   : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20"
@@ -328,7 +329,7 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
         </div>
 
         {/* Technology Filter Badges Carousel */}
-        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar scroll-smooth [&::-webkit-scrollbar]:hidden">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 no-scrollbar scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {allTechs.map((tech) => {
             const isSelected = selectedTech === tech
             return (
@@ -349,17 +350,17 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
       </section>
 
       {/* Projects Grid */}
-      <section className="max-w-6xl mx-auto px-4">
+      <section className="mx-auto max-w-6xl px-4">
         {filteredProjects.length === 0 ? (
-          <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
+          <div className="rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-14 text-center sm:rounded-3xl sm:py-20">
             <Code className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-400 font-semibold text-lg">No projects match your filter criteria.</p>
+            <p className="text-base font-semibold text-slate-400 sm:text-lg">No projects match your filter criteria.</p>
             <p className="text-slate-500 text-sm mt-1">Try expanding your search parameters or check back later.</p>
           </div>
         ) : (
           <motion.div 
             layout
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3"
           >
             {filteredProjects.map((project) => (
               <motion.div
@@ -369,7 +370,7 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.4 }}
                 onClick={() => setSelectedProject(project)}
-                className="group relative flex flex-col justify-between h-full bg-white/5 border border-white/10 rounded-3xl overflow-hidden hover:border-[#492B8C] hover:shadow-xl hover:shadow-[#492B8C]/5 transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
+                className="group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition-all duration-300 hover:-translate-y-1 hover:border-[#492B8C] hover:shadow-xl hover:shadow-[#492B8C]/5 sm:rounded-3xl"
               >
                 {/* Visual highlights */}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent opacity-80 z-10" />
@@ -399,9 +400,9 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
                 </div>
 
                 {/* Info Content */}
-                <div className="p-5 flex-1 flex flex-col justify-between relative z-20">
+                <div className="relative z-20 flex flex-1 flex-col justify-between p-4 sm:p-5">
                   <div>
-                    <h3 className="text-lg font-bold text-white group-hover:text-[#00C8A7] transition-colors duration-300 truncate mb-2">
+                    <h3 className="mb-2 line-clamp-2 text-base font-bold text-white transition-colors duration-300 group-hover:text-[#00C8A7] sm:text-lg">
                       {project.title}
                     </h3>
                     <p className="text-slate-400 text-xs sm:text-sm line-clamp-3 leading-relaxed font-light mb-4">
@@ -425,7 +426,7 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
                       {project.developer.avatar_url ? (
                         <img 
                           src={project.developer.avatar_url} 
@@ -437,7 +438,7 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
                           {project.developer.name.charAt(0).toUpperCase()}
                         </div>
                       )}
-                      <span className="text-xs font-medium text-slate-300 truncate">
+                      <span className="min-w-0 truncate text-xs font-medium text-slate-300">
                         By {project.developer.name}
                       </span>
                     </div>
@@ -453,7 +454,7 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
       <AnimatePresence>
         {selectedProject && (
           <div 
-            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
+            className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/90 p-3 backdrop-blur-md sm:items-center sm:p-4"
             onClick={() => setSelectedProject(null)}
           >
             <motion.div
@@ -461,12 +462,12 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-slate-950 border border-white/10 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl relative flex flex-col max-h-[90vh] text-white"
+              className="relative flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950 text-white shadow-2xl sm:max-h-[90vh] sm:rounded-3xl"
             >
               {/* Close Button */}
               <button
                 onClick={() => setSelectedProject(null)}
-                className="absolute top-4 right-4 z-40 w-9 h-9 rounded-full bg-slate-900/50 hover:bg-slate-900 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all shadow"
+                className="absolute right-3 top-3 z-40 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-slate-900/70 text-slate-400 shadow transition-all hover:bg-slate-900 hover:text-white sm:right-4 sm:top-4"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -502,9 +503,9 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
                 })()}
 
                 {/* Project details content */}
-                <div className="p-6 sm:p-8 space-y-6">
+                <div className="space-y-6 p-4 sm:p-8">
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         {selectedProject.featured && (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FFD13F]/15 border border-[#FFD13F]/30 text-[#FFD13F] flex items-center gap-1 shadow">
@@ -513,13 +514,13 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
                         )}
                         <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-900 border border-white/10 text-slate-400">Published</span>
                       </div>
-                      <h3 className="text-2xl sm:text-3xl font-extrabold text-white" style={{ fontFamily: "var(--font-cal-sans)" }}>
+                      <h3 className="break-words text-2xl font-extrabold text-white sm:text-3xl" style={{ fontFamily: "var(--font-cal-sans)" }}>
                         {selectedProject.title}
                       </h3>
                     </div>
 
                     {/* Developer details */}
-                    <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl p-3 flex-shrink-0">
+                    <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 sm:flex-shrink-0">
                       {selectedProject.developer.avatar_url ? (
                         <img 
                           src={selectedProject.developer.avatar_url} 
@@ -531,9 +532,9 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
                           {selectedProject.developer.name.charAt(0).toUpperCase()}
                         </div>
                       )}
-                      <div>
-                        <p className="text-sm font-semibold text-white leading-tight">{selectedProject.developer.name}</p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">{selectedProject.developer.email}</p>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold leading-tight text-white">{selectedProject.developer.name}</p>
+                        <p className="mt-0.5 truncate text-[11px] text-slate-400">{selectedProject.developer.email}</p>
                       </div>
                     </div>
                   </div>
@@ -542,7 +543,7 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
                   {selectedProject.description && (
                     <div className="space-y-2">
                       <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">About this application</h4>
-                      <p className="text-slate-300 font-light text-sm sm:text-base leading-relaxed whitespace-pre-line">
+                      <p className="whitespace-pre-line break-words text-sm font-light leading-relaxed text-slate-300 sm:text-base">
                         {selectedProject.description}
                       </p>
                     </div>
@@ -561,15 +562,15 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
                   </div>
 
                   {/* Call to Actions (CTAs) */}
-                  <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-white/5">
+                  <div className="flex flex-col gap-3 border-t border-white/5 pt-6 sm:flex-row">
                     {selectedProject.project_url && (
                       <Button
                         size="lg"
                         asChild
                         className="bg-[#00C8A7] hover:bg-[#009E87] text-white rounded-xl flex-1 font-bold h-12 text-sm"
                       >
-                        <a href={selectedProject.project_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
-                          Visit Live Application <ExternalLink className="w-4 h-4" />
+                        <a href={selectedProject.project_url} target="_blank" rel="noopener noreferrer" className="flex min-w-0 items-center justify-center gap-2">
+                          <span className="truncate">Visit Live Application</span> <ExternalLink className="h-4 w-4 flex-shrink-0" />
                         </a>
                       </Button>
                     )}
@@ -580,8 +581,8 @@ export default function CohortShowcasePage({ params }: { params: Promise<{ slug:
                         asChild
                         className="border-white/10 hover:bg-white/5 rounded-xl text-slate-300 hover:text-white flex-1 font-semibold h-12 text-sm bg-transparent"
                       >
-                        <a href={selectedProject.repo_url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
-                          View Code Repository <Code className="w-4 h-4" />
+                        <a href={selectedProject.repo_url} target="_blank" rel="noopener noreferrer" className="flex min-w-0 items-center justify-center gap-2">
+                          <span className="truncate">View Code Repository</span> <Code className="h-4 w-4 flex-shrink-0" />
                         </a>
                       </Button>
                     )}
