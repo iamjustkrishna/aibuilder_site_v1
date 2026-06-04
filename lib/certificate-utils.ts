@@ -33,7 +33,7 @@ export const MOCK_COHORTS: Cohort[] = [
   {
     id: "cohort-0",
     code: "cohort-0",
-    name: "Cohort 0 (Current)",
+    name: "Cohort 1 (Current)",
     user_count: 12,
     is_current: true,
   },

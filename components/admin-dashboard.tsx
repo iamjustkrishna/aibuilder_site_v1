@@ -1949,10 +1949,10 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         {/* Cohort Weeks Tab */}
         {activeTab === "weeks" && (
           <div className="space-y-4">
-            {/* Show Legacy Weeks for Cohort 0 (Always visible) */}
+            {/* Show Legacy Weeks for Cohort 1 (Always visible) */}
             <div>
               <div className="mb-4 p-4 bg-white/10 rounded-lg border border-white/20">
-                <p className="text-white/70 text-sm"><strong>Cohort 0 (Legacy)</strong> - Current live cohort. Videos below are synced across all users by tier requirements.</p>
+                <p className="text-white/70 text-sm"><strong>Cohort 1 (Legacy)</strong> - Current live cohort. Videos below are synced across all users by tier requirements.</p>
               </div>
               
               {weekConfig.map((week) => {

@@ -6,6 +6,7 @@ import {
   Cohort,
   CohortUser,
   CertificateStatus,
+  MOCK_COHORTS,
   generateMockStatuses,
   updateProgressStepSimulation,
   getStatusBadge,
@@ -30,7 +31,7 @@ interface UserData {
 
 export default function CertificateManagement() {
   // State Management
-  const [selectedCohort, setSelectedCohort] = useState<string>("cohort-0")
+  const [selectedCohort, setSelectedCohort] = useState<string>(MOCK_COHORTS.find((cohort) => cohort.is_current)?.id || MOCK_COHORTS[0]?.id || "")
   const [showCohortDropdown, setShowCohortDropdown] = useState(false)
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
   const [selectAll, setSelectAll] = useState(false)

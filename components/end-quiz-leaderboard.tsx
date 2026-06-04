@@ -45,6 +45,7 @@ export function EndQuizLeaderboard({ currentCohortName, showQuizCard = true }: E
   const [quizError, setQuizError] = useState<string | null>(null)
 
   const topEntries = useMemo(() => leaderboardEntries.slice(0, 5), [leaderboardEntries])
+  const cohortLabel = currentCohortName || "Cohort 1"
 
   async function loadLeaderboard() {
     setLeaderboardLoading(true)
@@ -140,7 +141,7 @@ export function EndQuizLeaderboard({ currentCohortName, showQuizCard = true }: E
               <ClipboardList className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-[#6B5B9E] uppercase tracking-wider">Cohort 0 Final Assessment</p>
+              <p className="text-xs font-medium text-[#6B5B9E] uppercase tracking-wider">{cohortLabel} Final Assessment</p>
               <h2 className="text-2xl font-bold text-[#1A0A3D]" style={{ fontFamily: "var(--font-cal-sans)" }}>
                 End Quiz
               </h2>
@@ -258,7 +259,7 @@ export function EndQuizLeaderboard({ currentCohortName, showQuizCard = true }: E
           <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-3xl bg-white shadow-2xl flex flex-col">
             <div className="p-5 border-b border-[#E8E3F3] flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-wider text-[#6B5B9E]">Cohort 0 end quiz</p>
+                <p className="text-xs uppercase tracking-wider text-[#6B5B9E]">{cohortLabel} end quiz</p>
                 <h3 className="text-xl font-bold text-[#1A0A3D]" style={{ fontFamily: "var(--font-cal-sans)" }}>
                   Answer based on your project and the cohort content
                 </h3>
