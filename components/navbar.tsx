@@ -72,32 +72,32 @@ export function Navbar() {
         </div>
 
         {/* Desktop Nav Items */}
-        <div className="hidden md:flex items-center gap-1 relative">
+        <div className="hidden md:flex items-center gap-2 flex-1 justify-center px-4">
           {navItems.map((item, index) => (
             <a
               key={item.label}
               href={item.href}
               target={item.external ? "_blank" : undefined}
               rel={item.external ? "noopener noreferrer" : undefined}
-              className="relative px-4 py-2 text-sm text-[#C3AFFF] hover:text-white transition-colors"
+              className="relative px-3 py-2 text-sm text-[#C3AFFF] hover:text-white transition-colors whitespace-nowrap"
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
               {hoveredIndex === index && (
                 <motion.div
                   layoutId="navbar-hover"
-                  className="absolute inset-0 bg-[#492B8C] rounded-full"
+                  className="absolute inset-0 bg-[#492B8C] rounded-full z-0"
                   initial={false}
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               )}
-              <span className="relative z-10">{item.label}</span>
+              <span className="relative z-20">{item.label}</span>
             </a>
           ))}
         </div>
 
         {/* CTA Button & Showcase Badge */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-3 flex-shrink-0 relative z-20">
           {!loading && (
             user ? (
               <Button size="sm" asChild className="shimmer-btn bg-[#FF6B34] text-white hover:bg-[#FF6B34]/90 rounded-full px-5 font-medium">
