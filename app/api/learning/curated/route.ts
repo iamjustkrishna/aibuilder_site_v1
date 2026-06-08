@@ -49,10 +49,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  // Get week parameter - defaults to all weeks if not specified
+  // Get week and cohort parameters
   const { searchParams } = new URL(request.url)
   const weekParam = searchParams.get("week")
   const weekNumber = weekParam ? parseInt(weekParam.replace("week-", "")) : null
+  const queryCohortId = searchParams.get("cohort_id")
 
   const serviceClient = createServiceClient()
 
@@ -67,6 +68,10 @@ export async function GET(request: Request) {
   }
 
   let cohortIds = (enrollments || []).map((entry) => entry.cohort_id)
+
+  if (queryCohortId) {
+    cohortIds = [queryCohortId]
+  }
 
   // 1. Get current cohort or fall back to any cohort, and automatically enroll user if not enrolled
   if (cohortIds.length === 0) {
@@ -266,24 +271,34 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { action, title, video_title, description, youtube_url, video_url, week_number, github_json_url } = body
+    const { action, title, video_title, description, youtube_url, video_url, week_number, github_json_url, cohort_id } = body
 
     const serviceClient = createServiceClient()
 
-    // 1. Get, resolve, or create current cohort
+    // 1. Get target cohort, or fallback to current
     let currentCohort = null
-    const { data: existingCurrentCohort } = await serviceClient
-      .from("cohorts")
-      .select("*")
-      .eq("is_current", true)
-      .limit(1)
-      .maybeSingle()
+    if (cohort_id) {
+      const { data: specificCohort } = await serviceClient
+        .from("cohorts")
+        .select("*")
+        .eq("id", cohort_id)
+        .maybeSingle()
+      if (specificCohort) currentCohort = specificCohort
+    }
 
-    if (existingCurrentCohort) {
-      currentCohort = existingCurrentCohort
-    } else {
-      // Find any cohort
-      const { data: anyCohort } = await serviceClient
+    if (!currentCohort) {
+      const { data: existingCurrentCohort } = await serviceClient
+        .from("cohorts")
+        .select("*")
+        .eq("is_current", true)
+        .limit(1)
+        .maybeSingle()
+
+      if (existingCurrentCohort) {
+        currentCohort = existingCurrentCohort
+      } else {
+        // Find any cohort
+        const { data: anyCohort } = await serviceClient
         .from("cohorts")
         .select("*")
         .limit(1)
@@ -305,14 +320,15 @@ export async function POST(request: Request) {
           .select("*")
           .single()
 
-        if (createError) {
-          console.error("Failed to create default cohort in POST:", createError)
-          return NextResponse.json(
-            { error: "Failed to locate or create cohort: " + createError.message },
-            { status: 500 }
-          )
+          if (createError) {
+            console.error("Failed to create default cohort in POST:", createError)
+            return NextResponse.json(
+              { error: "Failed to locate or create cohort: " + createError.message },
+              { status: 500 }
+            )
+          }
+          currentCohort = newCohort
         }
-        currentCohort = newCohort
       }
     }
 

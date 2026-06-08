@@ -308,6 +308,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
   })
   const [curatedVideos, setCuratedVideos] = useState<CohortVideoConfig[]>([])
   const [selectedCuratedWeek, setSelectedCuratedWeek] = useState<string>("week-1")
+  const [selectedCuratedCohortId, setSelectedCuratedCohortId] = useState<string>("")
   const [githubJsonUrl, setGithubJsonUrl] = useState<string>("")
   const [showCuratedVideoForm, setShowCuratedVideoForm] = useState(false)
   const [curatedVideoForm, setCuratedVideoForm] = useState({
@@ -563,7 +564,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         setRegistrations(data || [])
       }
     } else if (activeTab === "curated-videos") {
-      await fetchCuratedVideos(selectedCuratedWeek)
+      await fetchCuratedVideos(selectedCuratedWeek, selectedCuratedCohortId)
     } else if (activeTab === "sessions") {
       const [sessionsRes, usersRes] = await Promise.all([
         fetch("/api/admin/sessions"),
@@ -689,10 +690,10 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
 
   async function handleSetCurrentCohort(cohortId: string) {
     try {
-      const res = await fetch(`/api/admin/cohorts?action=set-current`, {
+      const res = await fetch(`/api/admin/cohorts`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cohort_id: cohortId }),
+        body: JSON.stringify({ action: "set-current", cohort_id: cohortId }),
       })
       if (res.ok) {
         setCohorts(cohorts.map(c => ({ ...c, is_current: c.id === cohortId })))
@@ -1336,11 +1337,16 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
     window.location.href = "/"
   }
 
-  async function fetchCuratedVideos(weekKey: string) {
+  async function fetchCuratedVideos(weekKey: string, cohortId?: string) {
     setLoadingCuratedVideos(true)
     try {
       const weekNum = parseInt(weekKey.replace("week-", ""))
-      const res = await fetch(`/api/learning/curated?week=${weekNum}`)
+      const queryParams = new URLSearchParams()
+      queryParams.append("week", weekNum.toString())
+      if (cohortId) {
+        queryParams.append("cohort_id", cohortId)
+      }
+      const res = await fetch(`/api/learning/curated?${queryParams.toString()}`)
       if (res.ok) {
         const data = await res.json()
         setCuratedVideos(data || [])
@@ -1367,6 +1373,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           week_number: weekNum,
+          cohort_id: selectedCuratedCohortId || undefined,
           ...curatedVideoForm,
         }),
       })
@@ -1374,7 +1381,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       if (res.ok) {
         setCuratedVideoMessage({ type: "success", text: "Video added successfully" })
         setCuratedVideoForm({ title: "", description: "", youtube_url: "", tier_required: "foundational" })
-        await fetchCuratedVideos(selectedCuratedWeek)
+        await fetchCuratedVideos(selectedCuratedWeek, selectedCuratedCohortId)
         setShowCuratedVideoForm(false)
       } else {
         const data = await res.json()
@@ -1394,7 +1401,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
       
       if (res.ok) {
         setCuratedVideoMessage({ type: "success", text: "Video deleted successfully" })
-        await fetchCuratedVideos(selectedCuratedWeek)
+        await fetchCuratedVideos(selectedCuratedWeek, selectedCuratedCohortId)
       } else {
         const data = await res.json()
         setCuratedVideoMessage({ type: "error", text: data.error || "Failed to delete video" })
@@ -1421,20 +1428,21 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
         body: JSON.stringify({
           action: "sync-github",
           github_json_url: sourceUrl,
+          cohort_id: selectedCuratedCohortId || undefined,
         }),
       })
       
       if (res.ok) {
         const data = await res.json()
         setCuratedVideoMessage({ type: "success", text: `Synced ${data.synced_count || 0} videos from GitHub` })
-        if (selectedCohortId) {
+        if (selectedCuratedCohortId || selectedCohortId) {
           setCohorts((prev) =>
             prev.map((c) =>
-              c.id === selectedCohortId ? { ...c, curated_videos_source_url: sourceUrl } : c
+              c.id === (selectedCuratedCohortId || selectedCohortId) ? { ...c, curated_videos_source_url: sourceUrl } : c
             )
           )
         }
-        await fetchCuratedVideos(selectedCuratedWeek)
+        await fetchCuratedVideos(selectedCuratedWeek, selectedCuratedCohortId)
       } else {
         const data = await res.json()
         setCuratedVideoMessage({ type: "error", text: data.error || "Failed to sync from GitHub" })
@@ -3811,6 +3819,29 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                 </Button>
               </div>
 
+              {/* Cohort Selector */}
+              <div className="flex items-center gap-4 mb-4">
+                <label className="text-sm font-medium text-[#1A0A3D]">Select Cohort:</label>
+                <div className="relative max-w-sm flex-1">
+                  <select
+                    value={selectedCuratedCohortId}
+                    onChange={(e) => {
+                      setSelectedCuratedCohortId(e.target.value)
+                      fetchCuratedVideos(selectedCuratedWeek, e.target.value)
+                    }}
+                    className="w-full appearance-none pl-4 pr-10 py-2.5 bg-[#F4F1FB] border border-[#E8E3F3] rounded-xl text-[#1A0A3D] focus:outline-none focus:border-[#492B8C] font-medium"
+                  >
+                    <option value="">Default/Current Cohort</option>
+                    {cohorts.map((cohort) => (
+                      <option key={cohort.id} value={cohort.id}>
+                        {cohort.name} {cohort.is_current ? "(Current)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B5B9E] pointer-events-none" />
+                </div>
+              </div>
+
               {/* Week Selector */}
               <div className="flex gap-2 mb-4 pb-4 border-b border-[#E8E3F3]">
                 {weekConfig.map((week) => (
@@ -3818,7 +3849,7 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                     key={week.key}
                     onClick={() => {
                       setSelectedCuratedWeek(week.key)
-                      fetchCuratedVideos(week.key)
+                      fetchCuratedVideos(week.key, selectedCuratedCohortId)
                     }}
                     className={`px-4 py-2 rounded-lg font-medium transition-all text-sm ${
                       selectedCuratedWeek === week.key
