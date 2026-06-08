@@ -384,6 +384,93 @@ export async function PATCH(request: Request) {
     return NextResponse.json(cohort)
   }
 
+  if (action === "init-weeks") {
+    if (!cohortId) {
+      return NextResponse.json({ error: "cohort_id is required" }, { status: 400 })
+    }
+    const serviceClient = createServiceClient()
+    const weekCount = 4
+    const weekRows = Array.from({ length: weekCount }, (_, index) => ({
+      cohort_id: cohortId,
+      week_number: index + 1,
+      title: `Week ${index + 1}`,
+    }))
+    const { data: weeks, error: weeksError } = await serviceClient.from("cohort_weeks").insert(weekRows).select()
+    if (weeksError) {
+      return NextResponse.json({ error: weeksError.message }, { status: 500 })
+    }
+    return NextResponse.json(weeks)
+  }
+
+  if (action === "copy-weeks") {
+    const targetCohortId = cohortId
+    const sourceCohortId = typeof body.source_cohort_id === "string" ? body.source_cohort_id.trim() : ""
+    
+    if (!targetCohortId || !sourceCohortId) {
+      return NextResponse.json({ error: "cohort_id and source_cohort_id are required" }, { status: 400 })
+    }
+    
+    const serviceClient = createServiceClient()
+    
+    // Fetch source weeks
+    const { data: sourceWeeks, error: sourceWeeksError } = await serviceClient
+      .from("cohort_weeks")
+      .select("*")
+      .eq("cohort_id", sourceCohortId)
+      
+    if (sourceWeeksError) return NextResponse.json({ error: sourceWeeksError.message }, { status: 500 })
+    if (!sourceWeeks || sourceWeeks.length === 0) return NextResponse.json({ error: "Source cohort has no weeks" }, { status: 400 })
+    
+    // Fetch source videos
+    const { data: sourceVideos, error: sourceVideosError } = await serviceClient
+      .from("cohort_video_configs")
+      .select("*")
+      .eq("cohort_id", sourceCohortId)
+      
+    if (sourceVideosError) return NextResponse.json({ error: sourceVideosError.message }, { status: 500 })
+    
+    // Insert new weeks mapped to new cohort
+    const newWeeks = sourceWeeks.map(w => ({
+      cohort_id: targetCohortId,
+      week_number: w.week_number,
+      title: w.title,
+      description: w.description,
+      unlock_at: null // Reset unlock time
+    }))
+    
+    const { data: insertedWeeks, error: insertWeeksError } = await serviceClient
+      .from("cohort_weeks")
+      .insert(newWeeks)
+      .select()
+      
+    if (insertWeeksError) return NextResponse.json({ error: insertWeeksError.message }, { status: 500 })
+    
+    // Insert new videos
+    if (sourceVideos && sourceVideos.length > 0) {
+      const newVideos = sourceVideos.map(v => ({
+        cohort_id: targetCohortId,
+        week_number: v.week_number,
+        video_title: v.video_title,
+        description: v.description,
+        video_url: v.video_url,
+        sort_order: v.sort_order,
+        question_count: v.question_count,
+        auto_generate_quiz: v.auto_generate_quiz,
+        is_active: v.is_active,
+        resource_id: v.resource_id,
+        github_json_url: v.github_json_url
+      }))
+      
+      const { error: insertVideosError } = await serviceClient
+        .from("cohort_video_configs")
+        .insert(newVideos)
+        
+      if (insertVideosError) return NextResponse.json({ error: insertVideosError.message }, { status: 500 })
+    }
+    
+    return NextResponse.json({ success: true, copied_weeks: insertedWeeks.length, copied_videos: sourceVideos?.length || 0 })
+  }
+
   if (action === "toggle-project-submission") {
     if (!cohortId) {
       return NextResponse.json({ error: "cohort_id is required" }, { status: 400 })

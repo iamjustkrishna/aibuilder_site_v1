@@ -2141,7 +2141,54 @@ export function AdminDashboard({ userEmail }: { userEmail: string | null }) {
                 {cohortWeeks.length === 0 ? (
                   <div className="text-center py-12 bg-white/5 rounded-2xl border border-white/10">
                     <Calendar className="w-12 h-12 mx-auto text-white/30 mb-3" />
-                    <p className="text-white/60">No weeks created for this cohort yet.</p>
+                    <p className="text-white/60 mb-6">No weeks created for this cohort yet.</p>
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                      <button
+                        onClick={async () => {
+                          const res = await fetch("/api/admin/cohorts", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ action: "init-weeks", cohort_id: selectedCohortId }),
+                          })
+                          if (res.ok) {
+                            fetchCohortDetails(selectedCohortId)
+                          }
+                        }}
+                        className="px-6 py-2 rounded-xl bg-[#492B8C] hover:bg-[#3D2174] text-white font-medium text-sm transition-colors"
+                      >
+                        Initialize 4 Weeks
+                      </button>
+                      <div className="hidden sm:block text-white/30">or</div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          id={`copy-weeks-${selectedCohortId}`}
+                          className="px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white focus:outline-none text-sm appearance-none min-w-[200px]"
+                        >
+                          <option value="" className="text-black">Select Cohort to Copy...</option>
+                          {cohorts.filter(c => c.id !== selectedCohortId).map(c => (
+                            <option key={c.id} value={c.id} className="text-black">{c.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={async () => {
+                            const select = document.getElementById(`copy-weeks-${selectedCohortId}`) as HTMLSelectElement
+                            if (select && select.value) {
+                              const res = await fetch("/api/admin/cohorts", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ action: "copy-weeks", cohort_id: selectedCohortId, source_cohort_id: select.value }),
+                              })
+                              if (res.ok) {
+                                fetchCohortDetails(selectedCohortId)
+                              }
+                            }
+                          }}
+                          className="px-6 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-medium text-sm transition-colors whitespace-nowrap"
+                        >
+                          Copy Weeks & Videos
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   cohortWeeks.map((week) => {
